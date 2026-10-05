@@ -1319,8 +1319,6 @@ function renderPerformance(){
 }
 
 // ══ VIRTUAL CLASSROOM (Google Meet-style) ════════════════════════
-function generateMeetCode(){return'ahruf-'+Math.random().toString(36).slice(2,5)+'-'+Math.random().toString(36).slice(2,5);}
-
 function renderClassroom(){
   const c=document.getElementById('classroomContent');
   if(!c)return;
@@ -1359,7 +1357,7 @@ function startMeet(){
   currentMeetCode=generateMeetCode();
   currentMeetTitle=title;
   DB.activeMeets.push({code:currentMeetCode,title,host:currentUser.name,started:new Date().toISOString()});
-  meetChatMsgs=[{who:'System',txt:\`Class started: \${title}\`,mine:false}];
+  meetChatMsgs=[{who:'System',txt:`Class started: ${title}`,mine:false}];
   inMeet=true;
   renderClassroom();
   setTimeout(()=>showToast('Live class started. Copy the invitation link for your students.'),250);
@@ -1368,7 +1366,7 @@ function joinMeet(code,title){
   currentMeetCode=(code||'').trim();
   currentMeetTitle=(title||"Al-Ahruf Qur'an Live Class").trim();
   if(!currentMeetCode){showToast('Invalid class code.',true);return;}
-  meetChatMsgs=[{who:'System',txt:\`Joined: \${currentMeetTitle}\`,mine:false}];
+  meetChatMsgs=[{who:'System',txt:`Joined: ${currentMeetTitle}`,mine:false}];
   inMeet=true;
   renderClassroom();
 }
@@ -1404,14 +1402,14 @@ function doJoinByCode(){
   switchStudentTab('classroom',null);
 }
 function renderMeetRoom(c){
-  c.innerHTML=\`
+  c.innerHTML=`
     <div class="live-shell">
       <div class="live-shell-head">
         <div class="live-shell-title">
           <div class="live-dot"></div>
           <div>
-            <strong>\${currentMeetTitle||'Al-Ahruf International Academy — Live Class'}</strong>
-            <div class="live-shell-code">Class code: <b>\${currentMeetCode}</b></div>
+            <strong>${currentMeetTitle||'Al-Ahruf International Academy — Live Class'}</strong>
+            <div class="live-shell-code">Class code: <b>${currentMeetCode}</b></div>
           </div>
         </div>
         <div class="live-actions">
@@ -1428,7 +1426,7 @@ function renderMeetRoom(c){
         </div>
       </div>
       <div class="live-help"><strong>Live classroom:</strong> video, microphone, chat, screen sharing, participants and other meeting controls are provided by the embedded Jitsi classroom. On mobile, rotate your phone for a larger classroom view.</div>
-    </div>\`;
+    </div>`;
   setTimeout(mountJitsiRoom,80);
 }
 
@@ -1436,11 +1434,11 @@ function mountJitsiRoom(){
   const container=document.getElementById('jitsiMeetContainer');
   if(!container||!currentMeetCode)return;
   if(typeof JitsiMeetExternalAPI==='undefined'){
-    container.innerHTML=\`<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#fff;background:#111;flex-direction:column;gap:12px;padding:24px;text-align:center;">
+    container.innerHTML=`<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#fff;background:#111;flex-direction:column;gap:12px;padding:24px;text-align:center;">
       <i class="fas fa-triangle-exclamation" style="font-size:2rem;color:var(--gold);"></i>
       <strong>Live classroom service is still loading.</strong>
       <span style="opacity:.7;font-size:.85rem;">Please refresh the page and try again.</span>
-    </div>\`;
+    </div>`;
     return;
   }
   if(jitsiApi){try{jitsiApi.dispose();}catch(e){} jitsiApi=null;}
