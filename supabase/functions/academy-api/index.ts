@@ -106,13 +106,14 @@ export default {
       if (action === "upsert_student") {
         if (profile.role !== "admin") return json({error:"Only an administrator can create or edit student accounts"},403);
         const s = body.student || {};
-        if (!s.id || !s.name || !s.pw) return json({error:"Student ID, name and password are required"},400);
+        if (!s.id || !s.name) return json({error:"Student ID and name are required"},400);
 
         const email = (s.email || (s.id.toLowerCase().replace(/[^a-z0-9]/g,"") + "@students.alahruf.local")).toLowerCase();
         const existing = await ctx.supabaseAdmin.from("profiles").select("id,email").eq("username",s.id).maybeSingle();
         let uid = existing.data?.id;
 
         if (!uid) {
+          if (!s.pw) return json({error:"A password is required for a new student"},400);
           const {data: created,error} = await ctx.supabaseAdmin.auth.admin.createUser({
             email,password:s.pw,email_confirm:true,user_metadata:{name:s.name,role:"student"}
           });
