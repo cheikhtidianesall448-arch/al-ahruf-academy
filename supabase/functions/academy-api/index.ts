@@ -27,7 +27,7 @@ async function roleOf(ctx: any) {
 }
 
 export default {
-  fetch: withSupabase({ auth: ["publishable", "user"] }, async (req, ctx) => {
+  fetch: withSupabase({ auth: ["user", "publishable"] }, async (req, ctx) => {
     if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
     try {
