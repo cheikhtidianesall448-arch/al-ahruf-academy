@@ -1,0 +1,2 @@
+[functions.academy-api]
+verify_jwt = false
