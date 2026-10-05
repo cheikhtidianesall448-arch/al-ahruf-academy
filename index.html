@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Al-Ahruf International Academy – Qur’an Learning Management</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://meet.jit.si/external_api.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Playfair+Display:wght@600;700&family=Amiri:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* ══ LIGHT THEME ════════════════════════════════════════════ */
@@ -393,6 +394,43 @@ footer{text-align:center;padding:22px;color:var(--txt3);font-size:.77rem;border-
   .course-grid,.surah-grid{grid-template-columns:1fr;}
 }
 
+
+/* ══ LIVE CLASS + STUDENT JOIN EXPERIENCE ═════════════════════ */
+.join-live-cta{margin-top:18px;padding-top:18px;border-top:1px solid var(--surfaceborder);}
+.join-live-cta .join-title{font-weight:800;color:var(--g1);font-size:.92rem;margin-bottom:5px;}
+.join-live-cta .join-copy{font-size:.76rem;color:var(--txt3);line-height:1.5;margin-bottom:10px;}
+.join-live-btn{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border:0;border-radius:10px;
+  padding:12px 16px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;box-shadow:var(--sh);transition:.2s;}
+.join-live-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
+.join-code-hint{margin-top:9px;font-size:.7rem;color:var(--txt3);}
+.live-shell{background:var(--card);border:1.5px solid var(--surfaceborder);border-radius:18px;overflow:hidden;
+  box-shadow:var(--shlg);}
+.live-shell-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;
+  background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;flex-wrap:wrap;}
+.live-shell-title{display:flex;align-items:center;gap:10px;min-width:0;}
+.live-shell-title .live-dot{width:9px;height:9px;border-radius:50%;background:#ffd166;box-shadow:0 0 0 5px rgba(255,209,102,.16);flex:0 0 auto;}
+.live-shell-title strong{font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.live-shell-code{font-size:.72rem;opacity:.85;margin-top:2px;word-break:break-all;}
+.live-actions{display:flex;gap:7px;flex-wrap:wrap;}
+.live-action{border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.12);color:#fff;border-radius:8px;
+  padding:8px 11px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;font-size:.75rem;}
+.live-action:hover{background:rgba(255,255,255,.2);}
+.jitsi-frame{height:min(72vh,760px);min-height:520px;background:#111;position:relative;}
+.jitsi-frame iframe{border:0!important;}
+.live-help{padding:10px 16px;background:var(--inputbg);border-top:1px solid var(--surfaceborder);
+  color:var(--txt3);font-size:.74rem;line-height:1.5;}
+.live-help strong{color:var(--txt2);}
+.student-join-modal{max-width:460px!important;}
+.student-join-badge{width:58px;height:58px;margin:0 auto 12px;border-radius:16px;background:var(--goldbg);
+  color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:1.35rem;border:1px solid var(--gborder);}
+.student-join-modal .form-group{text-align:left;}
+@media(max-width:700px){
+  .jitsi-frame{height:72vh;min-height:460px;}
+  .live-shell-head{padding:12px;}
+  .live-action{padding:7px 9px;}
+}
+
 </style>
 </head>
 <body>
@@ -446,6 +484,12 @@ footer{text-align:center;padding:22px;color:var(--txt3);font-size:.77rem;border-
     <div class="form-group"><label data-i18n="username">Username</label><input type="text" id="loginUser" autocomplete="off"></div>
     <div class="form-group"><label data-i18n="password">Password</label><input type="password" id="loginPass" autocomplete="new-password"></div>
     <button class="btn btn-full" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> <span data-i18n="login">Login</span></button>
+    <div class="join-live-cta">
+      <div class="join-title"><i class="fas fa-video"></i> Join a live class</div>
+      <div class="join-copy">Students can enter the class code or invitation link from their teacher. No dashboard account is required for the live room.</div>
+      <button class="join-live-btn" onclick="openStudentJoin()"><i class="fas fa-door-open"></i> Join Live Class</button>
+      <div class="join-code-hint">Works on phone, tablet and computer.</div>
+    </div>
       </div>
 </div>
 
@@ -651,11 +695,20 @@ footer{text-align:center;padding:22px;color:var(--txt3);font-size:.77rem;border-
 
 <!-- Join by Code -->
 <div class="modal-overlay" id="mJoinCode">
-  <div class="modal" style="max-width:400px;text-align:center;">
-    <h2><i class="fas fa-link"></i> Join Class</h2>
-    <div class="form-group"><label>Class Code</label><input type="text" id="joinCodeInput" placeholder="e.g. ahruf-abc-xyz" style="text-align:center;font-size:1.1rem;letter-spacing:2px;"></div>
+  <div class="modal student-join-modal">
+    <div class="student-join-badge"><i class="fas fa-video"></i></div>
+    <h2 style="text-align:center;margin-bottom:6px;">Join Al-Ahruf Live Class</h2>
+    <p style="text-align:center;color:var(--txt3);font-size:.82rem;margin-bottom:18px;">Enter the details shared by your teacher.</p>
+    <div class="form-group">
+      <label>Student Name</label>
+      <input type="text" id="joinNameInput" placeholder="Your full name" autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label>Class Code</label>
+      <input type="text" id="joinCodeInput" placeholder="Paste your class code" style="text-align:center;font-size:1.05rem;letter-spacing:1.5px;">
+    </div>
     <div class="modal-footer" style="justify-content:center;">
-      <button class="btn" onclick="doJoinByCode()"><i class="fas fa-sign-in-alt"></i> Join</button>
+      <button class="btn" onclick="doJoinByCode()"><i class="fas fa-sign-in-alt"></i> Join Live Class</button>
       <button class="btn btn-gray" onclick="closeModal('mJoinCode')">Cancel</button>
     </div>
   </div>
@@ -713,7 +766,7 @@ const SURAHS=["Al-Fatiha","Al-Baqarah","Ali 'Imran","An-Nisa'","Al-Ma'idah","Al-
 const SURAH_V=[7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,77,50,45,44,33,54,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,11,4,5,8,4,7,3,6,6,5,4,5,3,6,3,5,4,5,6];
 
 let currentUser=null,isAdmin=false,isTeacher=false,isStudent=false,currentLang='en';
-let micOn=true,camOn=true,meetChatMsgs=[],inMeet=false,currentMeetCode='';
+let micOn=true,camOn=true,meetChatMsgs=[],inMeet=false,currentMeetCode='',currentMeetTitle='',jitsiApi=null;
 
 // ── I18N ───────────────────────────────────────────────────────
 const TR={
@@ -1296,136 +1349,166 @@ function renderClassroom(){
     </div>`;
 }
 
+function generateMeetCode(){
+  const bytes=crypto.getRandomValues(new Uint8Array(10));
+  const token=Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return 'AHRUF-'+token.toUpperCase();
+}
 function startMeet(){
+  const title=(prompt('Class title:',"Al-Ahruf Qur'an Live Class")||"Al-Ahruf Qur'an Live Class").trim();
   currentMeetCode=generateMeetCode();
-  const title="Al-Ahruf Qur'an Class";
+  currentMeetTitle=title;
   DB.activeMeets.push({code:currentMeetCode,title,host:currentUser.name,started:new Date().toISOString()});
-  meetChatMsgs=[{who:'System',txt:`Class started. Code: ${currentMeetCode}`,mine:false}];
+  meetChatMsgs=[{who:'System',txt:\`Class started: \${title}\`,mine:false}];
   inMeet=true;
   renderClassroom();
+  setTimeout(()=>showToast('Live class started. Copy the invitation link for your students.'),250);
 }
 function joinMeet(code,title){
-  currentMeetCode=code;
-  meetChatMsgs=[{who:'System',txt:`You joined: ${title}`,mine:false}];
+  currentMeetCode=(code||'').trim();
+  currentMeetTitle=(title||"Al-Ahruf Qur'an Live Class").trim();
+  if(!currentMeetCode){showToast('Invalid class code.',true);return;}
+  meetChatMsgs=[{who:'System',txt:\`Joined: \${currentMeetTitle}\`,mine:false}];
   inMeet=true;
   renderClassroom();
 }
-function joinByCode(){openModal('mJoinCode');}
+function openStudentJoin(){
+  const hashMatch=location.hash.match(/^#class=(.+)$/);
+  if(hashMatch){
+    try{document.getElementById('joinCodeInput').value=decodeURIComponent(hashMatch[1]);}catch(e){}
+  }
+  if(currentUser&&currentUser.name)document.getElementById('joinNameInput').value=currentUser.name;
+  openModal('mJoinCode');
+}
+function joinByCode(){
+  openStudentJoin();
+}
 function doJoinByCode(){
   const code=document.getElementById('joinCodeInput').value.trim();
-  if(!code){showToast(t('required'),true);return;}
-  const meet=DB.activeMeets.find(m=>m.code===code);
+  const name=document.getElementById('joinNameInput').value.trim();
+  if(!code){showToast('Please enter the class code.',true);return;}
+  if(!name){showToast('Please enter your name.',true);return;}
   closeModal('mJoinCode');
-  if(meet)joinMeet(meet.code,meet.title);
-  else{currentMeetCode=code;meetChatMsgs=[{who:'System',txt:'Joined with code: '+code,mine:false}];inMeet=true;renderClassroom();}
+  if(!currentUser){
+    currentUser={id:'guest-'+Date.now(),name,role:'student',email:''};
+    isStudent=true;isAdmin=false;isTeacher=false;
+    document.getElementById('loginPage').style.display='none';
+    document.getElementById('dashboard').style.display='none';
+    document.getElementById('studentDash').style.display='block';
+    document.getElementById('headerRight').style.display='block';
+    document.getElementById('headerBadge').textContent='🎓 '+name;
+  }else if(currentUser.role==='student'){
+    currentUser.name=name;
+  }
+  joinMeet(code,'Al-Ahruf Live Class');
+  switchStudentTab('classroom',null);
 }
 function renderMeetRoom(c){
-  const participants=[{name:currentUser.name,isMe:true,isTeacher:isAdmin||isTeacher},
-    ...DB.students.slice(0,3).map(s=>({name:s.name,isMe:false,isTeacher:false}))];
-  c.innerHTML=`
-  <div class="meet-room">
-    <div class="meet-top">
-      <div class="meet-title">
-        <div class="dot"></div>
-        <span>${t('meet_title')}</span>
-        <span style="font-size:.75rem;background:rgba(255,255,255,.1);padding:3px 10px;border-radius:12px;opacity:.8;">Code: ${currentMeetCode}</span>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <span style="color:rgba(255,255,255,.6);font-size:.78rem;">${new Date().toLocaleTimeString()}</span>
-        <button onclick="copyMeetCode()" style="background:rgba(255,255,255,.1);border:none;color:#fff;padding:5px 12px;border-radius:8px;cursor:pointer;font-size:.78rem;font-family:'Nunito',sans-serif;"><i class="fas fa-copy"></i> Copy Code</button>
-      </div>
-    </div>
-    <div class="meet-main">
-      <div class="meet-video-area">
-        <!-- Main tile (teacher/self) -->
-        <div class="meet-tile main-tile">
-          <div class="meet-tile-avatar ${isAdmin||isTeacher?'teacher':''}">
-            ${currentUser.name.split(' ').map(w=>w[0]).join('').slice(0,2)}
-          </div>
-          <p style="color:rgba(255,255,255,.7);font-size:.85rem;">${currentUser.name}</p>
-          ${!camOn?'<div style="position:absolute;top:10px;right:10px;background:var(--red);border-radius:20px;padding:3px 10px;font-size:.7rem;color:#fff;"><i class="fas fa-video-slash"></i> Camera Off</div>':''}
-          <div class="meet-tile-name">${currentUser.name} (You)</div>
-        </div>
-        <!-- Other participants -->
-        ${DB.students.slice(0,3).map(s=>`
-        <div class="meet-tile thumb">
-          <div class="meet-tile-avatar" style="width:36px;height:36px;font-size:.9rem;">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
-          <div class="meet-tile-name">${s.name}</div>
-        </div>`).join('')}
-      </div>
-
-      <!-- Side panel -->
-      <div class="meet-side">
-        <div class="meet-tabs">
-          <div class="meet-tab active" onclick="switchMeetTab('chat',this)"><i class="fas fa-comment"></i> Chat</div>
-          <div class="meet-tab" onclick="switchMeetTab('people',this)"><i class="fas fa-users"></i> People (${participants.length})</div>
-        </div>
-
-        <!-- Chat panel -->
-        <div id="meetChatPanel" style="display:flex;flex-direction:column;flex:1;">
-          <div class="meet-chat" id="meetChatMessages">
-            ${meetChatMsgs.map(m=>`<div class="meet-chat-msg ${m.mine?'mine':''}"><div class="who">${m.who}</div><div class="txt">${m.txt}</div></div>`).join('')}
-          </div>
-          <div class="meet-chat-input">
-            <input type="text" id="meetChatInput" placeholder="Message everyone..." onkeydown="if(event.key==='Enter')sendMeetChat()">
-            <button onclick="sendMeetChat()"><i class="fas fa-paper-plane"></i></button>
+  c.innerHTML=\`
+    <div class="live-shell">
+      <div class="live-shell-head">
+        <div class="live-shell-title">
+          <div class="live-dot"></div>
+          <div>
+            <strong>\${currentMeetTitle||'Al-Ahruf International Academy — Live Class'}</strong>
+            <div class="live-shell-code">Class code: <b>\${currentMeetCode}</b></div>
           </div>
         </div>
-
-        <!-- People panel -->
-        <div id="meetPeoplePanel" style="display:none;flex:1;overflow-y:auto;padding:10px;">
-          ${participants.map(p=>`
-          <div class="meet-p-item">
-            <div class="meet-p-avatar ${p.isTeacher?'teacher':''}">${p.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
-            <div class="meet-p-name">${p.name}${p.isMe?' (You)':''}${p.isTeacher?' <span>(Host)</span>':''}</div>
-            <div style="margin-left:auto;display:flex;gap:6px;color:rgba(255,255,255,.4);">
-              <i class="fas fa-microphone" title="Mic on" style="font-size:.8rem;"></i>
-              <i class="fas fa-video" title="Cam on" style="font-size:.8rem;"></i>
-            </div>
-          </div>`).join('')}
-          <div class="meet-info">
-            <p>Meeting Code</p>
-            <div class="link" onclick="copyMeetCode()">${currentMeetCode} <i class="fas fa-copy" style="font-size:.75rem;"></i></div>
-          </div>
+        <div class="live-actions">
+          <button class="live-action" onclick="copyMeetingInvite()"><i class="fas fa-link"></i> Copy Invite</button>
+          <button class="live-action" onclick="openMeetingInNewTab()"><i class="fas fa-external-link-alt"></i> Open Full Screen</button>
+          <button class="live-action" onclick="leaveMeet()"><i class="fas fa-sign-out-alt"></i> Leave</button>
         </div>
       </div>
-    </div>
+      <div class="jitsi-frame" id="jitsiMeetContainer">
+        <div style="height:100%;display:flex;align-items:center;justify-content:center;color:#fff;background:#111;flex-direction:column;gap:10px;">
+          <i class="fas fa-circle-notch fa-spin" style="font-size:2rem;color:var(--g3);"></i>
+          <div>Connecting to the live classroom…</div>
+          <small style="opacity:.6;">Allow microphone and camera access when your browser asks.</small>
+        </div>
+      </div>
+      <div class="live-help"><strong>Live classroom:</strong> video, microphone, chat, screen sharing, participants and other meeting controls are provided by the embedded Jitsi classroom. On mobile, rotate your phone for a larger classroom view.</div>
+    </div>\`;
+  setTimeout(mountJitsiRoom,80);
+}
 
-    <!-- Controls -->
-    <div class="meet-controls">
-      <div style="text-align:center;">
-        <button class="meet-ctrl-btn mic ${micOn?'on':'off'}" onclick="toggleMic()" title="${micOn?'Mute':'Unmute'}">
-          <i class="fas fa-microphone${micOn?'':'-slash'}"></i>
-        </button>
-        <div style="color:rgba(255,255,255,.5);font-size:.6rem;margin-top:3px;">${micOn?'Mute':'Unmute'}</div>
-      </div>
-      <div style="text-align:center;">
-        <button class="meet-ctrl-btn cam ${camOn?'on':'off'}" onclick="toggleCam()" title="${camOn?'Stop cam':'Start cam'}">
-          <i class="fas fa-video${camOn?'':'-slash'}"></i>
-        </button>
-        <div style="color:rgba(255,255,255,.5);font-size:.6rem;margin-top:3px;">${camOn?'Stop Video':'Start Video'}</div>
-      </div>
-      <div style="text-align:center;">
-        <button class="meet-ctrl-btn share" onclick="showToast('Screen sharing requires browser API permission.')">
-          <i class="fas fa-desktop"></i>
-        </button>
-        <div style="color:rgba(255,255,255,.5);font-size:.6rem;margin-top:3px;">Share</div>
-      </div>
-      <div style="text-align:center;">
-        <button class="meet-ctrl-btn chat" onclick="switchMeetTab('chat',null)">
-          <i class="fas fa-comment-dots"></i>
-        </button>
-        <div style="color:rgba(255,255,255,.5);font-size:.6rem;margin-top:3px;">Chat</div>
-      </div>
-      <div style="text-align:center;">
-        <button class="meet-ctrl-btn end" onclick="endMeet()">
-          <i class="fas fa-phone-slash"></i>
-        </button>
-        <div style="color:rgba(255,255,255,.5);font-size:.6rem;margin-top:3px;">Leave</div>
-      </div>
-    </div>
-  </div>`;
-  scrollMeetChat();
+function mountJitsiRoom(){
+  const container=document.getElementById('jitsiMeetContainer');
+  if(!container||!currentMeetCode)return;
+  if(typeof JitsiMeetExternalAPI==='undefined'){
+    container.innerHTML=\`<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#fff;background:#111;flex-direction:column;gap:12px;padding:24px;text-align:center;">
+      <i class="fas fa-triangle-exclamation" style="font-size:2rem;color:var(--gold);"></i>
+      <strong>Live classroom service is still loading.</strong>
+      <span style="opacity:.7;font-size:.85rem;">Please refresh the page and try again.</span>
+    </div>\`;
+    return;
+  }
+  if(jitsiApi){try{jitsiApi.dispose();}catch(e){} jitsiApi=null;}
+  container.innerHTML='';
+  const displayName=(currentUser&&currentUser.name)?currentUser.name:'Al-Ahruf Student';
+  jitsiApi=new JitsiMeetExternalAPI('meet.jit.si',{
+    roomName:currentMeetCode,
+    width:'100%',
+    height:'100%',
+    parentNode:container,
+    userInfo:{displayName:displayName,email:(currentUser&&currentUser.email)||''},
+    lang:(currentLang==='ar'?'ar':currentLang==='fr'?'fr':'en'),
+    configOverwrite:{
+      prejoinConfig:{enabled:true,hideDisplayName:false},
+      startWithAudioMuted:false,
+      startWithVideoMuted:false,
+      disableDeepLinking:true,
+      enableWelcomePage:false,
+      enableInsecureRoomNameWarning:true,
+      useHostPageLocalStorage:true
+    },
+    interfaceConfigOverwrite:{
+      MOBILE_APP_PROMO:false,
+      TILE_VIEW_MAX_COLUMNS:4,
+      DISABLE_JOIN_LEAVE_NOTIFICATIONS:false
+    }
+  });
+  jitsiApi.addEventListener('videoConferenceJoined',function(){
+    showToast('Connected to the live classroom.');
+  });
+  jitsiApi.addEventListener('readyToClose',function(){
+    leaveMeet();
+  });
+  jitsiApi.addEventListener('cameraError',function(){
+    showToast('Camera access was not available. You can continue with audio.',true);
+  });
+}
+
+function getMeetingInviteUrl(){
+  return location.origin+location.pathname+'#class='+encodeURIComponent(currentMeetCode);
+}
+function copyMeetingInvite(){
+  const url=getMeetingInviteUrl();
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(url).then(()=>showToast('Invitation link copied.'));
+  }else{
+    prompt('Copy this invitation link:',url);
+  }
+}
+function openMeetingInNewTab(){
+  const url='https://meet.jit.si/'+encodeURIComponent(currentMeetCode);
+  window.open(url,'_blank','noopener,noreferrer');
+}
+function leaveMeet(){
+  if(jitsiApi){try{jitsiApi.dispose();}catch(e){} jitsiApi=null;}
+  inMeet=false;micOn=true;camOn=true;
+  currentMeetCode='';currentMeetTitle='';
+  if(location.hash.startsWith('#class=')){history.replaceState(null,'',location.pathname+location.search);}
+  if(currentUser&&currentUser.role==='student'){
+    document.getElementById('studentDash').style.display='block';
+    switchStudentTab('classroom',null);
+  }else if(currentUser){
+    renderClassroom();
+  }else{
+    document.getElementById('loginPage').style.display='flex';
+    document.getElementById('dashboard').style.display='none';
+    document.getElementById('studentDash').style.display='none';
+  }
 }
 function switchMeetTab(tab,el){
   document.getElementById('meetChatPanel').style.display=tab==='chat'?'flex':'none';
@@ -1446,12 +1529,8 @@ function sendMeetChat(){
 function scrollMeetChat(){const c=document.getElementById('meetChatMessages');if(c)c.scrollTop=c.scrollHeight;}
 function toggleMic(){micOn=!micOn;renderClassroom();}
 function toggleCam(){camOn=!camOn;renderClassroom();}
-function endMeet(){
-  const idx=DB.activeMeets.findIndex(m=>m.code===currentMeetCode);
-  if(idx>-1)DB.activeMeets.splice(idx,1);
-  inMeet=false;currentMeetCode='';micOn=true;camOn=true;meetChatMsgs=[];
-  showToast(t('meet_ended'));renderClassroom();
-}
+function endMeet(){leaveMeet();}
+function copyMeetCode(){copyMeetingInvite();}
 function copyMeetCode(){
   navigator.clipboard?.writeText(currentMeetCode).then(()=>showToast('Code copied: '+currentMeetCode)).catch(()=>showToast('Code: '+currentMeetCode));
 }
@@ -1570,6 +1649,9 @@ function showToast(msg,isErr=false,isWarn=false){
 
 // INIT
 applyI18n();
+if(location.hash.startsWith('#class=')){
+  setTimeout(()=>openStudentJoin(),150);
+}
 </script>
 </body>
 </html>
