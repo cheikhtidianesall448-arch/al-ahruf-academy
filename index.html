@@ -60,11 +60,13 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);co
 <div class="wrap" id="app"></div>
 <dialog id="dlg"></dialog><div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>window.addEventListener('error',e=>{console.error('Al-Ahruf startup error:',e.error||e.message);const a=document.getElementById('app');if(a&&!a.innerHTML.trim())a.innerHTML='<div class="card"><h2>Al-Ahruf Academy</h2><p class="mute">The login screen could not start. Please refresh the page.</p><button class="btn" onclick="location.reload()">Refresh</button></div>';});</script>
 <script src="supabase-config.js"></script>
 <script>
 const AHRUF_CFG=window.AHRUF_SUPABASE||{};
-const ONLINE=!!(AHRUF_CFG.url&&AHRUF_CFG.key&&AHRUF_CFG.url.indexOf('YOUR_')<0&&AHRUF_CFG.key.indexOf('YOUR_')<0);
-const sb=ONLINE?supabase.createClient(AHRUF_CFG.url,AHRUF_CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
+const SUPABASE_READY=!!(window.supabase&&typeof window.supabase.createClient==='function');
+const ONLINE=SUPABASE_READY&&!!(AHRUF_CFG.url&&AHRUF_CFG.key&&AHRUF_CFG.url.indexOf('YOUR_')<0&&AHRUF_CFG.key.indexOf('YOUR_')<0);
+const sb=ONLINE?window.supabase.createClient(AHRUF_CFG.url,AHRUF_CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
 let onlineBusy=false;
 async function onlineApi(action,payload={}){
   if(!ONLINE||!sb) throw new Error('Online database is not configured yet.');
