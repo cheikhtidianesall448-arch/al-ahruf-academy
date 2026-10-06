@@ -82,41 +82,29 @@ const API_BASE=ONLINE?AHRUF_CFG.url.replace(/\/$/,'')+'/functions/v1/academy-api
 async function onlineApi(action,payload={}){
   if(!ONLINE||!sb) throw new Error('Online database is not configured yet.');
 
-  // The new academy-api is REST-based. Keep this small compatibility
-  // layer so the existing academy UI can use the new backend.
-  if(action==='login'){
-    const {data,error}=await sb.auth.signInWithPassword({
-      email:String(payload.username||'').trim(),
-      password:String(payload.password||'')
-    });
-    if(error) throw error;
-    const dash=await onlineApi('dashboard');
-    return {session:data.session,user:{
-      id:data.user?.id,
-      name:[data.profile?.first_name,data.profile?.last_name].filter(Boolean).join(' ')||data.user?.email,
-      role:data.profile?.role
-    },state:S};
+  // All academy-api calls use POST. Login is performed by the secure Edge Function,
+  // which resolves usernames/student IDs to the real Supabase Auth email.
+  const body={action,...payload};
+  const headers={'Content-Type':'application/json','apikey':AHRUF_CFG.key};
+
+  if(action!=='login'){
+    const {data:{session}}=await sb.auth.getSession();
+    if(session?.access_token) headers.Authorization='Bearer '+session.access_token;
   }
 
-  const {data:{session}}=await sb.auth.getSession();
-  const headers={'Content-Type':'application/json'};
-  if(session?.access_token) headers.Authorization='Bearer '+session.access_token;
-
-  let method='GET', path='/'+String(action).replace(/^\//,'');
-  if(action==='dashboard') path='/dashboard';
-  else if(action==='students') path='/students';
-  else if(action==='teachers') path='/teachers';
-  else if(action==='courses') path='/courses';
-  else if(action==='surahs') path='/surahs';
-  else if(action==='classes') path='/classes';
-  else if(action==='attendance') path='/attendance';
-  else if(action==='notifications') path='/notifications';
-  else if(action==='payments') path='/payments';
-  else if(action==='save_state') return {success:true,localOnly:true};
-
-  const res=await fetch(API_BASE+path,{method,headers});
+  const res=await fetch(API_BASE,{method:'POST',headers,body:JSON.stringify(body)});
   const data=await res.json().catch(()=>({}));
-  if(!res.ok||data?.success===false) throw new Error(data?.error||('API request failed: '+res.status));
+  if(!res.ok||data?.error) throw new Error(data?.error||('API request failed: '+res.status));
+
+  // The API signs the user in server-side. Install that session in this browser
+  // so all subsequent database/API requests are authenticated.
+  if(action==='login' && data.session?.access_token && data.session?.refresh_token){
+    const {error}=await sb.auth.setSession({
+      access_token:data.session.access_token,
+      refresh_token:data.session.refresh_token
+    });
+    if(error) throw error;
+  }
   return data;
 }
 async function loadOnlineState(){
@@ -124,7 +112,7 @@ async function loadOnlineState(){
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session)return false;
-    const data=await onlineApi('dashboard');
+    const data=await onlineApi('get_state');
     if(data?.user)user={...user,...data.user};
     if(data?.profile?.role)user.role=data.profile.role;
     if(data?.profile?.first_name||data?.profile?.last_name){
