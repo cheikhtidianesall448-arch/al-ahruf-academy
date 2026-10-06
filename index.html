@@ -78,7 +78,7 @@ try{
   ONLINE=false;
 }
 let onlineBusy=false;
-const API_BASE=ONLINE?AHRUF_CFG.url.replace(/\\/$/,'')+'/functions/v1/academy-api':'';
+const API_BASE=ONLINE?AHRUF_CFG.url.replace(/\/$/,'')+'/functions/v1/academy-api':'';
 async function onlineApi(action,payload={}){
   if(!ONLINE||!sb) throw new Error('Online database is not configured yet.');
 
@@ -102,7 +102,7 @@ async function onlineApi(action,payload={}){
   const headers={'Content-Type':'application/json'};
   if(session?.access_token) headers.Authorization='Bearer '+session.access_token;
 
-  let method='GET', path='/'+String(action).replace(/^\\//,'');
+  let method='GET', path='/'+String(action).replace(/^\//,'');
   if(action==='dashboard') path='/dashboard';
   else if(action==='students') path='/students';
   else if(action==='teachers') path='/teachers';
