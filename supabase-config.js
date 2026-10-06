@@ -1,7 +1,8 @@
 // Al-Ahruf Academy — Supabase client configuration
-// Paste ONLY the browser-safe Publishable Key here.
+// Browser-safe Publishable Key only.
 // Never put a Supabase Secret/Service key in this file.
+
 window.AHRUF_SUPABASE = {
-  url: "https://gdbnomubpfwclpkhppwe.supabase.co",
-  key: "sb_publishable_laQPqhFz7N9QbkwQmCQ9Lw_N4O7OdLs"
+  url: "https://bxwrdutoauonbfdbrhsu.supabase.co",
+  key: "sb_publishable_wNR2PB3BxbDsRFFp_oaEUA_-K2aP9SP"
 };
