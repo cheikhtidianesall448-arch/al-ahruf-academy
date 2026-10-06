@@ -114,10 +114,10 @@ async function loadOnlineState(){
     if(!session)return false;
     const data=await onlineApi('get_state');
     if(data?.user)user={...user,...data.user};
-    if(data?.profile?.role)user.role=data.profile.role;
-    if(data?.profile?.first_name||data?.profile?.last_name){
-      user.name=[data.profile.first_name,data.profile.last_name].filter(Boolean).join(' ');
-    }
+    if(data?.user?.username)user.id=data.user.username;
+    if(data?.user?.role)user.role=data.user.role;
+    if(data?.user?.name)user.name=data.user.name;
+    if(data?.state)S=data.state;
     return true;
   }catch(e){console.warn('Al-Ahruf online session:',e);return false}
 }
