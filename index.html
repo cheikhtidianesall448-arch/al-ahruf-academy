@@ -65,8 +65,18 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);co
 <script>
 const AHRUF_CFG=window.AHRUF_SUPABASE||{};
 const SUPABASE_READY=!!(window.supabase&&typeof window.supabase.createClient==='function');
-const ONLINE=SUPABASE_READY&&!!(AHRUF_CFG.url&&AHRUF_CFG.key&&AHRUF_CFG.url.indexOf('YOUR_')<0&&AHRUF_CFG.key.indexOf('YOUR_')<0);
-const sb=ONLINE?window.supabase.createClient(AHRUF_CFG.url,AHRUF_CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
+let sb=null;
+let ONLINE=false;
+try{
+  if(SUPABASE_READY&&AHRUF_CFG.url&&AHRUF_CFG.key&&AHRUF_CFG.url.indexOf('YOUR_')<0&&AHRUF_CFG.key.indexOf('YOUR_')<0){
+    sb=window.supabase.createClient(AHRUF_CFG.url,AHRUF_CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    ONLINE=!!sb;
+  }
+}catch(e){
+  console.warn('Supabase client could not start; continuing in local mode.',e);
+  sb=null;
+  ONLINE=false;
+}
 let onlineBusy=false;
 const API_BASE=ONLINE?AHRUF_CFG.url.replace(/\\/$/,'')+'/functions/v1/academy-api':'';
 async function onlineApi(action,payload={}){
