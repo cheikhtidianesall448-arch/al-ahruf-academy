@@ -68,11 +68,45 @@ const SUPABASE_READY=!!(window.supabase&&typeof window.supabase.createClient==='
 const ONLINE=SUPABASE_READY&&!!(AHRUF_CFG.url&&AHRUF_CFG.key&&AHRUF_CFG.url.indexOf('YOUR_')<0&&AHRUF_CFG.key.indexOf('YOUR_')<0);
 const sb=ONLINE?window.supabase.createClient(AHRUF_CFG.url,AHRUF_CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
 let onlineBusy=false;
+const API_BASE=ONLINE?AHRUF_CFG.url.replace(/\\/$/,'')+'/functions/v1/academy-api':'';
 async function onlineApi(action,payload={}){
   if(!ONLINE||!sb) throw new Error('Online database is not configured yet.');
-  const {data,error}=await sb.functions.invoke('academy-api',{body:{action,...payload}});
-  if(error) throw error;
-  if(data?.error) throw new Error(data.error);
+
+  // The new academy-api is REST-based. Keep this small compatibility
+  // layer so the existing academy UI can use the new backend.
+  if(action==='login'){
+    const {data,error}=await sb.auth.signInWithPassword({
+      email:String(payload.username||'').trim(),
+      password:String(payload.password||'')
+    });
+    if(error) throw error;
+    const dash=await onlineApi('dashboard');
+    return {session:data.session,user:{
+      id:data.user?.id,
+      name:[data.profile?.first_name,data.profile?.last_name].filter(Boolean).join(' ')||data.user?.email,
+      role:data.profile?.role
+    },state:S};
+  }
+
+  const {data:{session}}=await sb.auth.getSession();
+  const headers={'Content-Type':'application/json'};
+  if(session?.access_token) headers.Authorization='Bearer '+session.access_token;
+
+  let method='GET', path='/'+String(action).replace(/^\\//,'');
+  if(action==='dashboard') path='/dashboard';
+  else if(action==='students') path='/students';
+  else if(action==='teachers') path='/teachers';
+  else if(action==='courses') path='/courses';
+  else if(action==='surahs') path='/surahs';
+  else if(action==='classes') path='/classes';
+  else if(action==='attendance') path='/attendance';
+  else if(action==='notifications') path='/notifications';
+  else if(action==='payments') path='/payments';
+  else if(action==='save_state') return {success:true,localOnly:true};
+
+  const res=await fetch(API_BASE+path,{method,headers});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok||data?.success===false) throw new Error(data?.error||('API request failed: '+res.status));
   return data;
 }
 async function loadOnlineState(){
@@ -80,9 +114,12 @@ async function loadOnlineState(){
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session)return false;
-    const data=await onlineApi('get_state');
-    if(data?.state)S=data.state;
-    if(data?.user)user={...data.user};
+    const data=await onlineApi('dashboard');
+    if(data?.user)user={...user,...data.user};
+    if(data?.profile?.role)user.role=data.profile.role;
+    if(data?.profile?.first_name||data?.profile?.last_name){
+      user.name=[data.profile.first_name,data.profile.last_name].filter(Boolean).join(' ');
+    }
     return true;
   }catch(e){console.warn('Al-Ahruf online session:',e);return false}
 }
@@ -126,10 +163,13 @@ async function login(role,u,p){
    onlineBusy=true;
    try{
      const d=await onlineApi('login',{role,username:u,password:p});
-     if(d.session)await sb.auth.setSession(d.session);
+     if(d.user?.role && d.user.role!==role){
+       await sb.auth.signOut();
+       throw new Error('Account role does not match the selected login.');
+     }
      user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
      toast('Signed in securely');render();
-   }catch(e){console.error(e);toast('Wrong username or password')}
+   }catch(e){console.error(e);toast(e.message==='Account role does not match the selected login.'?e.message:'Wrong email or password')}
    finally{onlineBusy=false}
    return;
  }
