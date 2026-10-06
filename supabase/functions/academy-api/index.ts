@@ -47,12 +47,21 @@ export default {
           .or("username.ilike." + username + ",email.ilike." + username)
           .maybeSingle();
 
-        if (pe || !profile || profile.role !== wantedRole || !profile.email) {
+        if (pe || !profile || profile.role !== wantedRole) {
+          return json({ error: "Invalid login" }, 401);
+        }
+
+        // Always use the email currently stored in Supabase Auth.
+        // The profile table can contain an older/different email after an account change.
+        const { data: authUserData, error: authUserError } =
+          await ctx.supabaseAdmin.auth.admin.getUserById(profile.id);
+        const authEmail = authUserData?.user?.email || profile.email;
+        if (authUserError || !authEmail) {
           return json({ error: "Invalid login" }, 401);
         }
 
         const { data: authData, error: ae } = await ctx.supabaseAdmin.auth.signInWithPassword({
-          email: profile.email,
+          email: authEmail,
           password,
         });
         if (ae || !authData.session) return json({ error: "Invalid login" }, 401);
