@@ -59,10 +59,29 @@ function studentState(state: any, username: string) {
   const id = lower(username);
   const s = cleanState(state);
 
+  // Resolve legacy assignments stored as either a teacher username or display name.
+  const teacherKey = (value: unknown) => {
+    const raw = lower(value);
+    if (!raw) return "";
+    const match = s.teachers.find((t: any) =>
+      lower(t?.username) === raw || lower(t?.name) === raw
+    );
+    return lower(match?.username) || raw;
+  };
+
   const me = s.students.find((student: any) => lower(student?.id) === id);
-  const teacher = lower(me?.teacher);
+  const teacher = teacherKey(me?.teacher);
   s.messagePeers = teacher
-    ? s.students.filter((student: any) => lower(student?.teacher) === teacher && lower(student?.id) !== id).map((student: any) => ({ id: student.id, name: student.name, teacher: student.teacher }))
+    ? s.students
+        .filter((student: any) =>
+          lower(student?.id) !== id && teacherKey(student?.teacher) === teacher
+        )
+        .map((student: any) => ({
+          id: student.id,
+          name: student.name,
+          sex: student.sex,
+          teacher: student.teacher,
+        }))
     : [];
   s.students = s.students.filter(
     (student: any) => lower(student?.id) === id,
