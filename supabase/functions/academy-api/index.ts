@@ -120,11 +120,10 @@ function buildNotifications(state: any, profile: any) {
     return lower(n?.target) === me;
   });
   const now = new Date();
+  if (role === "teacher") return out.sort((a:any,b:any)=>String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
   const students = role === "student"
     ? s.students.filter((x: any) => lower(x?.id) === me)
-    : role === "teacher"
-      ? s.students.filter((x: any) => lower(x?.teacher) === me)
-      : s.students;
+    : s.students;
   for (const student of students) {
     for (const p of s.pay.filter((x: any) => lower(x?.sid) === lower(student?.id) && x?.st !== "paid" && x?.due)) {
       const due = new Date(String(p.due) + "T23:59:59");
