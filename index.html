@@ -103,17 +103,28 @@ body:has(.hero) .hero>.card .badge{background:transparent;padding:0}
 <script>window.addEventListener('error',e=>{console.error('Al-Ahruf startup error:',e.error||e.message);const a=document.getElementById('app');if(a&&!a.innerHTML.trim())a.innerHTML='<div class="card"><h2>Al-Ahruf Academy</h2><p class="mute">The login screen could not start. Please refresh the page.</p><button class="btn" onclick="location.reload()">Refresh</button></div>';});</script>
 <script src="supabase-config.js"></script>
 <script>
+/* Built-in fallback for GitHub Pages: the publishable key is safe for browser use. */
+if(!window.AHRUF_SUPABASE){
+  window.AHRUF_SUPABASE={
+    url:"https://bxwrdutoauonbfdbrhsu.supabase.co",
+    key:"sb_publishable_wNR2PB3BxbDsRFFp_oaEUA_-K2aP9SP"
+  };
+}
+</script>
+<script>
 const AHRUF_CFG=window.AHRUF_SUPABASE||{};
 const SUPABASE_READY=!!(window.supabase&&typeof window.supabase.createClient==='function');
 let sb=null;
 let ONLINE=false;
+let SUPABASE_ERROR='';
 try{
   if(SUPABASE_READY&&AHRUF_CFG.url&&AHRUF_CFG.key&&AHRUF_CFG.url.indexOf('YOUR_')<0&&AHRUF_CFG.key.indexOf('YOUR_')<0){
     sb=window.supabase.createClient(AHRUF_CFG.url,AHRUF_CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
     ONLINE=!!sb;
   }
 }catch(e){
-  console.warn('Supabase client could not start; continuing in local mode.',e);
+  console.error('Supabase client could not start:',e);
+  SUPABASE_ERROR=e?.message||String(e);
   sb=null;
   ONLINE=false;
 }
