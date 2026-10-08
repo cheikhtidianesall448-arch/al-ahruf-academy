@@ -239,7 +239,17 @@ async function onlineApi(action,payload={}){
     if(session?.access_token) headers.Authorization='Bearer '+session.access_token;
   }
 
-  const res=await fetch(API_BASE,{method:'POST',headers,body:JSON.stringify(body)});
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  let res;
+  try{
+    res=await fetch(API_BASE,{method:'POST',headers,body:JSON.stringify(body),signal:controller.signal});
+  }catch(e){
+    if(e?.name==='AbortError') throw new Error('The academy server did not respond. Please try again.');
+    throw e;
+  }finally{
+    clearTimeout(timeout);
+  }
   const data=await res.json().catch(()=>({}));
   if(!res.ok||data?.error) throw new Error(data?.error||('API request failed: '+res.status));
 
@@ -600,6 +610,7 @@ function editS(id){if(user.role!=='admin'){toast('Only the administrator can edi
  if(S.students.some(x=>x.id===nid&&x.id!==id)){toast('That generated ID is already used');return false}
  const age=Number(f.age.value);if(!Number.isInteger(age)||age<1||age>120){toast('Enter a valid age between 1 and 120.');return false}if(!['Male','Female'].includes(f.sex.value)){toast('Select Male or Female.');return false}const d={id:nid,name:f.name.value.trim(),age,sex:f.sex.value,pw:f.pw.value,phone:f.phone.value.trim(),email:f.email.value.trim(),teacher:f.teacher.value.trim(),level:f.level.value,pay:f.pay.value,sur:[...f.sur.selectedOptions].map(o=>o.value)};
  if(ONLINE){
+  toast('Saving student...');
   const result=await onlineApi('upsert_student',{student:d,existingId:id||null});
   if(result.state)S=cleanState(result.state);
   // Keep the edited age/sex in the current state even if an older deployed
