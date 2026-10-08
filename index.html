@@ -268,7 +268,7 @@ function notifications(){const list=[...(S.notifications||[])].sort((a,b)=>Strin
  const admin=user.role==='admin';
  const items=admin
   ? [['overview','Overview'],['students','Students'],['teachers','Teachers'],['attendance','Attendance'],['payments','Payments'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['notifications','Notifications'+(unreadCount()?' ('+unreadCount()+')':'')],['class','Live class']]
-  : [['students','My students'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['notifications','Notifications'+(unreadCount()?' ('+unreadCount()+')':'')],['class','Live class']];
+  : [['students','My students'],['attendance','Attendance'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['notifications','Notifications'+(unreadCount()?' ('+unreadCount()+')':'')],['class','Live class']];
  const allowed=items.map(x=>x[0]);
  if(!allowed.includes(tab))tab=admin?'overview':'students';
  const pages={overview,students,teachers,attendance,payments,messages,notifications,klass};
@@ -333,9 +333,9 @@ function editS(id){if(user.role!=='admin'){toast('Only the administrator can edi
    save();
  }
  toast(ONLINE?'Student account created/updated online':'Student saved');render()})}
-function attendance(){if(user.role!=='admin')return '<div class="card"><b>Permission denied.</b></div>';const d=new Date().toISOString().slice(0,10);
+function attendance(){if(user.role!=='admin'&&user.role!=='teacher')return '<div class="card"><b>Permission denied.</b></div>';const d=new Date().toISOString().slice(0,10);
  return `<div class="card"><div class="row between"><h3>Attendance</h3><input type="date" id="ad" value="${d}" style="max-width:180px" onchange="render()"></div><br><div class="tw"><table><thead><tr><th>Student</th><th>Status</th><th>Memorization</th></tr></thead><tbody>${S.students.map(s=>{const r=(S.att[d]||{})[s.id]||{};return `<tr><td><b>${esc(s.name)}</b></td><td><select id="a-${s.id}"><option value="present" ${r.a==='present'?'selected':''}>Present</option><option value="late" ${r.a==='late'?'selected':''}>Late</option><option value="absent" ${r.a==='absent'?'selected':''}>Absent</option></select></td><td><select id="m-${s.id}"><option value="memorized">Memorized</option><option value="partial" ${r.m==='partial'?'selected':''}>Partial</option><option value="not" ${r.m==='not'?'selected':''}>Not memorized</option></select></td></tr>`}).join('')}</tbody></table></div><div class="row end"><button class="btn" onclick="saveAtt()">Save attendance</button></div></div>`}
-function saveAtt(){if(user.role!=='admin')return toast('Only the administrator can edit attendance.');const d=$('#ad').value;S.att[d]={};S.students.forEach(s=>S.att[d][s.id]={a:$('#a-'+s.id).value,m:$('#m-'+s.id).value});save();toast('Attendance saved')}
+function saveAtt(){if(user.role!=='admin'&&user.role!=='teacher')return toast('You do not have permission to edit attendance.');const d=$('#ad').value;S.att[d]={};S.students.forEach(s=>S.att[d][s.id]={a:$('#a-'+s.id).value,m:$('#m-'+s.id).value});save();toast('Attendance saved')}
 function payments(){if(user.role!=='admin')return '<div class="card"><b>Permission denied.</b></div>';const nm=id=>(S.students.find(s=>s.id===id)||{}).name||id;
  return `<div class="card"><div class="row between"><h3>Payments</h3><button class="btn gold" onclick="newInv()">New invoice</button></div><br><div class="tw"><table><thead><tr><th>Invoice</th><th>Student</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${S.pay.map((p,i)=>`<tr><td>${esc(p.inv)}</td><td>${esc(nm(p.sid))}</td><td>$${p.amt}</td><td>${esc(p.due)}</td><td><span class="badge ${p.st}">${p.st}</span></td><td>${p.st!=='paid'?`<button class="btn ghost sm" onclick="markPaid(${i})">Mark paid</button>`:''}</td></tr>`).join('')}</tbody></table></div></div>`}
 function markPaid(i){if(user.role!=='admin')return toast('Only the administrator can edit payments.');const p=S.pay[i];p.st='paid';const s=S.students.find(x=>x.id===p.sid);if(s)s.pay='paid';save();toast('Marked as paid');render()}
