@@ -79,7 +79,9 @@ body:has(.hero) .hero>.card .tabs{display:flex;gap:3px;border:1px solid #d8e1dd;
 body:has(.hero) .hero>.card .tabs button{border:0;background:transparent;color:var(--mute);padding:12px 8px;border-radius:999px;font:700 .9rem Figtree;cursor:pointer}
 body:has(.hero) .hero>.card .tabs button.on{background:var(--pri);color:#fff;box-shadow:0 4px 12px rgba(11,74,66,.2)}
 body:has(.hero) .hero>.card label{font-size:.78rem}
-body:has(.hero) .hero>.card input{padding:14px 15px;border-radius:13px;background:#fbfcfb;border-color:#d8e2de}
+body:has(.hero) .hero>.card input{padding:14px 15px;border-radius:13px;background:#fff;color:#000;border-color:#d8e2de}
+body:has(.hero) .hero>.card input::placeholder{color:#555;opacity:1}
+body:has(.hero) .hero>.card input:focus{color:#000;background:#fff}
 body:has(.hero) .hero>.card input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(19,112,99,.1)}
 body:has(.hero) .hero>.card form .btn{width:100%;margin-top:20px;padding:14px;border-radius:13px}
 body:has(.hero) .hero>.card .badge{background:transparent;padding:0}
