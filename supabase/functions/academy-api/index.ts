@@ -207,14 +207,6 @@ async function sendMessage(ctx: any, body: any) {
 
   return {ok:true,state:{messages:visibleMessages(state,profile),notifications:buildNotifications(state,profile)}};
 }
-only message the academy or your assigned teacher/student.");
-  const item = { id:crypto.randomUUID(), from:profile.username, fromName:profileName(profile), fromRole:role, to:target.username, toName:profileName(target), toRole:targetRole, subject:subject||"Message from Al-Ahruf Academy", category, body:message, status:"open", createdAt:new Date().toISOString(), readBy:[profile.username] };
-  state.messages.push(item);
-  state.notifications.push({id:"msg-"+item.id,type:"message",target:target.username,title:"New message",body:subject||"You have a new message.",createdAt:item.createdAt,read:false});
-  const {error}=await ctx.supabaseAdmin.from("academy_state").update({state:cleanState(state),updated_at:new Date().toISOString()}).eq("id",1);
-  if(error) throw error;
-  return {ok:true,state:{messages:visibleMessages(state,profile),notifications:buildNotifications(state,profile)}};
-}
 
 async function sendPaymentReminders(ctx: any) {
   await requireStaff(ctx, ["admin"]);
