@@ -358,11 +358,11 @@ const I18N={
   'Add your first student to see rankings.':'أضف أول طالب لرؤية الترتيب.'
  }
 };
-let currentLang=localStorage.getItem(LANG_KEY)||'en';
+let currentLang='en';try{const savedLang=window.localStorage&&window.localStorage.getItem(LANG_KEY);if(savedLang&&LANGS[savedLang])currentLang=savedLang}catch(e){console.warn('Language preference storage unavailable:',e)}
 function t(key){return (I18N[currentLang]&&I18N[currentLang][key])||key}
 function setLanguage(lang){
  if(!LANGS[lang])return;
- currentLang=lang;localStorage.setItem(LANG_KEY,lang);
+ currentLang=lang;try{window.localStorage&&window.localStorage.setItem(LANG_KEY,lang)}catch(e){}
  document.documentElement.lang=lang;document.body.classList.toggle('rtl',lang==='ar');
  render();
 }
