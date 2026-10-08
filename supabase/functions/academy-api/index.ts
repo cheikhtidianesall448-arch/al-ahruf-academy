@@ -799,10 +799,15 @@ async function upsertStudent(ctx: any, body: any) {
     teacher: teacherUsername,
   };
 
-  const students = (state.students || []).filter(
-    (x: any) => lower(x?.id) !== normalizedStudentId,
+  const students = Array.isArray(state.students) ? [...state.students] : [];
+  const existingIndex = students.findIndex(
+    (x: any) => lower(x?.id) === normalizedStudentId,
   );
-  students.push(cleanStudent);
+  if (existingIndex >= 0) {
+    students[existingIndex] = { ...students[existingIndex], ...cleanStudent };
+  } else {
+    students.push(cleanStudent);
+  }
   state.students = students;
 
   const { error: stateError } = await ctx.supabaseAdmin
