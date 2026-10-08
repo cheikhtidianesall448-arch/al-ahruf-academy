@@ -529,8 +529,16 @@ function safeLoginFallback(err){
  console.error('Al-Ahruf render error:',err);
 }
 async function startApp(){
- try{if(ONLINE)await loadOnlineState()}catch(e){console.warn('Startup session load skipped:',e)}
+ // Render the login screen immediately. Never make the whole interface wait for Supabase.
  try{render()}catch(e){safeLoginFallback(e)}
+ if(ONLINE){
+   try{
+     const sessionPromise=loadOnlineState();
+     const timeout=new Promise(resolve=>setTimeout(()=>resolve(false),5000));
+     const restored=await Promise.race([sessionPromise,timeout]);
+     if(restored)render();
+   }catch(e){console.warn('Startup session load skipped:',e)}
+ }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startApp,{once:true});else startApp();
 </script>
