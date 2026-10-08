@@ -493,7 +493,7 @@ function messageRecipients(){const me=String(user.id||user.username||'').toLower
 async function sendPlatformMessage(f){
  const fileInput=f.attachment,file=fileInput?.files?.[0];
  const d={to:f.to.value,subject:'',category:'general',message:f.message.value.trim()};
- if(!d.to&&f.group?.checked)d.to='group:'+String((S.students||[]).find(x=>String(x.id)===String(user.id))?.teacher||'');
+ if(f.group?.checked)d.to='group:'+String((S.students||[]).find(x=>String(x.id)===String(user.id))?.teacher||'');
  if(!d.to||(!d.message&&!file))return false;
  if(file){
   if(file.size>10*1024*1024){toast('Please choose a file smaller than 10 MB.');return false}
@@ -511,7 +511,7 @@ async function sendPlatformMessage(f){
 function composeMessage(to){
  const opts=messageRecipients().map(x=>'<option value="'+esc(x.u)+'" '+(x.u===to?'selected':'')+'>'+esc(x.n)+' — '+esc(x.r)+'</option>').join('');
  const student=(S.students||[]).find(x=>String(x.id)===String(user.id));
- const groupOption=user.role==='student'&&student?.teacher?'<label class="row"><input type="checkbox" name="group" style="width:auto"> Send to my class group</label>':'';
+ const groupOption=user.role==='student'&&student?.teacher?'<label class="row"><input type="checkbox" name="group" style="width:auto" '+(to==='group:'+String(student.teacher)?'checked':'')+'> Send to my class group</label>':'';
  modal('New message','<label>Recipient</label><select name="to">'+opts+'</select>'+groupOption+'<label>Message</label><textarea name="message" rows="5" placeholder="Write a message..."></textarea><label>Attach a file (PDF, book, music, video, or picture)</label><input type="file" name="attachment" accept=".pdf,.epub,.txt,.doc,.docx,.mp3,.wav,.m4a,.mp4,.mov,.webm,.jpg,.jpeg,.png,.gif,.webp" style="padding:10px"><p class="mute">Maximum file size: 10 MB.</p>',sendPlatformMessage,'Send message')
 }
 function replyMessage(to){composeMessage(to)}
