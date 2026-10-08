@@ -148,7 +148,14 @@ async function sendMessage(ctx: any, body: any) {
   const state = await getAcademyState(ctx);
   const role = normalizedRole(profile.role);
   const me = lower(profile.username);
-  const target = await getProfile(ctx, (await ctx.supabaseAdmin.from("profiles").select("id").ilike("username",to).limit(1)).data?.[0]?.id || "");
+  const found = await ctx.supabaseAdmin.from("profiles").select("id").ilike("username",to).limit(1);
+  if (found.error) throw found.error;
+  let target = found.data?.[0] ? await getProfile(ctx, found.data[0].id) : null;
+  if (!target && to === "ahruf") {
+    const admins = await ctx.supabaseAdmin.from("profiles").select("id").eq("role","admin").neq("is_active",false).limit(2);
+    if (admins.error) throw admins.error;
+    if (admins.data?.length === 1) target = await getProfile(ctx, admins.data[0].id);
+  }
   if (!target || !isActive(target)) throw new Error("Recipient was not found.");
   const targetRole = normalizedRole(target.role);
   const allowed = role === "admin"
