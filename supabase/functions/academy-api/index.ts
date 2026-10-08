@@ -306,6 +306,28 @@ function escapeHtml(value: unknown) {
   return text(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
 }
 
+async function sendEmail(to: string, subject: string, html: string, textBody: string) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  const from = Deno.env.get("RESEND_FROM_EMAIL");
+  if (!apiKey || !from || !to || !to.includes("@")) return { ok: false, skipped: true };
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to: [to], subject, html, text: textBody }),
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error("Resend email failed:", response.status, detail);
+      return { ok: false, error: detail };
+    }
+    return { ok: true };
+  } catch (error) {
+    console.error("Resend request failed:", error);
+    return { ok: false, error: String(error) };
+  }
+}
+
 function profileName(profile: any, fallback = "User") {
   return text(profile?.full_name) ||
     text(profile?.name) ||
