@@ -617,7 +617,7 @@ function editS(id){if(user.role!=='admin'){toast('Only the administrator can edi
   // academy-api function returns a legacy student record.
   const savedIndex=S.students.findIndex(x=>x.id===nid);
   if(savedIndex>=0){
-    S.students[savedIndex]={...S.students[savedIndex],age,sex};
+    S.students[savedIndex]={...S.students[savedIndex],age,sex:f.sex.value};
   }else{
     S.students.push(d);
   }
