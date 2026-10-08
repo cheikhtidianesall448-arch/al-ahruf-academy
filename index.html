@@ -177,12 +177,13 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const SUR="Al-Fatiha,Al-Baqarah,Aal-Imran,An-Nisa,Al-Maidah,Al-Anam,Al-Araf,Al-Anfal,At-Tawbah,Yunus,Hud,Yusuf,Ar-Rad,Ibrahim,Al-Hijr,An-Nahl,Al-Isra,Al-Kahf,Maryam,Ta-Ha,Al-Anbiya,Al-Hajj,Al-Muminun,An-Nur,Al-Furqan,Ash-Shuara,An-Naml,Al-Qasas,Al-Ankabut,Ar-Rum,Luqman,As-Sajdah,Al-Ahzab,Saba,Fatir,Ya-Sin,As-Saffat,Sad,Az-Zumar,Ghafir,Fussilat,Ash-Shura,Az-Zukhruf,Ad-Dukhan,Al-Jathiyah,Al-Ahqaf,Muhammad,Al-Fath,Al-Hujurat,Qaf,Adh-Dhariyat,At-Tur,An-Najm,Al-Qamar,Ar-Rahman,Al-Waqiah,Al-Hadid,Al-Mujadila,Al-Hashr,Al-Mumtahanah,As-Saff,Al-Jumuah,Al-Munafiqun,At-Taghabun,At-Talaq,At-Tahrim,Al-Mulk,Al-Qalam,Al-Haqqah,Al-Maarij,Nuh,Al-Jinn,Al-Muzzammil,Al-Muddaththir,Al-Qiyamah,Al-Insan,Al-Mursalat,An-Naba,An-Naziat,Abasa,At-Takwir,Al-Infitar,Al-Mutaffifin,Al-Inshiqaq,Al-Buruj,At-Tariq,Al-Ala,Al-Ghashiyah,Al-Fajr,Al-Balad,Ash-Shams,Al-Layl,Ad-Duha,Ash-Sharh,At-Tin,Al-Alaq,Al-Qadr,Al-Bayyinah,Az-Zalzalah,Al-Adiyat,Al-Qariah,At-Takathur,Al-Asr,Al-Humazah,Al-Fil,Quraysh,Al-Maun,Al-Kawthar,Al-Kafirun,An-Nasr,Al-Masad,Al-Ikhlas,Al-Falaq,An-Nas".split(',');
 const KEY='ahruf_v2';
 const demo=()=>({students:[
-{id:'ST001',name:'Ahmed Mansour',phone:'221770012345',email:'',pw:'pass123',level:'Intermediate',pay:'paid',sur:['Al-Fatiha','An-Nas','Al-Ikhlas','Al-Falaq','Al-Kawthar']},
-{id:'ST002',name:'Fatima Diop',phone:'221770234567',email:'',pw:'pass123',level:'Beginner',pay:'paid',sur:['Al-Fatiha','Al-Falaq','An-Nas']},
-{id:'ST003',name:'Yusuf Sow',phone:'221770345678',email:'',pw:'pass123',level:'Advanced',pay:'pending',sur:['Al-Fatiha','Al-Baqarah','Aal-Imran','An-Nisa']}],
+{id:'ST001',name:'Ahmed Mansour',phone:'221770012345',email:'',pw:'pass123',level:'Intermediate',pay:'paid',sur:['Al-Fatiha','An-Nas','Al-Ikhlas','Al-Falaq','Al-Kawthar'],teacher:''},
+{id:'ST002',name:'Fatima Diop',phone:'221770234567',email:'',pw:'pass123',level:'Beginner',pay:'paid',sur:['Al-Fatiha','Al-Falaq','An-Nas'],teacher:''},
+{id:'ST003',name:'Yusuf Sow',phone:'221770345678',email:'',pw:'pass123',level:'Advanced',pay:'pending',sur:['Al-Fatiha','Al-Baqarah','Aal-Imran','An-Nisa'],teacher:''}],
+teachers:[],
 pay:[{inv:'INV-001',sid:'ST001',amt:50,due:'2026-10-05',st:'paid'},{inv:'INV-002',sid:'ST003',amt:75,due:'2026-10-15',st:'pending'}],att:{},classes:[]});
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!S)S=demo();
-function cleanState(x){const y=JSON.parse(JSON.stringify(x||{}));(y.students||[]).forEach(s=>delete s.pw);return y}
+function cleanState(x){const y=JSON.parse(JSON.stringify(x||{}));y.students=Array.isArray(y.students)?y.students:[];y.teachers=Array.isArray(y.teachers)?y.teachers:[];(y.students||[]).forEach(s=>delete s.pw);return y}
 let saveTimer=null;
 function save(){
  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
@@ -254,7 +255,31 @@ function doJoin(f){const c=parseCode(f.c.value);if(c.length<4)return toast('Chec
 function nav(items){return `<div class="nav">${items.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('')}</div>`}
 function viewStaff(){
  const admin=user.role==='admin';
- return `<div class="row between"><h2>Welcome, ${esc(user.name)}</h2><span class="badge">${admin?'Administrator':'Teacher'}</span></div><br>`+nav([['overview','Overview'],['students','Students'],['attendance','Attendance'],['payments','Payments'],['class','Live class']])+({overview,students,attendance,payments,klass})[tab==='class'?'klass':tab]()}
+ const items=[['overview','Overview'],['students','Students'],['attendance','Attendance'],['payments','Payments'],['class','Live class']];
+ if(admin)items.splice(2,0,['teachers','Teachers']);
+ return `<div class="row between"><h2>Welcome, ${esc(user.name)}</h2><span class="badge">${admin?'Administrator':'Teacher'}</span></div><br>`+nav(items)+({overview,students,teachers,attendance,payments,klass})[tab==='class'?'klass':tab]()}
+function teacherName(v){const x=(S.teachers||[]).find(t=>String(t.username).toLowerCase()===String(v||'').toLowerCase());return x?.name||v||'Unassigned'}
+function teacherOptions(selected=''){return `<option value="">Unassigned</option>`+(S.teachers||[]).map(t=>`<option value="${esc(t.username)}" ${String(t.username).toLowerCase()===String(selected||'').toLowerCase()?'selected':''}>${esc(t.name)} — ${esc(t.username)}</option>`).join('')}
+function teachers(){
+ if(user.role!=='admin')return '<div class="card"><b>Permission denied.</b></div>';
+ const list=S.teachers||[];
+ return `<div class="row between" style="margin-bottom:12px"><div><h3>Teacher Management</h3><span class="mute">Create teacher accounts and assign students to them.</span></div><button class="btn" onclick="editT()">Add teacher</button></div>
+ <div class="card tw"><table><thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Phone</th><th>Students</th><th></th></tr></thead><tbody>${list.map(t=>`<tr><td><b>${esc(t.name)}</b></td><td>${esc(t.username)}</td><td>${esc(t.email)}</td><td>${esc(t.phone||'')}</td><td>${S.students.filter(s=>String(s.teacher||'').toLowerCase()===String(t.username||'').toLowerCase()).length}</td><td class="row"><button class="btn ghost sm" onclick="editT('${esc(t.username)}')">Edit</button><button class="btn ghost sm" onclick="delT('${esc(t.username)}',this)">Delete</button></td></tr>`).join('')||'<tr><td colspan="6" class="mute">No teachers yet.</td></tr>'}`</tbody></table></div>`}
+function editT(username){
+ const t=(S.teachers||[]).find(x=>String(x.username).toLowerCase()===String(username||'').toLowerCase())||{name:'',username:'',email:'',phone:''};
+ modal(username?'Edit teacher':'Add teacher',`<label>Full name</label><input name="name" required value="${esc(t.name)}"><div class="row"><div style="flex:1"><label>Username</label><input name="username" required value="${esc(t.username)}" ${username?'readonly':''}></div><div style="flex:1"><label>Password ${username?'<span class="mute">(leave blank to keep current)</span>':''}</label><input name="password" type="password" ${username?'':'required'}></div></div><div class="row"><div style="flex:1"><label>Email</label><input name="email" type="email" required value="${esc(t.email||'')}"></div><div style="flex:1"><label>Phone</label><input name="phone" value="${esc(t.phone||'')}"></div></div>`,async f=>{
+ const d={name:f.name.value.trim(),username:f.username.value.trim(),password:f.password.value,email:f.email.value.trim(),phone:f.phone.value.trim()};
+ if(ONLINE){const result=await onlineApi('upsert_teacher',{teacher:d});if(result.state)S=result.state;}
+ else{const i=(S.teachers||[]).findIndex(x=>String(x.username).toLowerCase()===String(username||'').toLowerCase());if(i<0)S.teachers.push({name:d.name,username:d.username,email:d.email,phone:d.phone,active:true});else S.teachers[i]={...S.teachers[i],name:d.name,email:d.email,phone:d.phone};S.students.forEach(s=>{if(String(s.teacher||'').toLowerCase()===String(username||'').toLowerCase())s.teacher=d.username});save();}
+ toast(ONLINE?'Teacher account saved online':'Teacher saved');render()
+ })}
+async function delT(username,b){
+ if(user.role!=='admin')return;
+ if(!b.dataset.s){b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red');return}
+ if(ONLINE){try{const result=await onlineApi('delete_teacher',{username});if(result.state)S=result.state;toast('Teacher deleted');render()}catch(e){toast(e.message||'Delete failed')}}
+ else{S.teachers=(S.teachers||[]).filter(t=>String(t.username).toLowerCase()!==String(username).toLowerCase());S.students.forEach(s=>{if(String(s.teacher||'').toLowerCase()===String(username).toLowerCase())s.teacher=''});save();toast('Teacher deleted');render()}
+}
+
 function overview(){
  const n=S.students.length,avg=n?S.students.reduce((a,s)=>a+lvl(s),0)/n:0,rev=S.pay.filter(p=>p.st==='paid').reduce((a,p)=>a+p.amt,0),due=S.pay.filter(p=>p.st!=='paid').length;
  const top=[...S.students].sort((a,b)=>b.sur.length-a.sur.length).slice(0,5);
@@ -262,7 +287,7 @@ function overview(){
  <div class="card"><h3>Top memorizers</h3><br>${top.map((s,i)=>`<div class="row between" style="margin-bottom:8px"><span>${i+1}. ${esc(s.name)}</span><span class="mute">${s.sur.length} surahs</span></div><div class="bar2"><i style="width:${lvl(s)}%"></i></div>`).join('')||'<p class="mute">Add your first student to see rankings.</p>'}</div>`}
 function students(){return `<div class="row between" style="margin-bottom:12px"><input id="q" placeholder="Search students" oninput="rows()" style="max-width:300px"><button class="btn" onclick="editS()">Add student</button></div><div class="card tw"><table><thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Progress</th><th>Payment</th><th>Teacher</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>`+(setTimeout(rows),'')}
 function rows(){const q=($('#q')?.value||'').toLowerCase(),tb=$('#tb');if(!tb)return;
- tb.innerHTML=S.students.filter(s=>(s.name+s.id).toLowerCase().includes(q)).map(s=>`<tr><td>${esc(s.id)}</td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${s.sur.length}/114</span></td><td><span class="badge ${s.pay}">${s.pay}</span></td><td><span class="mute">${esc(s.teacher||"Unassigned")}</span></td><td class="row"><button class="btn ghost sm" onclick="editS('${s.id}')">Edit</button>${user.role==='admin'?`<button class="btn ghost sm" onclick="delS('${s.id}',this)">Delete</button>`:''}</td></tr>`).join('')||'<tr><td colspan=6 class="mute">No students yet.</td></tr>'}
+ tb.innerHTML=S.students.filter(s=>(s.name+s.id+s.phone+s.email+s.teacher).toLowerCase().includes(q)).map(s=>`<tr><td>${esc(s.id)}</td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${s.sur.length}/114</span></td><td><span class="badge ${s.pay}">${s.pay}</span></td><td><span class="mute">${esc(teacherName(s.teacher))}</span></td><td class="row"><button class="btn ghost sm" onclick="editS('${s.id}')">Edit</button>${user.role==='admin'?`<button class="btn ghost sm" onclick="delS('${s.id}',this)">Delete</button>`:''}</td></tr>`).join('')||'<tr><td colspan=7 class="mute">No students yet.</td></tr>'}
 async function delS(id,b){
  if(b.dataset.s){
    if(ONLINE){
@@ -275,7 +300,7 @@ async function delS(id,b){
 }
 function editS(id){const s=S.students.find(x=>x.id===id)||{id:'ST'+String(S.students.length+1).padStart(3,'0'),name:'',phone:'',email:'',pw:'',level:'Beginner',pay:'pending',sur:[],teacher:''};
  const opt=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('');
- modal(id?'Edit student':'Add student',`<label>Full name</label><input name="name" required value="${esc(s.name)}"><div class="row"><div style="flex:1"><label>Student ID</label><input name="id" required value="${esc(s.id)}"></div><div style="flex:1"><label>Password ${id?'<span class="mute">(leave blank to keep current)</span>':''}</label><input name="pw" ${id?'':'required'} type="password" value="${esc(s.pw||'')}"></div></div><div class="row"><div style="flex:1"><label>Phone</label><input name="phone" value="${esc(s.phone)}"></div><div style="flex:1"><label>Email</label><input name="email" type="email" value="${esc(s.email)}"></div></div><div class="row"><div style="flex:1"><label>Level</label><select name="level">${opt(['Beginner','Intermediate','Advanced'],s.level)}</select></div><div style="flex:1"><label>Payment</label><select name="pay">${opt(['paid','pending','overdue'],s.pay)}</select></div></div><label>Teacher</label><input name="teacher" list="teacher-list" value="${esc(s.teacher||'')}" placeholder="Teacher name"><label>Memorized surahs (Ctrl/Cmd + click)</label><select name="sur" multiple size="6">${SUR.map((x,i)=>`<option value="${x}" ${s.sur.includes(x)?'selected':''}>${i+1}. ${x}</option>`).join('')}</select>`,async f=>{
+ modal(id?'Edit student':'Add student',`<label>Full name</label><input name="name" required value="${esc(s.name)}"><div class="row"><div style="flex:1"><label>Student ID</label><input name="id" required value="${esc(s.id)}"></div><div style="flex:1"><label>Password ${id?'<span class="mute">(leave blank to keep current)</span>':''}</label><input name="pw" ${id?'':'required'} type="password" value="${esc(s.pw||'')}"></div></div><div class="row"><div style="flex:1"><label>Phone</label><input name="phone" value="${esc(s.phone)}"></div><div style="flex:1"><label>Email</label><input name="email" type="email" value="${esc(s.email)}"></div></div><div class="row"><div style="flex:1"><label>Level</label><select name="level">${opt(['Beginner','Intermediate','Advanced'],s.level)}</select></div><div style="flex:1"><label>Payment</label><select name="pay">${opt(['paid','pending','overdue'],s.pay)}</select></div></div><label>Teacher</label><select name="teacher">${teacherOptions(s.teacher)}</select><label>Memorized surahs (Ctrl/Cmd + click)</label><select name="sur" multiple size="6">${SUR.map((x,i)=>`<option value="${x}" ${s.sur.includes(x)?'selected':''}>${i+1}. ${x}</option>`).join('')}</select>`,async f=>{
  const nid=f.id.value.trim();if(S.students.some(x=>x.id===nid&&x.id!==id)){toast('That ID is already used');return false}
  const d={id:nid,name:f.name.value.trim(),pw:f.pw.value,phone:f.phone.value.trim(),email:f.email.value.trim(),teacher:f.teacher.value.trim(),level:f.level.value,pay:f.pay.value,sur:[...f.sur.selectedOptions].map(o=>o.value)};
  if(ONLINE){
