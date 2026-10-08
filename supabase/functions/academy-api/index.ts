@@ -80,22 +80,13 @@ function teacherState(state: any, username: string) {
   const s = cleanState(state);
   const teacher = lower(username);
   s.students = s.students.filter((student: any) => lower(student?.teacher) === teacher);
-  const assigned = new Set(s.students.map((student: any) => lower(student?.id)));
-  s.pay = s.pay.filter((payment: any) => assigned.has(lower(payment?.sid)));
-  const filteredAttendance: Record<string, any> = {};
-  for (const [date, value] of Object.entries(s.att || {})) {
-    if (!value || typeof value !== "object") continue;
-    const day: Record<string, any> = {};
-    for (const [sid, record] of Object.entries(value as Record<string, any>)) {
-      if (assigned.has(lower(sid))) day[sid] = record;
-    }
-    if (Object.keys(day).length) filteredAttendance[date] = day;
-  }
-  s.att = filteredAttendance;
+  // Teachers never receive payment or attendance data.
+  s.pay = [];
+  s.att = {};
   return s;
 }
 
-function visibleMessages(state: any, profile: any) {
+function visibleMessagesfunction visibleMessages(state: any, profile: any) {
   const s = cleanState(state);
   const role = normalizedRole(profile?.role);
   const me = lower(profile?.username);
@@ -107,7 +98,9 @@ function visibleMessages(state: any, profile: any) {
     const from = lower(m?.from);
     const to = lower(m?.to);
     if (from === me || to === me) return true;
-    if (role === "teacher" && (assignedIds.has(from) || assignedIds.has(to))) return true;
+    // Teachers may see messages involving themselves and assigned students,
+    // but never private student-to-admin conversations or complaints.
+    if (role === "teacher" && ((assignedIds.has(from) && to === me) || (assignedIds.has(to) && from === me))) return true;
     return false;
   });
 }
@@ -858,30 +851,10 @@ async function saveState(ctx: any, body: any) {
     return { ok: true };
   }
 
+  // Teachers may save only live-class state. Student, payment,
+  // attendance, and teacher-account data can never be written by a teacher.
   const full = await getAcademyState(ctx);
   const incoming = cleanState(body.state);
-  const assignedIds = new Set(full.students
-    .filter((s: any) => lower(s?.teacher) === lower(profile.username))
-    .map((s: any) => lower(s?.id)));
-
-  full.students = full.students.map((existing: any) => {
-    const id = lower(existing?.id);
-    if (!assignedIds.has(id)) return existing;
-    return incoming.students.find((s: any) => lower(s?.id) === id) || existing;
-  });
-
-  full.pay = full.pay.filter((p: any) => !assignedIds.has(lower(p?.sid)));
-  for (const p of incoming.pay || []) {
-    if (assignedIds.has(lower(p?.sid))) full.pay.push(p);
-  }
-
-  for (const date of Object.keys(incoming.att || {})) {
-    if (!full.att[date]) full.att[date] = {};
-    for (const [sid, record] of Object.entries(incoming.att[date] || {})) {
-      if (assignedIds.has(lower(sid))) full.att[date][sid] = record;
-    }
-  }
-
   if (Array.isArray(incoming.classes)) full.classes = incoming.classes;
 
   const { error } = await ctx.supabaseAdmin.from("academy_state")
@@ -890,7 +863,7 @@ async function saveState(ctx: any, body: any) {
   return { ok: true };
 }
 
-export default {
+export default {export default {
   fetch: withSupabase(
     { auth: ["user", "publishable"] },
     async (req, ctx) => {
