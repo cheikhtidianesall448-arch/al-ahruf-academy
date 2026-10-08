@@ -508,7 +508,7 @@ function viewInvoice(i){const p=S.pay[i];if(!p)return toast('Invoice not found')
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(bootGuard,800)},{once:true});
   else setTimeout(bootGuard,800);
 })();
-</script>
+<\\/script>
 </body></html>');w.document.close()}
 function payments(){if(user.role!=='admin')return '<div class="card"><b>Permission denied.</b></div>';const nm=id=>(S.students.find(s=>s.id===id)||{}).name||id;
  return `<div class="card"><div class="row between"><h3>Payments & Invoices</h3><button class="btn gold" onclick="newInv()">New invoice</button></div><p class="mute">Each invoice belongs to the selected student. It opens as a normal paper-style invoice that can be printed or saved as PDF.</p><br><div class="tw"><table><thead><tr><th>Invoice</th><th>Student</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${S.pay.map((p,i)=>`<tr><td>${esc(p.inv)}</td><td>${esc(nm(p.sid))}</td><td>$${p.amt}</td><td>${esc(p.due)}</td><td><span class="badge ${p.st}">${p.st}</span></td><td><button class="btn ghost sm" onclick="viewInvoice(${i})">Print / Save PDF</button>${p.st!=='paid'?` <button class="btn ghost sm" onclick="markPaid(${i})">Mark paid</button>`:''}</td></tr>`).join('')}</tbody></table></div></div>`}
