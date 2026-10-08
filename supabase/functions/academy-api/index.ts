@@ -148,7 +148,7 @@ async function sendMessage(ctx: any, body: any) {
   const category = text(body.category) || "general";
   if (!requestedTo || !message) throw new Error("Recipient and message are required.");
 
-  const state = await getAcademyState(ctx);
+  const state = ensureMessageState(await getAcademyState(ctx));
   const role = normalizedRole(profile.role);
   const me = lower(profile.username);
 
@@ -197,7 +197,7 @@ async function sendMessage(ctx: any, body: any) {
   const recipientEmail=text(target.email);
   if(recipientEmail) {
     const emailSubject = category === "complaint" ? "New complaint received" : "New Al-Ahruf Academy message";
-    await sendEmail(
+    await sendAcademyEmail(
       recipientEmail,
       emailSubject,
       `<p>Hello ${escapeHtml(profileName(target))},</p><p>You have a new message in <strong>Al-Ahruf International Academy</strong>.</p><p><strong>Subject:</strong> ${escapeHtml(item.subject)}</p><p>Please sign in to the Academy dashboard to read and respond.</p>`,
@@ -230,7 +230,7 @@ async function sendPaymentReminders(ctx: any) {
     let body=`Your payment ${p.inv || ""} is due soon.`;
     if(kind==="due-today") body=`Your payment ${p.inv || ""} is due today.`;
     if(kind==="overdue"){ subject="Al-Ahruf Academy payment overdue"; body=`Your payment ${p.inv || ""} is overdue. Please contact the Academy if you need assistance.`; }
-    const result=await sendEmail(email,subject,
+    const result=await sendAcademyEmail(email,subject,
       `<p>Hello ${escapeHtml(student.name)},</p><p>${escapeHtml(body)}</p><p>Please sign in to the Al-Ahruf Academy dashboard for your payment information.</p>`,
       `Hello ${student.name},\\n\\n${body}\\n\\nPlease sign in to the Al-Ahruf Academy dashboard for your payment information.`);
     if(result.ok){ state.paymentReminders.push({key,sid:student.id,kind,sentAt:new Date().toISOString()}); sent.push({sid:student.id,kind}); }
@@ -302,25 +302,53 @@ function normalizedRole(value: unknown) {
   return r;
 }
 
+function ensureMessageState(state: any) {
+  const s = state && typeof state === "object" ? state : {};
+  s.students = Array.isArray(s.students) ? s.students : [];
+  s.teachers = Array.isArray(s.teachers) ? s.teachers : [];
+  s.pay = Array.isArray(s.pay) ? s.pay : [];
+  s.att = s.att && typeof s.att === "object" ? s.att : {};
+  s.classes = Array.isArray(s.classes) ? s.classes : [];
+  s.messages = Array.isArray(s.messages) ? s.messages : [];
+  s.notifications = Array.isArray(s.notifications) ? s.notifications : [];
+  s.paymentReminders = Array.isArray(s.paymentReminders) ? s.paymentReminders : [];
+  return s;
+}
+
 function escapeHtml(value: unknown) {
   return text(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
 }
 
-async function sendEmail(to: string, subject: string, html: string, textBody: string) {
+async function sendAcademyEmail(to: string, subject: string, html: string, textBody: string) {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   const from = Deno.env.get("RESEND_FROM_EMAIL");
-  if (!apiKey || !from || !to || !to.includes("@")) return { ok: false, skipped: true };
+
+  if (!apiKey || !from || !to || !to.includes("@")) {
+    return { ok: false, skipped: true };
+  }
+
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to: [to], subject, html, text: textBody }),
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject,
+        html,
+        text: textBody,
+      }),
     });
+
     if (!response.ok) {
       const detail = await response.text();
       console.error("Resend email failed:", response.status, detail);
       return { ok: false, error: detail };
     }
+
     return { ok: true };
   } catch (error) {
     console.error("Resend request failed:", error);
