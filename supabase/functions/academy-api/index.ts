@@ -507,6 +507,20 @@ async function upsertStudent(ctx: any, body: any) {
   }
 
   const state = await getAcademyState(ctx);
+  const teacherUsername = text(s.teacher);
+  if (teacherUsername) {
+    const teacherProfile = await ctx.supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .ilike("username", teacherUsername)
+      .eq("role", "teacher")
+      .limit(2);
+    if (teacherProfile.error) throw teacherProfile.error;
+    if (teacherProfile.data?.length !== 1) {
+      throw new Error("The selected teacher account was not found.");
+    }
+  }
+
   const cleanStudent = {
     id: studentId,
     name: fullName,
@@ -515,7 +529,7 @@ async function upsertStudent(ctx: any, body: any) {
     level: text(s.level) || "Beginner",
     pay: text(s.pay) || "pending",
     sur: Array.isArray(s.sur) ? s.sur : [],
-    teacher: text(s.teacher),
+    teacher: teacherUsername,
   };
 
   const students = (state.students || []).filter(
