@@ -611,17 +611,16 @@ function editS(id){if(user.role!=='admin'){toast('Only the administrator can edi
  const age=Number(f.age.value);if(!Number.isInteger(age)||age<1||age>120){toast('Enter a valid age between 1 and 120.');return false}if(!['Male','Female'].includes(f.sex.value)){toast('Select Male or Female.');return false}const d={id:nid,name:f.name.value.trim(),age,sex:f.sex.value,pw:f.pw.value,phone:f.phone.value.trim(),email:f.email.value.trim(),teacher:f.teacher.value.trim(),level:f.level.value,pay:f.pay.value,sur:[...f.sur.selectedOptions].map(o=>o.value)};
  if(ONLINE){
   toast('Saving student...');
-  const result=await onlineApi('upsert_student',{student:d,existingId:id||null});
-  if(result.state)S=cleanState(result.state);
-  // Keep the edited age/sex in the current state even if an older deployed
-  // academy-api function returns a legacy student record.
+  // Do not replace the browser's complete student list with a partial API response.
+  // Update only this student locally, then persist the complete list.
   const savedIndex=S.students.findIndex(x=>x.id===nid);
   if(savedIndex>=0){
-    S.students[savedIndex]={...S.students[savedIndex],age,sex:f.sex.value};
+    S.students[savedIndex]={...S.students[savedIndex],...d};
   }else{
     S.students.push(d);
   }
-  // upsert_student already saves the complete student record in Supabase.
+  await onlineApi('upsert_student',{student:d,existingId:id||null});
+  await onlineApi('save_state',{state:S});
 }else{const i=S.students.findIndex(x=>x.id===id);i<0?S.students.push(d):S.students[i]=d;save();}
  toast(ONLINE?'Student account created/updated online':'Student saved');render()})}
 
