@@ -431,9 +431,12 @@ async function delT(username,b){
 
 function overview(){
  const n=S.students.length,avg=n?S.students.reduce((a,s)=>a+lvl(s),0)/n:0,rev=S.pay.filter(p=>p.st==='paid').reduce((a,p)=>a+p.amt,0),due=S.pay.filter(p=>p.st!=='paid').length;
- const top=[...S.students].sort((a,b)=>b.sur.length-a.sur.length).slice(0,5);
- return `<div class="stats"><div class="card"><b>${n}</b><span>Students</span></div><div class="card"><b>${avg.toFixed(1)}%</b><span>Average Qur'an progress</span></div><div class="card"><b>$${rev}</b><span>Collected</span></div><div class="card"><b>${due}</b><span>Unpaid invoices</span></div></div>
- <div class="card"><h3>Top memorizers</h3><br>${top.map((s,i)=>`<div class="row between" style="margin-bottom:8px"><span>${i+1}. ${esc(s.name)}</span><span class="mute">${s.sur.length} surahs</span></div><div class="bar2"><i style="width:${lvl(s)}%"></i></div>`).join('')||'<p class="mute">Add your first student to see rankings.</p>'}</div>`}
+ const top=[...S.students].sort((a,b)=>b.sur.length-a.sur.length);
+ return '<div class="stats"><div class="card"><b>'+n+'</b><span>Students</span></div><div class="card"><b>'+avg.toFixed(1)+'%</b><span>Average Quran progress</span></div><div class="card"><b>$'+rev+'</b><span>Collected</span></div><div class="card"><b>'+due+'</b><span>Unpaid invoices</span></div></div>'
+ +'<div class="card"><h3>Quran Memorization Ranking</h3><p class="mute">Ranked automatically by the number of memorized surahs.</p><br>'
+ +top.map((s,i)=>'<div class="row between" style="margin-bottom:8px"><span><b>#'+(i+1)+'</b> '+esc(s.name)+'</span><span class="mute">'+s.sur.length+' surahs</span></div><div class="bar2"><i style="width:'+lvl(s)+'%"></i></div>').join('')
++(top.length?'':'<p class="mute">Add students to start the ranking.</p>')+'</div>';
+}
 function students(){
  const teacher=user.role==='teacher';
  return `<div class="row between" style="margin-bottom:12px"><div><h3>${teacher?'My students':'Students'}</h3><span class="mute">${teacher?'Read-only access to students assigned to you.':'Manage all academy students.'}</span></div><input id="q" placeholder="Search students" oninput="rows()" style="max-width:300px">${teacher?'':'<button class="btn" onclick="editS()">Add student</button>'}</div><div class="card tw"><table><thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Progress</th>${teacher?'':'<th>Payment</th><th>Teacher</th><th></th>'}</tr></thead><tbody id="tb"></tbody></table></div>`+(setTimeout(rows),'')}
@@ -492,11 +495,21 @@ function endClass(i){S.classes.splice(i,1);save();render()}
 function copy(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Invite copied'),()=>modal('Copy invite link',`<input value="${esc(t)}" readonly onfocus="this.select()">`,()=>{}, 'Done'))}
 
 function viewStudent(){const s=S.students.find(x=>x.id===user.id)||{sur:[],name:''};
- const rank=[...S.students].sort((a,b)=>b.sur.length-a.sur.length).findIndex(x=>x.id===s.id)+1;
+ const ranking=[...S.students].sort((a,b)=>b.sur.length-a.sur.length);
+ const rank=ranking.findIndex(x=>x.id===s.id)+1;
+ const ahead=rank>1?ranking[rank-2]:null;
+ const behind=rank<ranking.length?ranking[rank]:null;
+ const rankText=rank>0?'#'+rank:'—';
+ const gapAhead=ahead?Math.max(0,ahead.sur.length-s.sur.length):0;
+ const gapBehind=behind?Math.max(0,s.sur.length-behind.sur.length):0;
  return `<h2>As-salamu alaykum, ${esc(s.name)}</h2><br>`+nav([['home','My progress'],['surahs','All surahs'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['notifications','Notifications'+(unreadCount()?' ('+unreadCount()+')':'')],['join','Live class']])+
  (tab==='messages'?messages():tab==='notifications'?notifications():tab==='join'?`<div class="card"><h3>Join your class</h3><p class="mute">Paste the code or invite link from your teacher.</p><form onsubmit="event.preventDefault();doJoin2(this)"><input name="c" required placeholder="Class code or invite link"><br><br><button class="btn">Continue</button></form>${joinInfo?`<br><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(joinInfo.c,s.name))}">Enter classroom</a>`:''}</div>`
  :tab==='surahs'?`<div class="card"><h3>All 114 Surahs</h3><p class="mute">${s.sur.length} of 114 memorized</p><br><div class="surah-list-vertical">${SUR.map((x,i)=>`<div class="surah-item"><span class="surah-num">${i+1}</span><div class="surah-name">${surahLabel(x,i)}${s.sur.includes(x)?'<span class="badge paid">✓ Memorized</span>':''}</div></div>`).join('')}</div></div>`
- :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>Surahs memorized</span></div><div class="card"><b>${lvl(s)}%</b><span>Of the Qur'an</span></div><div class="card"><b>#${rank}</b><span>Class ranking</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">Payment</span></div></div><div class="card"><h3>Your progress</h3><br><div class="bar2" style="height:14px"><i style="width:${lvl(s)}%"></i></div><br>${s.sur.map(x=>`<span class="tag">${x}</span>`).join('')||'<span class="mute">Your memorized surahs will appear here.</span>'}</div>`)}
+ :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>Surahs memorized</span></div><div class="card"><b>${lvl(s)}%</b><span>Of the Quran</span></div><div class="card"><b>${rankText}</b><span>Your ranking</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">Payment</span></div></div>
+<div class="card" style="border-color:var(--gold);margin-bottom:14px"><h3>Your Memorization Ranking</h3><p class="mute">Keep memorizing to move higher in the ranking.</p><br>
+${ahead?'<div class="row between"><span>⬆️ <b>Ahead of you</b></span><span>'+esc(ahead.name)+' — '+ahead.sur.length+' surahs</span></div><div class="mute" style="margin-top:4px">'+gapAhead+' more surah'+(gapAhead===1?'':'s')+' to reach this position.</div>':rank===1?'<div class="row"><span>🏆 <b>You are #1 — the current top memorizer!</b></span></div>':'<div class="mute">Your ranking will appear as soon as students are added.</div>'}
+${behind?'<div class="row between" style="margin-top:14px"><span>⬇️ <b>Behind you</b></span><span>'+esc(behind.name)+' — '+behind.sur.length+' surahs</span></div><div class="mute" style="margin-top:4px">'+gapBehind+' more surah'+(gapBehind===1?'':'s')+' than the student behind you.</div>':'<div class="mute" style="margin-top:14px">No student is currently behind you.</div>'}
+</div><div class="card"><h3>Your progress</h3><br><div class="bar2" style="height:14px"><i style="width:${lvl(s)}%"></i></div><br>${s.sur.map(x=>`<span class="tag">${x}</span>`).join('')||'<span class="mute">Your memorized surahs will appear here.</span>'}</div>`)}
 function doJoin2(f){joinInfo={n:user.name,c:parseCode(f.c.value)};render()}
 (async()=>{if(ONLINE)await loadOnlineState();render()})();
 </script>
