@@ -274,7 +274,7 @@ function notifications(){const list=[...(S.notifications||[])].sort((a,b)=>Strin
  const pages={overview,students,teachers,attendance,payments,messages,notifications,klass};
  return `<div class="row between"><h2>Welcome, ${esc(user.name)}</h2><span class="badge">${admin?'Administrator':'Teacher'}</span></div><br>`+nav(items)+pages[tab==='class'?'klass':tab]()
 }
-function teacherNamefunction teacherName(v){const x=(S.teachers||[]).find(t=>String(t.username).toLowerCase()===String(v||'').toLowerCase());return x?.name||v||'Unassigned'}
+function teacherName(v){const x=(S.teachers||[]).find(t=>String(t.username).toLowerCase()===String(v||'').toLowerCase());return x?.name||v||'Unassigned'}
 function teacherOptions(selected=''){return `<option value="">Unassigned</option>`+(S.teachers||[]).map(t=>`<option value="${esc(t.username)}" ${String(t.username).toLowerCase()===String(selected||'').toLowerCase()?'selected':''}>${esc(t.name)} — ${esc(t.username)}</option>`).join('')}
 function teachers(){
  if(user.role!=='admin')return '<div class="card"><b>Permission denied.</b></div>';
