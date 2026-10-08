@@ -12,6 +12,8 @@ const EMPTY_STATE = {
   pay: [],
   att: {},
   classes: [],
+  messages: [],
+  notifications: [],
 };
 
 function json(data: unknown, status = 200) {
@@ -40,6 +42,8 @@ function cleanState(state: any) {
   s.pay = Array.isArray(s.pay) ? s.pay : [];
   s.att = s.att && typeof s.att === "object" ? s.att : {};
   s.classes = Array.isArray(s.classes) ? s.classes : [];
+  s.messages = Array.isArray(s.messages) ? s.messages : [];
+  s.notifications = Array.isArray(s.notifications) ? s.notifications : [];
 
   // Never return stored passwords to the browser.
   s.students.forEach((student: any) => {
@@ -88,6 +92,88 @@ function teacherState(state: any, username: string) {
   }
   s.att = filteredAttendance;
   return s;
+}
+
+function visibleMessages(state: any, profile: any) {
+  const s = cleanState(state);
+  const role = normalizedRole(profile?.role);
+  const me = lower(profile?.username);
+  if (role === "admin") return s.messages;
+  const assignedIds = role === "teacher"
+    ? new Set(s.students.filter((x: any) => lower(x?.teacher) === me).map((x: any) => lower(x?.id)))
+    : new Set([me]);
+  return s.messages.filter((m: any) => {
+    const from = lower(m?.from);
+    const to = lower(m?.to);
+    if (from === me || to === me) return true;
+    if (role === "teacher" && (assignedIds.has(from) || assignedIds.has(to))) return true;
+    return false;
+  });
+}
+
+function buildNotifications(state: any, profile: any) {
+  const s = cleanState(state);
+  const role = normalizedRole(profile?.role);
+  const me = lower(profile?.username);
+  const out = s.notifications.filter((n: any) => {
+    if (role === "admin") return !n?.target || lower(n.target) === me || n.targetRole === "admin";
+    return lower(n?.target) === me;
+  });
+  const now = new Date();
+  const students = role === "student"
+    ? s.students.filter((x: any) => lower(x?.id) === me)
+    : role === "teacher"
+      ? s.students.filter((x: any) => lower(x?.teacher) === me)
+      : s.students;
+  for (const student of students) {
+    for (const p of s.pay.filter((x: any) => lower(x?.sid) === lower(student?.id) && x?.st !== "paid" && x?.due)) {
+      const due = new Date(String(p.due) + "T23:59:59");
+      const days = Math.ceil((due.getTime() - now.getTime()) / 86400000);
+      if (days <= 5 && days >= 0) {
+        out.push({ id:"payment-"+p.inv+"-"+(role==="student"?me:"admin"), type:"payment", target:role==="student"?me:"admin", title:days===0?"Payment due today":"Payment due soon", body:days===0?("Payment "+p.inv+" is due today."):("Payment "+p.inv+" is due in "+days+" day"+(days===1?"":"s")+"."), createdAt:new Date().toISOString(), read:false });
+      } else if (days < 0) {
+        out.push({ id:"overdue-"+p.inv+"-"+(role==="student"?me:"admin"), type:"payment", target:role==="student"?me:"admin", title:"Payment overdue", body:"Payment "+p.inv+" is overdue.", createdAt:new Date().toISOString(), read:false });
+      }
+    }
+  }
+  return out.sort((a:any,b:any)=>String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
+}
+
+async function sendMessage(ctx: any, body: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  const to = text(body.to), subject = text(body.subject), message = text(body.message);
+  const category = text(body.category) || "general";
+  if (!to || !message) throw new Error("Recipient and message are required.");
+  const state = await getAcademyState(ctx);
+  const role = normalizedRole(profile.role);
+  const me = lower(profile.username);
+  const target = await getProfile(ctx, (await ctx.supabaseAdmin.from("profiles").select("id").ilike("username",to).limit(1)).data?.[0]?.id || "");
+  if (!target || !isActive(target)) throw new Error("Recipient was not found.");
+  const targetRole = normalizedRole(target.role);
+  const allowed = role === "admin"
+    || targetRole === "admin"
+    || (role === "teacher" && targetRole === "student" && state.students.some((s:any)=>lower(s?.id)===lower(target.username)&&lower(s?.teacher)===me))
+    || (role === "student" && targetRole === "teacher" && lower(target.username) === lower(state.students.find((s:any)=>lower(s?.id)===me)?.teacher));
+  if (!allowed) throw new Error("You can only message the academy or your assigned teacher/student.");
+  const item = { id:crypto.randomUUID(), from:profile.username, fromName:profileName(profile), fromRole:role, to:target.username, toName:profileName(target), toRole:targetRole, subject:subject||"Message from Al-Ahruf Academy", category, body:message, status:"open", createdAt:new Date().toISOString(), readBy:[profile.username] };
+  state.messages.push(item);
+  state.notifications.push({id:"msg-"+item.id,type:"message",target:target.username,title:"New message",body:subject||"You have a new message.",createdAt:item.createdAt,read:false});
+  const {error}=await ctx.supabaseAdmin.from("academy_state").update({state:cleanState(state),updated_at:new Date().toISOString()}).eq("id",1);
+  if(error) throw error;
+  return {ok:true,state:{messages:visibleMessages(state,profile),notifications:buildNotifications(state,profile)}};
+}
+
+async function markNotificationRead(ctx: any, body: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  const id=text(body.id); if(!id) throw new Error("Notification ID is required.");
+  const state=await getAcademyState(ctx);
+  const n=state.notifications.find((x:any)=>x?.id===id && lower(x?.target)===lower(profile.username));
+  if(n) n.read=true;
+  const {error}=await ctx.supabaseAdmin.from("academy_state").update({state:cleanState(state),updated_at:new Date().toISOString()}).eq("id",1);
+  if(error) throw error;
+  return {ok:true,state:{messages:visibleMessages(state,profile),notifications:buildNotifications(state,profile)}};
 }
 
 async function getAcademyState(ctx: any) {
@@ -322,7 +408,7 @@ async function login(ctx: any, payload: any) {
       photo_url: profile.photo_url ?? "",
     },
     profile,
-    state,
+    state: {...state, messages: visibleMessages(fullState, profile), notifications: buildNotifications(fullState, profile)},
   };
 }
 
@@ -627,7 +713,7 @@ async function getState(ctx: any) {
       full_name: profileName(profile),
       role: actualRole,
     },
-    state: visibleState,
+    state: {...visibleState, messages: visibleMessages(state, profile), notifications: buildNotifications(state, profile)},
   };
 }
 
@@ -707,6 +793,14 @@ export default {
 
         if (action === "save_state") {
           return json(await saveState(ctx, body));
+        }
+
+        if (action === "send_message") {
+          return json(await sendMessage(ctx, body));
+        }
+
+        if (action === "mark_notification_read") {
+          return json(await markNotificationRead(ctx, body));
         }
 
         if (action === "upsert_student") {
