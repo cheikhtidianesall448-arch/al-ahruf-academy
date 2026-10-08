@@ -447,19 +447,29 @@ async function delS(id,b){
  }
  b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red')
 }
-function editS(id){if(user.role!=='admin'){toast('Only the administrator can edit students.');return}const s=S.students.find(x=>x.id===id)||{id:'ST'+String(S.students.length+1).padStart(3,'0'),name:'',phone:'',email:'',pw:'',level:'Beginner',pay:'pending',sur:[],teacher:''};
+function generateStudentId(name,phone,existingId){
+ const keep=String(existingId||'').trim();
+ if(keep)return keep;
+ const letters=String(name||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^A-Za-z]/g,'').toUpperCase();
+ const digits=String(phone||'').replace(/\\D/g,'');
+ if(letters.length<2||digits.length<2)return '';
+ const base=letters[0]+letters[letters.length-1]+'ARF'+digits.slice(-2);
+ const used=new Set((S.students||[]).map(x=>String(x.id||'').toUpperCase()));
+ if(!used.has(base))return base;
+ let n=2;while(used.has(base+'-'+n))n++;return base+'-'+n;
+}
+function editS(id){if(user.role!=='admin'){toast('Only the administrator can edit students.');return}const s=S.students.find(x=>x.id===id)||{id:'',name:'',phone:'',email:'',pw:'',level:'Beginner',pay:'pending',sur:[],teacher:''};
  const opt=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('');
- modal(id?'Edit student':'Add student',`<label>Full name</label><input name="name" required value="${esc(s.name)}"><div class="row"><div style="flex:1"><label>Student ID</label><input name="id" required value="${esc(s.id)}"></div><div style="flex:1"><label>Password ${id?'<span class="mute">(leave blank to keep current)</span>':''}</label><input name="pw" ${id?'':'required'} type="password" value="${esc(s.pw||'')}"></div></div><div class="row"><div style="flex:1"><label>Phone</label><input name="phone" value="${esc(s.phone)}"></div><div style="flex:1"><label>Email</label><input name="email" type="email" value="${esc(s.email)}"></div></div><div class="row"><div style="flex:1"><label>Level</label><select name="level">${opt(['Beginner','Intermediate','Advanced'],s.level)}</select></div><div style="flex:1"><label>Payment</label><select name="pay">${opt(['paid','pending','overdue'],s.pay)}</select></div></div><label>Teacher</label><select name="teacher">${teacherOptions(s.teacher)}</select><label>Memorized surahs (Ctrl/Cmd + click)</label><select name="sur" multiple size="6">${SUR.map((x,i)=>`<option value="${x}" ${s.sur.includes(x)?'selected':''}>${i+1}. ${surahLabel(x,i)}</option>`).join('')}</select>`,async f=>{
- const nid=f.id.value.trim();if(S.students.some(x=>x.id===nid&&x.id!==id)){toast('That ID is already used');return false}
+ const generated=generateStudentId(s.name,s.phone,id||'');
+ modal(id?'Edit student':'Add student',`<label>Full name</label><input name="name" required value="${esc(s.name)}"><div class="row"><div style="flex:1"><label>Student ID</label><input name="id" readonly value="${esc(generated)}" placeholder="Generated automatically"><span class="mute">Generated from the first and last letters of the full name + ARF + last 2 phone digits.</span></div><div style="flex:1"><label>Password ${id?'<span class="mute">(leave blank to keep current)</span>':''}</label><input name="pw" ${id?'':'required'} type="password" value="${esc(s.pw||'')}"></div></div><div class="row"><div style="flex:1"><label>Phone</label><input name="phone" required value="${esc(s.phone)}" oninput="this.form.id.value=generateStudentId(this.form.name.value,this.value,'${esc(id||'')}')"></div><div style="flex:1"><label>Email</label><input name="email" type="email" value="${esc(s.email)}"></div></div><div class="row"><div style="flex:1"><label>Level</label><select name="level">${opt(['Beginner','Intermediate','Advanced'],s.level)}</select></div><div style="flex:1"><label>Payment</label><select name="pay">${opt(['paid','pending','overdue'],s.pay)}</select></div></div><label>Teacher</label><select name="teacher">${teacherOptions(s.teacher)}</select><label>Memorized surahs (Ctrl/Cmd + click)</label><select name="sur" multiple size="6">${SUR.map((x,i)=>`<option value="${x}" ${s.sur.includes(x)?'selected':''}>${i+1}. ${surahLabel(x,i)}</option>`).join('')}</select>`,async f=>{
+ const nid=f.id.value.trim();
+ if(!nid){toast('Enter a full name and a valid phone number to generate the Student ID.');return false}
+ if(S.students.some(x=>x.id===nid&&x.id!==id)){toast('That generated ID is already used');return false}
  const d={id:nid,name:f.name.value.trim(),pw:f.pw.value,phone:f.phone.value.trim(),email:f.email.value.trim(),teacher:f.teacher.value.trim(),level:f.level.value,pay:f.pay.value,sur:[...f.sur.selectedOptions].map(o=>o.value)};
- if(ONLINE){
-   const result=await onlineApi('upsert_student',{student:d,existingId:id||null});
-   if(result.state)S=result.state;
- }else{
-   const i=S.students.findIndex(x=>x.id===id);i<0?S.students.push(d):S.students[i]=d;
-   save();
- }
+ if(ONLINE){const result=await onlineApi('upsert_student',{student:d,existingId:id||null});if(result.state)S=result.state;}
+ else{const i=S.students.findIndex(x=>x.id===id);i<0?S.students.push(d):S.students[i]=d;save();}
  toast(ONLINE?'Student account created/updated online':'Student saved');render()})}
+
 function attendance(){if(user.role!=='admin'&&user.role!=='teacher')return '<div class="card"><b>Permission denied.</b></div>';const d=new Date().toISOString().slice(0,10);
  return `<div class="card"><div class="row between"><h3>Attendance</h3><input type="date" id="ad" value="${d}" style="max-width:180px" onchange="render()"></div><br><div class="tw"><table><thead><tr><th>Student</th><th>Status</th><th>Memorization</th></tr></thead><tbody>${S.students.map(s=>{const r=(S.att[d]||{})[s.id]||{};return `<tr><td><b>${esc(s.name)}</b></td><td><select id="a-${s.id}"><option value="present" ${r.a==='present'?'selected':''}>Present</option><option value="late" ${r.a==='late'?'selected':''}>Late</option><option value="absent" ${r.a==='absent'?'selected':''}>Absent</option></select></td><td><select id="m-${s.id}"><option value="memorized">Memorized</option><option value="partial" ${r.m==='partial'?'selected':''}>Partial</option><option value="not" ${r.m==='not'?'selected':''}>Not memorized</option></select></td></tr>`}).join('')}</tbody></table></div><div class="row end"><button class="btn" onclick="saveAtt()">Save attendance</button></div></div>`}
 function saveAtt(){if(user.role!=='admin'&&user.role!=='teacher')return toast('You do not have permission to edit attendance.');const d=$('#ad').value;S.att[d]={};S.students.forEach(s=>S.att[d][s.id]={a:$('#a-'+s.id).value,m:$('#m-'+s.id).value});save();toast('Attendance saved')}
