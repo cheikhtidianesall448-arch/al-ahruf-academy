@@ -263,7 +263,7 @@ async function loadOnlineState(){
     if(data?.user?.username)user.id=data.user.username;
     if(data?.user?.role)user.role=data.user.role;
     if(data?.user?.name)user.name=data.user.name;
-    if(data?.state)S=data.state;
+    if(data?.state)S=cleanState(data.state);
     return true;
   }catch(e){console.warn('Al-Ahruf online session:',e);return false}
 }
@@ -391,6 +391,7 @@ teachers:[],messages:[],notifications:[],
 pay:[{inv:'INV-001',sid:'ST001',amt:50,due:'2026-10-05',st:'paid'},{inv:'INV-002',sid:'ST003',amt:75,due:'2026-10-15',st:'pending'}],att:{},classes:[]});
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!S)S=demo();
 function cleanState(x){const y=JSON.parse(JSON.stringify(x||{}));y.students=Array.isArray(y.students)?y.students:[];y.teachers=Array.isArray(y.teachers)?y.teachers:[];y.messages=Array.isArray(y.messages)?y.messages:[];y.notifications=Array.isArray(y.notifications)?y.notifications:[];y.pay=Array.isArray(y.pay)?y.pay:[];y.classes=Array.isArray(y.classes)?y.classes:[];y.timetable=Array.isArray(y.timetable)?y.timetable:[];y.att=y.att&&typeof y.att==='object'?y.att:{};(y.students||[]).forEach(s=>delete s.pw);return y}
+S=cleanState(S);
 let saveTimer=null;
 function save(){
  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
