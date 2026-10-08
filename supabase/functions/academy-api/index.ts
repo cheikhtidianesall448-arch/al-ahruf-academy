@@ -422,6 +422,7 @@ async function upsertStudent(ctx: any, body: any) {
     level: text(s.level) || "Beginner",
     pay: text(s.pay) || "pending",
     sur: Array.isArray(s.sur) ? s.sur : [],
+    teacher: text(s.teacher),
   };
 
   const students = (state.students || []).filter(
