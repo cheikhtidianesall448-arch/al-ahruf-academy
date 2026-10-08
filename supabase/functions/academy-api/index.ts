@@ -60,11 +60,14 @@ export default {
           return json({ error: "Invalid login" }, 401);
         }
 
-        const { data: authData, error: ae } = await ctx.supabaseAdmin.auth.signInWithPassword({
+        const { data: authData, error: ae } = await ctx.supabase.auth.signInWithPassword({
           email: authEmail,
           password,
         });
-        if (ae || !authData.session) return json({ error: "Invalid login" }, 401);
+        if (ae || !authData.session) {
+          console.error("Login password verification failed:", ae?.message || "no session");
+          return json({ error: "Invalid login credentials" }, 401);
+        }
 
         const { data: stateRow } = await ctx.supabaseAdmin.from("academy_state").select("state").eq("id",1).single();
         let state = stateRow?.state || {students:[],pay:[],att:{},classes:[]};
