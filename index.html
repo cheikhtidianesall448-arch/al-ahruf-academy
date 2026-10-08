@@ -543,7 +543,7 @@ ${behind?'<div class="row between" style="margin-top:14px"><span>⬇️ <b>Behin
 function doJoin2(f){joinInfo={n:user.name,c:parseCode(f.c.value)};render()}
 function safeLoginFallback(err){
  const a=document.getElementById('app'); if(!a)return;
- a.innerHTML='<div class="hero"><div class="brand"><h1>Al-Ahruf Academy</h1><p>Nurturing faith, enhancing learning</p><div class="card"><h2>Welcome</h2><p class="mute">Please choose how you want to continue.</p><div class="row"><button class="btn" onclick="lt=\\'in\\';render()">Log in</button><button class="btn ghost" onclick="lt=\\'join\\';render()">Join a class</button></div></div></div></div>';
+ a.innerHTML=`<div class="hero"><div class="brand"><h1>Al-Ahruf Academy</h1><p>Nurturing faith, enhancing learning</p></div><div class="card"><h2>Welcome</h2><p class="mute">Please choose how you want to continue.</p><div class="row"><button class="btn" onclick="lt='in';render()">Log in</button><button class="btn ghost" onclick="lt='join';render()">Join a class</button></div></div></div>`;
  console.error('Al-Ahruf render error:',err);
 }
 async function startApp(){
