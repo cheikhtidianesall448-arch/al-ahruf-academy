@@ -628,19 +628,54 @@ async function deleteTeacher(ctx: any, body: any) {
   return { ok: true, state: cleanState(state) };
 }
 
+function generatedStudentId(fullName: string, phone: string, usedIds: string[], preserveId = "") {
+  const keep = text(preserveId);
+  if (keep) return keep;
+  const letters = fullName.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^A-Za-z]/g, "").toUpperCase();
+  const digits = phone.replace(/\\D/g, "");
+  if (letters.length < 2) throw new Error("The student's full name must contain at least two letters.");
+  if (digits.length < 2) throw new Error("A valid phone number with at least two digits is required to generate the Student ID.");
+  const base = `${letters[0]}${letters[letters.length - 1]}ARF${digits.slice(-2)}`;
+  const used = new Set(usedIds.map((x) => lower(x)));
+  if (!used.has(lower(base))) return base;
+  let n = 2;
+  while (used.has(lower(`${base}-${n}`))) n++;
+  return `${base}-${n}`;
+}
+
 async function upsertStudent(ctx: any, body: any) {
   const admin = await requireStaff(ctx, ["admin"]);
   void admin;
 
   const s = body.student || {};
-  const studentId = text(s.id);
   const fullName = text(s.name);
   const password = text(s.pw);
   const emailInput = lower(s.email);
   const phone = text(s.phone);
+  const existingId = text(body.existingId);
 
-  if (!studentId || !fullName) {
-    throw new Error("Student ID and full name are required.");
+  if (!fullName) throw new Error("Student full name is required.");
+  if (!phone) throw new Error("A phone number is required to generate the Student ID.");
+
+  const state = await getAcademyState(ctx);
+  const currentStudent = existingId
+    ? (state.students || []).find((x: any) => lower(x?.id) === lower(existingId))
+    : null;
+
+  let studentId = existingId || text(s.id);
+  if (!studentId) {
+    const profileResult = await ctx.supabaseAdmin
+      .from("profiles")
+      .select("username")
+      .eq("role", "student");
+    if (profileResult.error) throw profileResult.error;
+    const usedIds = [
+      ...(state.students || []).map((x: any) => text(x?.id)),
+      ...(profileResult.data || []).map((x: any) => text(x?.username)),
+    ].filter(Boolean);
+    studentId = generatedStudentId(fullName, phone, usedIds);
+  } else if (currentStudent && lower(studentId) !== lower(currentStudent.id)) {
+    throw new Error("The existing Student ID could not be verified.");
   }
 
   const normalizedStudentId = studentId.toLowerCase();
@@ -648,7 +683,6 @@ async function upsertStudent(ctx: any, body: any) {
   const authEmail =
     emailInput || `${safeStudentId || crypto.randomUUID()}@student.alahruf.local`;
 
-  // Find an existing Academy profile case-insensitively.
   const existing = await ctx.supabaseAdmin
     .from("profiles")
     .select("id")
@@ -706,7 +740,6 @@ async function upsertStudent(ctx: any, body: any) {
     if (error) throw error;
   }
 
-  // IMPORTANT: full_name is required by the current profiles schema.
   const { error: profileError } = await ctx.supabaseAdmin
     .from("profiles")
     .upsert(
@@ -728,7 +761,6 @@ async function upsertStudent(ctx: any, body: any) {
     throw new Error(`Could not save student profile: ${profileError.message}`);
   }
 
-  const state = await getAcademyState(ctx);
   const teacherUsername = text(s.teacher);
   if (teacherUsername) {
     const teacherProfile = await ctx.supabaseAdmin
@@ -770,7 +802,7 @@ async function upsertStudent(ctx: any, body: any) {
 
   if (stateError) throw stateError;
 
-  return { ok: true, state: cleanState(state) };
+  return { ok: true, state: cleanState(state), studentId };
 }
 
 async function deleteStudent(ctx: any, body: any) {
