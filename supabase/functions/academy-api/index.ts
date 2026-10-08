@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const EMPTY_STATE = {
+  students: [],
+  pay: [],
+  att: {},
+  classes: [],
+};
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -13,160 +20,564 @@ function json(data: unknown, status = 200) {
   });
 }
 
+function errorResponse(message: string, status = 400) {
+  return json({ error: message }, status);
+}
+
+function text(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function lower(value: unknown) {
+  return text(value).toLowerCase();
+}
+
 function cleanState(state: any) {
-  const s = JSON.parse(JSON.stringify(state || {students:[],pay:[],att:{},classes:[]}));
-  (s.students || []).forEach((x: any) => delete x.pw);
+  const s = JSON.parse(JSON.stringify(state || EMPTY_STATE));
+  s.students = Array.isArray(s.students) ? s.students : [];
+  s.pay = Array.isArray(s.pay) ? s.pay : [];
+  s.att = s.att && typeof s.att === "object" ? s.att : {};
+  s.classes = Array.isArray(s.classes) ? s.classes : [];
+
+  // Never return stored passwords to the browser.
+  s.students.forEach((student: any) => {
+    if (student && typeof student === "object") delete student.pw;
+  });
+
   return s;
 }
 
-async function roleOf(ctx: any) {
-  const uid = ctx.userClaims?.sub;
-  if (!uid) return null;
-  const { data } = await ctx.supabaseAdmin.from("profiles").select("id,username,name,full_name,role,email,phone,is_active").eq("id", uid).maybeSingle();
+function studentState(state: any, username: string) {
+  const id = lower(username);
+  const s = cleanState(state);
+
+  s.students = s.students.filter(
+    (student: any) => lower(student?.id) === id,
+  );
+
+  s.pay = s.pay.filter((payment: any) => lower(payment?.sid) === id);
+
+  const filteredAttendance: Record<string, any> = {};
+  for (const [date, value] of Object.entries(s.att || {})) {
+    if (value && typeof value === "object" && value[id]) {
+      filteredAttendance[date] = { [id]: value[id] };
+    }
+  }
+  s.att = filteredAttendance;
+
+  return s;
+}
+
+async function getAcademyState(ctx: any) {
+  const { data, error } = await ctx.supabaseAdmin
+    .from("academy_state")
+    .select("state")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return data?.state || EMPTY_STATE;
+}
+
+async function getProfile(ctx: any, userId: string) {
+  const { data, error } = await ctx.supabaseAdmin
+    .from("profiles")
+    .select(
+      "id,username,name,full_name,role,email,phone,photo_url,gender,is_active",
+    )
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
   return data || null;
 }
 
-export default {
-  fetch: withSupabase({ auth: ["user", "publishable"] }, async (req, ctx) => {
-    if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+async function getCurrentProfile(ctx: any) {
+  const userId = ctx.userClaims?.sub;
+  if (!userId) return null;
+  return await getProfile(ctx, userId);
+}
 
-    try {
-      const body = await req.json();
-      const action = body.action;
+function normalizedRole(value: unknown) {
+  const r = lower(value);
+  if (r === "administrator") return "admin";
+  return r;
+}
 
-      // Login is intentionally allowed with the publishable key; credentials are
-      // exchanged for a normal Supabase Auth session. No secret key is sent to the browser.
-      if (action === "login") {
-        const username = String(body.username || "").trim().toLowerCase();
-        const password = String(body.password || "");
-        const wantedRole = String(body.role || "").trim().toLowerCase();
+function profileName(profile: any, fallback = "User") {
+  return text(profile?.full_name) ||
+    text(profile?.name) ||
+    text(profile?.username) ||
+    fallback;
+}
 
-        const { data: profile, error: pe } = await ctx.supabaseAdmin
-          .from("profiles")
-          .select("id,username,name,full_name,role,email,phone,is_active")
-          .or("username.ilike." + username + ",email.ilike." + username)
-          .maybeSingle();
+function isActive(profile: any) {
+  // Legacy rows with NULL are treated as active.
+  return profile?.is_active !== false;
+}
 
-        if (pe || !profile || !profile.is_active || String(profile.role || "").toLowerCase() !== wantedRole) {
-          return json({ error: "Invalid login" }, 401);
-        }
+async function findProfileForLogin(ctx: any, username: string) {
+  const input = lower(username);
+  if (!input) return null;
 
-        // Always use the email currently stored in Supabase Auth.
-        // The profile table can contain an older/different email after an account change.
-        const { data: authUserData, error: authUserError } =
-          await ctx.supabaseAdmin.auth.admin.getUserById(profile.id);
-        const authEmail = authUserData?.user?.email || profile.email;
-        if (authUserError || !authEmail) {
-          return json({ error: "Invalid login" }, 401);
-        }
+  // 1. Username — case insensitive.
+  const byUsername = await ctx.supabaseAdmin
+    .from("profiles")
+    .select(
+      "id,username,name,full_name,role,email,phone,photo_url,gender,is_active",
+    )
+    .ilike("username", input)
+    .limit(2);
 
-        const { data: authData, error: ae } = await ctx.supabase.auth.signInWithPassword({
-          email: authEmail,
-          password,
-        });
-        if (ae || !authData.session) {
-          console.error("Login password verification failed:", ae?.message || "no session");
-          return json({ error: "Invalid login credentials" }, 401);
-        }
+  if (byUsername.error) throw byUsername.error;
+  if (byUsername.data?.length === 1) return byUsername.data[0];
 
-        const { data: stateRow } = await ctx.supabaseAdmin.from("academy_state").select("state").eq("id",1).single();
-        let state = stateRow?.state || {students:[],pay:[],att:{},classes:[]};
+  // 2. Profile email — case insensitive.
+  if (input.includes("@")) {
+    const byEmail = await ctx.supabaseAdmin
+      .from("profiles")
+      .select(
+        "id,username,name,full_name,role,email,phone,photo_url,gender,is_active",
+      )
+      .ilike("email", input)
+      .limit(2);
 
-        if (profile.role === "student") {
-          state = {
-            ...state,
-            students: (state.students || []).filter((s:any) => s.id === profile.username),
-            pay: (state.pay || []).filter((p:any) => p.sid === profile.username),
-            att: Object.fromEntries(Object.entries(state.att || {}).map(([d,v]:any) => [d, v?.[profile.username] ? {[profile.username]:v[profile.username]} : {}])),
-          };
-        }
+    if (byEmail.error) throw byEmail.error;
+    if (byEmail.data?.length === 1) return byEmail.data[0];
+  }
 
-        return json({
-          session: authData.session,
-          user: { id: profile.id, role: profile.role, name: profile.name || profile.full_name || "", username: profile.username },
-          state: cleanState(state),
-        });
-      }
+  // 3. Name fallback. Useful for the existing admin account if its username
+  // field was never saved correctly.
+  const byName = await ctx.supabaseAdmin
+    .from("profiles")
+    .select(
+      "id,username,name,full_name,role,email,phone,photo_url,gender,is_active",
+    )
+    .or(`name.ilike.${input},full_name.ilike.${input}`)
+    .limit(2);
 
-      // Everything below requires a signed-in user.
-      const profile = await roleOf(ctx);
-      if (!profile) return json({ error: "Not authenticated" }, 401);
+  if (byName.error) throw byName.error;
+  if (byName.data?.length === 1) return byName.data[0];
 
-      const { data: stateRow, error: stateError } = await ctx.supabaseAdmin
-        .from("academy_state").select("state").eq("id",1).single();
-      if (stateError) throw stateError;
-      let state = cleanState(stateRow?.state);
+  // 4. If the login is the admin username and there is exactly one active
+  // admin profile, use it. This repairs older installations where "ahruf"
+  // was displayed in the UI but not stored in profiles.username.
+  if (input === "ahruf") {
+    const admins = await ctx.supabaseAdmin
+      .from("profiles")
+      .select(
+        "id,username,name,full_name,role,email,phone,photo_url,gender,is_active",
+      )
+      .eq("role", "admin")
+      .neq("is_active", false)
+      .limit(2);
 
-      if (action === "get_state") {
-        if (profile.role === "student") {
-          state = {
-            ...state,
-            students: (state.students || []).filter((s:any) => s.id === profile.username),
-            pay: (state.pay || []).filter((p:any) => p.sid === profile.username),
-            att: Object.fromEntries(Object.entries(state.att || {}).map(([d,v]:any) => [d, v?.[profile.username] ? {[profile.username]:v[profile.username]} : {}])),
-          };
-        }
-        return json({ user:{id:profile.id,role:profile.role,name:profile.name || profile.full_name || "",username:profile.username}, state });
-      }
+    if (admins.error) throw admins.error;
+    if (admins.data?.length === 1) return admins.data[0];
+  }
 
-      if (action === "save_state") {
-        if (!["admin","teacher"].includes(profile.role)) return json({error:"Permission denied"},403);
-        await ctx.supabaseAdmin.from("academy_state").update({state:cleanState(body.state),updated_at:new Date().toISOString()}).eq("id",1);
-        return json({ok:true});
-      }
+  return null;
+}
 
-      if (action === "upsert_student") {
-        if (profile.role !== "admin") return json({error:"Only an administrator can create or edit student accounts"},403);
-        const s = body.student || {};
-        if (!s.id || !s.name) return json({error:"Student ID and name are required"},400);
+async function authenticateLogin(ctx: any, username: string, password: string) {
+  const input = lower(username);
 
-        const email = (s.email || (s.id.toLowerCase().replace(/[^a-z0-9]/g,"") + "@students.alahruf.local")).toLowerCase();
-        const existing = await ctx.supabaseAdmin.from("profiles").select("id,email").eq("username",s.id).maybeSingle();
-        let uid = existing.data?.id;
+  if (!input) throw new Error("Username or student ID is required.");
+  if (!password) throw new Error("Password is required.");
 
-        if (!uid) {
-          if (!s.pw) return json({error:"A password is required for a new student"},400);
-          const {data: created,error} = await ctx.supabaseAdmin.auth.admin.createUser({
-            email,password:s.pw,email_confirm:true,user_metadata:{name:s.name,role:"student"}
-          });
-          if(error) throw error;
-          uid=created.user.id;
-          const {error: pe} = await ctx.supabaseAdmin.from("profiles").insert({
-            id:uid,username:s.id,name:s.name,full_name:s.name,role:"student",email,phone:s.phone||"",is_active:true
-          });
-          if(pe) throw pe;
-        } else {
-          const attrs:any={email,user_metadata:{name:s.name,role:"student"}};
-          if(s.pw) attrs.password=s.pw;
-          const {error:ue}=await ctx.supabaseAdmin.auth.admin.updateUserById(uid,attrs);
-          if(ue) throw ue;
-          const {error:pe}=await ctx.supabaseAdmin.from("profiles").update({name:s.name,full_name:s.name,email,phone:s.phone||"",is_active:true}).eq("id",uid);
-          if(pe) throw pe;
-        }
+  let profile = await findProfileForLogin(ctx, input);
+  let authEmail = "";
 
-        const clean={id:s.id,name:s.name,phone:s.phone||"",email:s.email||"",level:s.level||"Beginner",pay:s.pay||"pending",sur:Array.isArray(s.sur)?s.sur:[]};
-        const list=(state.students||[]).filter((x:any)=>x.id!==s.id);
-        list.push(clean); state.students=list;
-        await ctx.supabaseAdmin.from("academy_state").update({state,updated_at:new Date().toISOString()}).eq("id",1);
-        return json({ok:true,state});
-      }
+  // If the user supplied an email, we can authenticate directly even when
+  // the profile row is incomplete. We then recover the profile by auth UID.
+  if (input.includes("@")) authEmail = input;
 
-      if (action === "delete_student") {
-        if (profile.role !== "admin") return json({error:"Permission denied"},403);
-        const id=String(body.studentId||"");
-        const p=await ctx.supabaseAdmin.from("profiles").select("id").eq("username",id).maybeSingle();
-        if(p.data?.id) await ctx.supabaseAdmin.auth.admin.deleteUser(p.data.id);
-        state.students=(state.students||[]).filter((s:any)=>s.id!==id);
-        state.pay=(state.pay||[]).filter((p:any)=>p.sid!==id);
-        Object.keys(state.att||{}).forEach(d=>{if(state.att[d])delete state.att[d][id]});
-        await ctx.supabaseAdmin.from("academy_state").update({state,updated_at:new Date().toISOString()}).eq("id",1);
-        return json({ok:true,state});
-      }
+  if (profile) {
+    const { data: authUserData, error: authUserError } =
+      await ctx.supabaseAdmin.auth.admin.getUserById(profile.id);
 
-      return json({error:"Unknown action"},400);
-    } catch (e) {
-      console.error(e);
-      return json({error:e?.message || "Server error"},500);
+    if (!authUserError && authUserData?.user?.email) {
+      authEmail = authUserData.user.email;
+    } else if (!authEmail && profile.email) {
+      authEmail = lower(profile.email);
     }
-  }),
+  }
+
+  if (!authEmail) {
+    throw new Error("No account was found with that username or student ID.");
+  }
+
+  // Password verification happens through the normal Supabase Auth client.
+  const { data: authData, error: authError } =
+    await ctx.supabase.auth.signInWithPassword({
+      email: authEmail,
+      password,
+    });
+
+  if (authError || !authData?.session || !authData.user) {
+    console.error(
+      "Login password verification failed:",
+      authError?.message || "No session",
+    );
+    throw new Error("Invalid username or password.");
+  }
+
+  // Recover the profile from the authenticated UID. This is the final source
+  // of truth and avoids trusting a stale profile email.
+  profile = await getProfile(ctx, authData.user.id);
+
+  if (!profile) {
+    // An email-authenticated account can still be useful if the profile row
+    // was missing; however, the Academy requires a role, so reject it clearly.
+    throw new Error("Your account is missing its Academy profile.");
+  }
+
+  if (!isActive(profile)) {
+    await ctx.supabase.auth.signOut();
+    throw new Error("This account is inactive. Please contact the administrator.");
+  }
+
+  return { authData, profile };
+}
+
+async function login(ctx: any, payload: any) {
+  const username = text(
+    payload.username ??
+      payload.studentId ??
+      payload.student_id ??
+      payload.email,
+  );
+  const password = text(payload.password);
+  const wantedRole = normalizedRole(payload.role);
+
+  const { authData, profile } = await authenticateLogin(
+    ctx,
+    username,
+    password,
+  );
+
+  const actualRole = normalizedRole(profile.role);
+
+  if (wantedRole && actualRole !== wantedRole) {
+    await ctx.supabase.auth.signOut();
+    throw new Error(
+      `This account is registered as ${actualRole}, not ${wantedRole}.`,
+    );
+  }
+
+  const fullState = await getAcademyState(ctx);
+  const state = actualRole === "student"
+    ? studentState(fullState, profile.username)
+    : cleanState(fullState);
+
+  return {
+    ok: true,
+    session: authData.session,
+    user: {
+      id: profile.id,
+      email: authData.user.email ?? profile.email ?? "",
+      username: profile.username ?? username,
+      name: profileName(profile),
+      full_name: profileName(profile),
+      role: actualRole,
+      phone: profile.phone ?? "",
+      photo_url: profile.photo_url ?? "",
+    },
+    profile,
+    state,
+  };
+}
+
+async function requireStaff(ctx: any, allowed: string[]) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile) throw new Error("Not authenticated.");
+  if (!isActive(profile)) throw new Error("This account is inactive.");
+
+  const actualRole = normalizedRole(profile.role);
+  if (!allowed.includes(actualRole)) throw new Error("Permission denied.");
+
+  return profile;
+}
+
+async function upsertStudent(ctx: any, body: any) {
+  const admin = await requireStaff(ctx, ["admin"]);
+  void admin;
+
+  const s = body.student || {};
+  const studentId = text(s.id);
+  const fullName = text(s.name);
+  const password = text(s.pw);
+  const emailInput = lower(s.email);
+  const phone = text(s.phone);
+
+  if (!studentId || !fullName) {
+    throw new Error("Student ID and full name are required.");
+  }
+
+  const normalizedStudentId = studentId.toLowerCase();
+  const safeStudentId = normalizedStudentId.replace(/[^a-z0-9]/g, "");
+  const authEmail =
+    emailInput || `${safeStudentId || crypto.randomUUID()}@student.alahruf.local`;
+
+  // Find an existing Academy profile case-insensitively.
+  const existing = await ctx.supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .ilike("username", studentId)
+    .limit(2);
+
+  if (existing.error) throw existing.error;
+  if ((existing.data?.length || 0) > 1) {
+    throw new Error("More than one profile uses this Student ID.");
+  }
+
+  let userId = existing.data?.[0]?.id;
+
+  if (!userId) {
+    if (!password) {
+      throw new Error("A password is required for a new student.");
+    }
+
+    const { data: created, error } =
+      await ctx.supabaseAdmin.auth.admin.createUser({
+        email: authEmail,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          name: fullName,
+          full_name: fullName,
+          role: "student",
+          username: studentId,
+        },
+      });
+
+    if (error || !created?.user) {
+      throw error || new Error("Could not create the student account.");
+    }
+
+    userId = created.user.id;
+  } else {
+    const attrs: any = {
+      user_metadata: {
+        name: fullName,
+        full_name: fullName,
+        role: "student",
+        username: studentId,
+      },
+    };
+
+    if (emailInput) attrs.email = authEmail;
+    if (password) attrs.password = password;
+
+    const { error } = await ctx.supabaseAdmin.auth.admin.updateUserById(
+      userId,
+      attrs,
+    );
+
+    if (error) throw error;
+  }
+
+  // IMPORTANT: full_name is required by the current profiles schema.
+  const { error: profileError } = await ctx.supabaseAdmin
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        username: studentId,
+        name: fullName,
+        full_name: fullName,
+        role: "student",
+        email: emailInput || authEmail,
+        phone,
+        is_active: true,
+      },
+      { onConflict: "id" },
+    );
+
+  if (profileError) {
+    console.error("Student profile save error:", profileError);
+    throw new Error(`Could not save student profile: ${profileError.message}`);
+  }
+
+  const state = await getAcademyState(ctx);
+  const cleanStudent = {
+    id: studentId,
+    name: fullName,
+    phone,
+    email: emailInput,
+    level: text(s.level) || "Beginner",
+    pay: text(s.pay) || "pending",
+    sur: Array.isArray(s.sur) ? s.sur : [],
+  };
+
+  const students = (state.students || []).filter(
+    (x: any) => lower(x?.id) !== normalizedStudentId,
+  );
+  students.push(cleanStudent);
+  state.students = students;
+
+  const { error: stateError } = await ctx.supabaseAdmin
+    .from("academy_state")
+    .update({
+      state: cleanState(state),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1);
+
+  if (stateError) throw stateError;
+
+  return { ok: true, state: cleanState(state) };
+}
+
+async function deleteStudent(ctx: any, body: any) {
+  await requireStaff(ctx, ["admin"]);
+
+  const studentId = text(body.studentId);
+  if (!studentId) throw new Error("Student ID is required.");
+
+  const profileResult = await ctx.supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .ilike("username", studentId)
+    .limit(2);
+
+  if (profileResult.error) throw profileResult.error;
+
+  if (profileResult.data?.length > 1) {
+    throw new Error("More than one profile uses this Student ID.");
+  }
+
+  const userId = profileResult.data?.[0]?.id;
+  if (userId) {
+    const { error } = await ctx.supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) throw error;
+  }
+
+  const state = await getAcademyState(ctx);
+  const id = lower(studentId);
+
+  state.students = (state.students || []).filter(
+    (s: any) => lower(s?.id) !== id,
+  );
+  state.pay = (state.pay || []).filter(
+    (p: any) => lower(p?.sid) !== id,
+  );
+
+  for (const date of Object.keys(state.att || {})) {
+    if (state.att[date] && typeof state.att[date] === "object") {
+      delete state.att[date][id];
+      delete state.att[date][studentId];
+    }
+  }
+
+  const { error } = await ctx.supabaseAdmin
+    .from("academy_state")
+    .update({
+      state: cleanState(state),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1);
+
+  if (error) throw error;
+
+  return { ok: true, state: cleanState(state) };
+}
+
+async function getState(ctx: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile) throw new Error("Not authenticated.");
+  if (!isActive(profile)) throw new Error("This account is inactive.");
+
+  const state = await getAcademyState(ctx);
+  const actualRole = normalizedRole(profile.role);
+
+  return {
+    user: {
+      id: profile.id,
+      email: profile.email ?? "",
+      username: profile.username ?? "",
+      name: profileName(profile),
+      full_name: profileName(profile),
+      role: actualRole,
+    },
+    state: actualRole === "student"
+      ? studentState(state, profile.username)
+      : cleanState(state),
+  };
+}
+
+async function saveState(ctx: any, body: any) {
+  await requireStaff(ctx, ["admin", "teacher"]);
+
+  if (!body.state || typeof body.state !== "object") {
+    throw new Error("A valid state object is required.");
+  }
+
+  const { error } = await ctx.supabaseAdmin
+    .from("academy_state")
+    .update({
+      state: cleanState(body.state),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1);
+
+  if (error) throw error;
+
+  return { ok: true };
+}
+
+export default {
+  fetch: withSupabase(
+    { auth: ["user", "publishable"] },
+    async (req, ctx) => {
+      if (req.method === "OPTIONS") {
+        return new Response("ok", { headers: corsHeaders });
+      }
+
+      if (req.method !== "POST") {
+        return errorResponse("Method not allowed.", 405);
+      }
+
+      try {
+        const body = await req.json().catch(() => ({}));
+        const action = lower(body.action);
+
+        if (!action) {
+          return errorResponse("Missing action.", 400);
+        }
+
+        // Login is intentionally available through the publishable-key path.
+        // Supabase Auth performs the password verification and returns a normal
+        // user session; the service-role client is never exposed to the browser.
+        if (action === "login") {
+          return json(await login(ctx, body));
+        }
+
+        if (action === "get_state") {
+          return json(await getState(ctx));
+        }
+
+        if (action === "save_state") {
+          return json(await saveState(ctx, body));
+        }
+
+        if (action === "upsert_student") {
+          return json(await upsertStudent(ctx, body));
+        }
+
+        if (action === "delete_student") {
+          return json(await deleteStudent(ctx, body));
+        }
+
+        return errorResponse(`Unknown action: ${action}`, 404);
+      } catch (error: any) {
+        console.error("academy-api error:", error);
+        return errorResponse(
+          text(error?.message) || "Server error.",
+          Number.isInteger(error?.status) ? error.status : 500,
+        );
+      }
+    },
+  ),
 };
