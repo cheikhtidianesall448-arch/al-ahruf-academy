@@ -39,9 +39,10 @@ label{display:block;font-weight:600;font-size:.82rem;margin:12px 0 5px;color:var
 #rt{display:flex!important;visibility:visible!important;opacity:1!important}
 #rt button{display:block!important;visibility:visible!important;opacity:1!important}
 
-.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-.nav button{border:1.5px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:99px;font:700 .84rem Figtree;cursor:pointer}
-.nav button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px;padding:7px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 14px rgba(18,48,43,.06)}
+.nav button{border:1px solid transparent;background:transparent;color:var(--mute);padding:9px 13px;border-radius:9px;font:700 .84rem Figtree;cursor:pointer;transition:.18s}
+.nav button:hover{background:var(--soft);color:var(--pri)}
+.nav button.on{background:var(--pri);color:#fff;border-color:var(--pri);box-shadow:0 2px 7px rgba(11,74,66,.2)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
 .stats .card b{font:700 2rem 'Cormorant Garamond',serif;color:var(--pri);display:block}.stats span{color:var(--mute);font-size:.8rem}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.end{justify-content:flex-end;margin-top:16px}.between{justify-content:space-between}
@@ -556,7 +557,13 @@ function overview(){
 }
 function students(){
  const teacher=user.role==='teacher';
- return `<div class="row between" style="margin-bottom:12px"><div><h3>${teacher?'My students':'Students'}</h3><span class="mute">${teacher?'Read-only access to students assigned to you.':'Manage all academy students.'}</span></div><input id="q" placeholder="Search students" oninput="rows()" style="max-width:300px">${teacher?'':'<button class="btn" onclick="editS()">Add student</button>'}</div><div class="card tw"><table><thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Sex</th><th>Level</th><th>Progress</th>${teacher?'':'<th>Payment</th><th>Teacher</th><th></th>'}</tr></thead><tbody id="tb"></tbody></table></div>`+(setTimeout(rows),'')}
+ const list=teacher?S.students.filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()):S.students;
+ const males=list.filter(s=>s.sex==='Male').length, females=list.filter(s=>s.sex==='Female').length;
+ const ages=list.filter(s=>Number(s.age)>0);
+ const avgAge=ages.length?ages.reduce((a,s)=>a+Number(s.age),0)/ages.length:0;
+ return `<div class="row between" style="margin-bottom:12px"><div><h3>${teacher?'My students':'Students'}</h3><span class="mute">${teacher?'Students assigned to you.':'Manage and monitor academy students.'}</span></div><div class="row" style="flex:1;justify-content:flex-end"><input id="q" placeholder="Search by name, ID, phone or teacher" oninput="rows()" style="max-width:340px">${teacher?'':'<button class="btn" onclick="editS()">Add student</button>'}</div></div>
+ <div class="stats" style="margin-bottom:14px"><div class="card"><b>${list.length}</b><span>${teacher?'Assigned students':'Total students'}</span></div><div class="card"><b>${males}</b><span>Male</span></div><div class="card"><b>${females}</b><span>Female</span></div><div class="card"><b>${avgAge?avgAge.toFixed(1):'—'}</b><span>Average age</span></div></div>
+ <div class="card tw"><table><thead><tr><th>ID</th><th>Student</th><th>Age</th><th>Sex</th><th>Level</th><th>Quran progress</th>${teacher?'':'<th>Payment</th><th>Teacher</th><th></th>'}</tr></thead><tbody id="tb"></tbody></table></div>`+(setTimeout(rows),'')}
 function rows(){const q=($('#q')?.value||'').toLowerCase(),tb=$('#tb');if(!tb)return;
  const teacher=user.role==='teacher';
  const source=teacher?S.students.filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()):S.students;
@@ -637,7 +644,7 @@ function viewStudent(){const s=S.students.find(x=>x.id===user.id)||{sur:[],name:
  const gapAhead=ahead?Math.max(0,ahead.sur.length-s.sur.length):0;
  const gapBehind=behind?Math.max(0,s.sur.length-behind.sur.length):0;
  const myInvoices=(S.pay||[]).map((p,i)=>({p,i})).filter(x=>String(x.p.sid)===String(s.id)).reverse();
- return `<h2>As-salamu alaykum, ${esc(s.name)}</h2><br>`+nav([['home','My progress'],['timetable','My Timetable'],['surahs','All surahs'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['notifications','Notifications'+(unreadCount()?' ('+unreadCount()+')':'')],['join','Live class']])+
+ return `<h2>As-salamu alaykum, ${esc(s.name)}</h2><br>`+nav([['home','My progress'],['timetable','My Timetable'],['surahs','All surahs'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['join','Live class']])+
  (tab==='messages'?messages():tab==='notifications'?notifications():tab==='timetable'?timetable():tab==='join'?`<div class="card"><h3>Join your class</h3><p class="mute">Paste the code or invite link from your teacher.</p><form onsubmit="event.preventDefault();doJoin2(this)"><input name="c" required placeholder="Class code or invite link"><br><br><button class="btn">Continue</button></form>${joinInfo?`<br><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(joinInfo.c,s.name))}">Enter classroom</a>`:''}</div>`
  :tab==='surahs'?`<div class="card"><h3>All 114 Surahs</h3><p class="mute">${s.sur.length} of 114 memorized</p><br><div class="surah-list-vertical">${SUR.map((x,i)=>`<div class="surah-item"><span class="surah-num">${i+1}</span><div class="surah-name">${surahLabel(x,i)}${s.sur.includes(x)?'<span class="badge paid">✓ Memorized</span>':''}</div></div>`).join('')}</div></div>`
  :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>Surahs memorized</span></div><div class="card"><b>${lvl(s)}%</b><span>Of the Quran</span></div><div class="card"><b>${rankText}</b><span>Your ranking</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">Payment</span></div></div>
