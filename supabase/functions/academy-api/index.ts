@@ -121,6 +121,8 @@ function visibleMessages(state: any, profile: any) {
     const from = lower(m?.from);
     const to = lower(m?.to);
     if (from === me || to === me) return true;
+    if (role === "student" && myStudent?.teacher && to === "group:" + lower(myStudent.teacher)) return true;
+    if (role === "teacher" && to === "group:" + me) return true;
     if (role === "student" && peerIds.has(from) && peerIds.has(to)) return true;
     if (role === "teacher" && assignedIds.has(from) && assignedIds.has(to)) return true;
     return false;
@@ -167,9 +169,18 @@ async function sendMessage(ctx: any, body: any) {
   const role = normalizedRole(profile.role);
   const me = lower(profile.username);
 
-  // Student complaints are always routed to the administrator.
-  const to = role === "student" && category === "complaint" ? "ahruf" : requestedTo;
+  if (requestedTo.startsWith("group:")) {
+    const teacherId = lower(requestedTo.slice(6));
+    const myStudent = role === "student" ? state.students.find((s:any)=>lower(s?.id)===me) : null;
+    if (role !== "student" || !myStudent?.teacher || lower(myStudent.teacher) !== teacherId) throw new Error("Only students assigned to this teacher can post in their class group.");
+    const item = {id:crypto.randomUUID(),from:profile.username,fromName:profileName(profile),fromRole:role,to:"group:"+teacherId,toName:"Class group",toRole:"group",subject:"",category:"general",body:message,attachment:body.attachment||null,status:"open",createdAt:new Date().toISOString(),readBy:[profile.username]};
+    state.messages.push(item);
+    const {error}=await ctx.supabaseAdmin.from("academy_state").update({state:cleanState(state),updated_at:new Date().toISOString()}).eq("id",1);
+    if(error) throw error;
+    return {ok:true,state:{messages:visibleMessages(state,profile),notifications:buildNotifications(state,profile)}};
+  }
 
+  const to = role === "student" && category === "complaint" ? "ahruf" : requestedTo;
   const found = await ctx.supabaseAdmin.from("profiles").select("id").ilike("username", to).limit(1);
   if (found.error) throw found.error;
   let target = found.data?.[0] ? await getProfile(ctx, found.data[0].id) : null;
@@ -196,7 +207,7 @@ async function sendMessage(ctx: any, body: any) {
     id: crypto.randomUUID(),
     from: profile.username, fromName: profileName(profile), fromRole: role,
     to: target.username, toName: profileName(target), toRole: targetRole,
-    subject: subject || "Message from Al-Ahruf Academy", category, body: message,
+    subject: "", category, body: message, attachment: body.attachment || null,
     status: "open", createdAt: new Date().toISOString(), readBy: [profile.username],
   };
 
