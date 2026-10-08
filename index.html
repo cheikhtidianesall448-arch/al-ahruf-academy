@@ -509,13 +509,6 @@ function editTimetable(id){
  },id?'Save changes':'Add course')
 }
 function deleteTimetable(id,b){if(user.role!=='admin')return;if(!b.dataset.s){b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red');return}S.timetable=(S.timetable||[]).filter(x=>String(x.id)!==String(id));save();toast('Course removed from timetable');render()}
-function downloadTimetable(){
- let list=Array.isArray(S.timetable)?S.timetable:[];if(user.role==='student')list=list.filter(x=>(x.students||[]).map(String).includes(String(user.id)));if(user.role==='teacher')list=list.filter(x=>String(x.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase());
- const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];list.sort((a,b)=>days.indexOf(a.day)-days.indexOf(b.day)||String(a.start).localeCompare(String(b.start)));
- const rows=list.map(x=>'<tr><td>'+esc(x.day)+'</td><td>'+esc(x.start)+' – '+esc(x.end)+'</td><td><b>'+esc(x.course||'Course')+'</b></td><td>'+esc(teacherName(x.teacher))+'</td></tr>').join('');
- const title=user.role==='student'?'My Timetable':'Al-Ahruf Academy Timetable',w=window.open('','_blank','width=900,height=900');if(!w)return toast('Please allow pop-ups to download the timetable.');
- w.document.write('<!doctype html><html><head><title>'+title+'</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#17202a}table{width:100%;border-collapse:collapse;margin-top:25px}th,td{border:1px solid #d8dee4;padding:12px;text-align:left}th{background:#f1f4f6}.print{margin-top:22px;padding:10px 16px;border:0;border-radius:8px;background:#0b6f63;color:#fff;cursor:pointer}@media print{.print{display:none}}</style></head><body><h1>Al-Ahruf International Academy</h1><h2>'+esc(title)+'</h2><p>Nurturing faith, enhancing learning</p><table><thead><tr><th>Day</th><th>Time</th><th>Course</th><th>Teacher</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');w.document.close()
-}
 function viewStaff(){
  const admin=user.role==='admin';
  const items=admin
