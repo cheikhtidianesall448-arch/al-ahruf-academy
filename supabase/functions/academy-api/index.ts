@@ -43,7 +43,7 @@ function cleanState(state: any) {
   s.att = s.att && typeof s.att === "object" ? s.att : {};
   s.classes = Array.isArray(s.classes) ? s.classes : [];
   s.messages = Array.isArray(s.messages) ? s.messages : [];
-  s.notifications = Array.isArray(s.notifications) ? s.notifications : [];
+  s.notifications = Array.isArray(s.notifications) ? s.notifications : [];\n  s.paymentReminders = Array.isArray(s.paymentReminders) ? s.paymentReminders : [];
 
   // Never return stored passwords to the browser.
   s.students.forEach((student: any) => {
@@ -141,33 +141,110 @@ function buildNotifications(state: any, profile: any) {
 async function sendMessage(ctx: any, body: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
-  const to = text(body.to), subject = text(body.subject), message = text(body.message);
+  const requestedTo = text(body.to);
+  const subject = text(body.subject);
+  const message = text(body.message);
   const category = text(body.category) || "general";
-  if (!to || !message) throw new Error("Recipient and message are required.");
+  if (!requestedTo || !message) throw new Error("Recipient and message are required.");
+
   const state = await getAcademyState(ctx);
   const role = normalizedRole(profile.role);
   const me = lower(profile.username);
-  const found = await ctx.supabaseAdmin.from("profiles").select("id").ilike("username",to).limit(1);
+
+  // Student complaints are always routed to the administrator.
+  const to = role === "student" && category === "complaint" ? "ahruf" : requestedTo;
+
+  const found = await ctx.supabaseAdmin.from("profiles").select("id").ilike("username", to).limit(1);
   if (found.error) throw found.error;
   let target = found.data?.[0] ? await getProfile(ctx, found.data[0].id) : null;
-  if (!target && to === "ahruf") {
+
+  if (!target && lower(to) === "ahruf") {
     const admins = await ctx.supabaseAdmin.from("profiles").select("id").eq("role","admin").neq("is_active",false).limit(2);
     if (admins.error) throw admins.error;
     if (admins.data?.length === 1) target = await getProfile(ctx, admins.data[0].id);
   }
   if (!target || !isActive(target)) throw new Error("Recipient was not found.");
+
   const targetRole = normalizedRole(target.role);
-  const allowed = role === "admin"
-    || targetRole === "admin"
-    || (role === "teacher" && targetRole === "student" && state.students.some((s:any)=>lower(s?.id)===lower(target.username)&&lower(s?.teacher)===me))
-    || (role === "student" && targetRole === "teacher" && lower(target.username) === lower(state.students.find((s:any)=>lower(s?.id)===me)?.teacher));
+  const allowed =
+    role === "admin" ||
+    targetRole === "admin" ||
+    (role === "teacher" && targetRole === "student" && state.students.some((s:any)=>lower(s?.id)===lower(target.username)&&lower(s?.teacher)===me)) ||
+    (role === "student" && targetRole === "teacher" && lower(target.username) === lower(state.students.find((s:any)=>lower(s?.id)===me)?.teacher));
+
   if (!allowed) throw new Error("You can only message the academy or your assigned teacher/student.");
+
+  const item = {
+    id: crypto.randomUUID(),
+    from: profile.username, fromName: profileName(profile), fromRole: role,
+    to: target.username, toName: profileName(target), toRole: targetRole,
+    subject: subject || "Message from Al-Ahruf Academy", category, body: message,
+    status: "open", createdAt: new Date().toISOString(), readBy: [profile.username],
+  };
+
+  state.messages.push(item);
+  state.notifications.push({
+    id:"msg-"+item.id, type:"message", target:target.username,
+    title: category === "complaint" ? "New complaint" : "New message",
+    body: subject || "You have a new message.", createdAt:item.createdAt, read:false
+  });
+
+  const {error}=await ctx.supabaseAdmin.from("academy_state")
+    .update({state:cleanState(state),updated_at:new Date().toISOString()}).eq("id",1);
+  if(error) throw error;
+
+  const recipientEmail=text(target.email);
+  if(recipientEmail) {
+    const emailSubject = category === "complaint" ? "New complaint received" : "New Al-Ahruf Academy message";
+    await sendEmail(
+      recipientEmail,
+      emailSubject,
+      `<p>Hello ${escapeHtml(profileName(target))},</p><p>You have a new message in <strong>Al-Ahruf International Academy</strong>.</p><p><strong>Subject:</strong> ${escapeHtml(item.subject)}</p><p>Please sign in to the Academy dashboard to read and respond.</p>`,
+      `Hello ${profileName(target)},\\n\\nYou have a new message in Al-Ahruf International Academy.\\nSubject: ${item.subject}\\n\\nPlease sign in to the Academy dashboard to read and respond.`
+    );
+  }
+
+  return {ok:true,state:{messages:visibleMessages(state,profile),notifications:buildNotifications(state,profile)}};
+}
+only message the academy or your assigned teacher/student.");
   const item = { id:crypto.randomUUID(), from:profile.username, fromName:profileName(profile), fromRole:role, to:target.username, toName:profileName(target), toRole:targetRole, subject:subject||"Message from Al-Ahruf Academy", category, body:message, status:"open", createdAt:new Date().toISOString(), readBy:[profile.username] };
   state.messages.push(item);
   state.notifications.push({id:"msg-"+item.id,type:"message",target:target.username,title:"New message",body:subject||"You have a new message.",createdAt:item.createdAt,read:false});
   const {error}=await ctx.supabaseAdmin.from("academy_state").update({state:cleanState(state),updated_at:new Date().toISOString()}).eq("id",1);
   if(error) throw error;
   return {ok:true,state:{messages:visibleMessages(state,profile),notifications:buildNotifications(state,profile)}};
+}
+
+async function sendPaymentReminders(ctx: any) {
+  await requireStaff(ctx, ["admin"]);
+  const state = await getAcademyState(ctx);
+  state.paymentReminders = Array.isArray(state.paymentReminders) ? state.paymentReminders : [];
+  const now = new Date(), today = now.toISOString().slice(0,10), sent:any[] = [];
+
+  for (const p of state.pay || []) {
+    if (!p || p.st === "paid" || !p.due || !p.sid) continue;
+    const dueDate = new Date(String(p.due)+"T23:59:59");
+    if (Number.isNaN(dueDate.getTime())) continue;
+    const days = Math.ceil((dueDate.getTime()-now.getTime())/86400000);
+    const kind = days===5 ? "5-days" : days===0 ? "due-today" : days<0 ? "overdue" : "";
+    if (!kind) continue;
+    const key = `${p.inv || p.sid}:${kind}:${today}`;
+    if (state.paymentReminders.some((x:any)=>x?.key===key)) continue;
+    const student=state.students.find((s:any)=>lower(s?.id)===lower(p.sid));
+    const email=text(student?.email);
+    if(!student || !email.includes("@")) continue;
+    let subject="Al-Ahruf Academy payment reminder";
+    let body=`Your payment ${p.inv || ""} is due soon.`;
+    if(kind==="due-today") body=`Your payment ${p.inv || ""} is due today.`;
+    if(kind==="overdue"){ subject="Al-Ahruf Academy payment overdue"; body=`Your payment ${p.inv || ""} is overdue. Please contact the Academy if you need assistance.`; }
+    const result=await sendEmail(email,subject,
+      `<p>Hello ${escapeHtml(student.name)},</p><p>${escapeHtml(body)}</p><p>Please sign in to the Al-Ahruf Academy dashboard for your payment information.</p>`,
+      `Hello ${student.name},\\n\\n${body}\\n\\nPlease sign in to the Al-Ahruf Academy dashboard for your payment information.`);
+    if(result.ok){ state.paymentReminders.push({key,sid:student.id,kind,sentAt:new Date().toISOString()}); sent.push({sid:student.id,kind}); }
+  }
+  const {error}=await ctx.supabaseAdmin.from("academy_state").update({state:cleanState(state),updated_at:new Date().toISOString()}).eq("id",1);
+  if(error) throw error;
+  return {ok:true,sent};
 }
 
 async function markNotificationRead(ctx: any, body: any) {
@@ -230,6 +307,10 @@ function normalizedRole(value: unknown) {
   const r = lower(value);
   if (r === "administrator") return "admin";
   return r;
+}
+
+function escapeHtml(value: unknown) {
+  return text(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
 }
 
 function profileName(profile: any, fallback = "User") {
@@ -803,6 +884,10 @@ export default {
 
         if (action === "send_message") {
           return json(await sendMessage(ctx, body));
+        }
+
+        if (action === "send_payment_reminders") {
+          return json(await sendPaymentReminders(ctx));
         }
 
         if (action === "mark_notification_read") {
