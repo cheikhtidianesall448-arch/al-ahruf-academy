@@ -44,6 +44,7 @@ function cleanState(state: any) {
   s.classes = Array.isArray(s.classes) ? s.classes : [];
   s.messages = Array.isArray(s.messages) ? s.messages : [];
   s.notifications = Array.isArray(s.notifications) ? s.notifications : [];
+  s.messagePeers = Array.isArray(s.messagePeers) ? s.messagePeers : [];
   s.paymentReminders = Array.isArray(s.paymentReminders) ? s.paymentReminders : [];
 
   // Never return stored passwords to the browser.
@@ -58,6 +59,11 @@ function studentState(state: any, username: string) {
   const id = lower(username);
   const s = cleanState(state);
 
+  const me = s.students.find((student: any) => lower(student?.id) === id);
+  const teacher = lower(me?.teacher);
+  s.messagePeers = teacher
+    ? s.students.filter((student: any) => lower(student?.teacher) === teacher && lower(student?.id) !== id).map((student: any) => ({ id: student.id, name: student.name, teacher: student.teacher }))
+    : [];
   s.students = s.students.filter(
     (student: any) => lower(student?.id) === id,
   );
@@ -107,13 +113,16 @@ function visibleMessages(state: any, profile: any) {
   const assignedIds = role === "teacher"
     ? new Set(s.students.filter((x: any) => lower(x?.teacher) === me).map((x: any) => lower(x?.id)))
     : new Set([me]);
+  const myStudent = role === "student" ? s.students.find((x: any) => lower(x?.id) === me) : null;
+  const peerIds = role === "student" && myStudent?.teacher
+    ? new Set(s.students.filter((x: any) => lower(x?.teacher) === lower(myStudent.teacher)).map((x: any) => lower(x?.id)))
+    : new Set<string>();
   return s.messages.filter((m: any) => {
     const from = lower(m?.from);
     const to = lower(m?.to);
     if (from === me || to === me) return true;
-    // Teachers may see messages involving themselves and assigned students,
-    // but never private student-to-admin conversations or complaints.
-    if (role === "teacher" && ((assignedIds.has(from) && to === me) || (assignedIds.has(to) && from === me))) return true;
+    if (role === "student" && peerIds.has(from) && peerIds.has(to)) return true;
+    if (role === "teacher" && assignedIds.has(from) && assignedIds.has(to)) return true;
     return false;
   });
 }
@@ -173,11 +182,13 @@ async function sendMessage(ctx: any, body: any) {
   if (!target || !isActive(target)) throw new Error("Recipient was not found.");
 
   const targetRole = normalizedRole(target.role);
+  const myStudent = role === "student" ? state.students.find((s:any)=>lower(s?.id)===me) : null;
+  const targetStudent = targetRole === "student" ? state.students.find((s:any)=>lower(s?.id)===lower(target.username)) : null;
   const allowed =
     role === "admin" ||
-    targetRole === "admin" ||
     (role === "teacher" && targetRole === "student" && state.students.some((s:any)=>lower(s?.id)===lower(target.username)&&lower(s?.teacher)===me)) ||
-    (role === "student" && targetRole === "teacher" && lower(target.username) === lower(state.students.find((s:any)=>lower(s?.id)===me)?.teacher));
+    (role === "student" && targetRole === "teacher" && lower(target.username) === lower(myStudent?.teacher)) ||
+    (role === "student" && targetRole === "student" && !!myStudent?.teacher && lower(myStudent.teacher) === lower(targetStudent?.teacher));
 
   if (!allowed) throw new Error("You can only message the academy or your assigned teacher/student.");
 
@@ -190,12 +201,6 @@ async function sendMessage(ctx: any, body: any) {
   };
 
   state.messages.push(item);
-  state.notifications.push({
-    id:"msg-"+item.id, type:"message", target:target.username,
-    title: category === "complaint" ? "New complaint" : "New message",
-    body: subject || "You have a new message.", createdAt:item.createdAt, read:false
-  });
-
   const {error}=await ctx.supabaseAdmin.from("academy_state")
     .update({state:cleanState(state),updated_at:new Date().toISOString()}).eq("id",1);
   if(error) throw error;
@@ -775,9 +780,16 @@ async function upsertStudent(ctx: any, body: any) {
     }
   }
 
+  const age = Number(s.age);
+  const sex = text(s.sex);
+  if (!Number.isInteger(age) || age < 1 || age > 120) throw new Error("A valid student age between 1 and 120 is required.");
+  if (sex !== "Male" && sex !== "Female") throw new Error("Student sex must be Male or Female.");
+
   const cleanStudent = {
     id: studentId,
     name: fullName,
+    age,
+    sex,
     phone,
     email: emailInput,
     level: text(s.level) || "Beginner",
