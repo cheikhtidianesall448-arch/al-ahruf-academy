@@ -22,7 +22,7 @@ function cleanState(state: any) {
 async function roleOf(ctx: any) {
   const uid = ctx.userClaims?.sub;
   if (!uid) return null;
-  const { data } = await ctx.supabaseAdmin.from("profiles").select("id,username,name,role,email,phone").eq("id", uid).maybeSingle();
+  const { data } = await ctx.supabaseAdmin.from("profiles").select("id,username,name,full_name,role,email,phone,is_active").eq("id", uid).maybeSingle();
   return data || null;
 }
 
@@ -39,7 +39,7 @@ export default {
       if (action === "login") {
         const username = String(body.username || "").trim().toLowerCase();
         const password = String(body.password || "");
-        const wantedRole = String(body.role || "");
+        const wantedRole = String(body.role || "").trim().toLowerCase();
 
         const { data: profile, error: pe } = await ctx.supabaseAdmin
           .from("profiles")
@@ -47,7 +47,7 @@ export default {
           .or("username.ilike." + username + ",email.ilike." + username)
           .maybeSingle();
 
-        if (pe || !profile || profile.role !== wantedRole) {
+        if (pe || !profile || !profile.is_active || String(profile.role || "").toLowerCase() !== wantedRole) {
           return json({ error: "Invalid login" }, 401);
         }
 
@@ -80,7 +80,7 @@ export default {
 
         return json({
           session: authData.session,
-          user: { id: profile.id, role: profile.role, name: profile.name, username: profile.username },
+          user: { id: profile.id, role: profile.role, name: profile.name || profile.full_name || "", username: profile.username },
           state: cleanState(state),
         });
       }
@@ -103,7 +103,7 @@ export default {
             att: Object.fromEntries(Object.entries(state.att || {}).map(([d,v]:any) => [d, v?.[profile.username] ? {[profile.username]:v[profile.username]} : {}])),
           };
         }
-        return json({ user:{id:profile.id,role:profile.role,name:profile.name,username:profile.username}, state });
+        return json({ user:{id:profile.id,role:profile.role,name:profile.name || profile.full_name || "",username:profile.username}, state });
       }
 
       if (action === "save_state") {
@@ -129,7 +129,7 @@ export default {
           if(error) throw error;
           uid=created.user.id;
           const {error: pe} = await ctx.supabaseAdmin.from("profiles").insert({
-            id:uid,username:s.id,name:s.name,role:"student",email,phone:s.phone||""
+            id:uid,username:s.id,name:s.name,full_name:s.name,role:"student",email,phone:s.phone||"",is_active:true
           });
           if(pe) throw pe;
         } else {
@@ -137,7 +137,7 @@ export default {
           if(s.pw) attrs.password=s.pw;
           const {error:ue}=await ctx.supabaseAdmin.auth.admin.updateUserById(uid,attrs);
           if(ue) throw ue;
-          const {error:pe}=await ctx.supabaseAdmin.from("profiles").update({name:s.name,email,phone:s.phone||""}).eq("id",uid);
+          const {error:pe}=await ctx.supabaseAdmin.from("profiles").update({name:s.name,full_name:s.name,email,phone:s.phone||"",is_active:true}).eq("id",uid);
           if(pe) throw pe;
         }
 
