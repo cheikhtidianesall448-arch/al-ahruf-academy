@@ -94,9 +94,22 @@ async function getProfile(ctx: any, userId: string) {
 }
 
 async function getCurrentProfile(ctx: any) {
-  const userId = ctx.userClaims?.sub;
-  if (!userId) return null;
-  return await getProfile(ctx, userId);
+  // withSupabase can expose the verified UID through userClaims, but the
+  // authenticated Supabase client is the reliable fallback for protected
+  // requests coming from the browser.
+  const claimUserId = ctx.userClaims?.sub;
+
+  if (claimUserId) {
+    return await getProfile(ctx, claimUserId);
+  }
+
+  const { data, error } = await ctx.supabase.auth.getUser();
+
+  if (error || !data?.user?.id) {
+    return null;
+  }
+
+  return await getProfile(ctx, data.user.id);
 }
 
 function normalizedRole(value: unknown) {
