@@ -304,7 +304,9 @@ async function login(ctx: any, payload: any) {
   const fullState = await getAcademyState(ctx);
   const state = actualRole === "student"
     ? studentState(fullState, profile.username)
-    : cleanState(fullState);
+    : actualRole === "teacher"
+      ? teacherState(fullState, profile.username)
+      : cleanState(fullState);
 
   return {
     ok: true,
@@ -616,22 +618,45 @@ async function getState(ctx: any) {
 }
 
 async function saveState(ctx: any, body: any) {
-  await requireStaff(ctx, ["admin", "teacher"]);
+  const profile = await requireStaff(ctx, ["admin", "teacher"]);
+  if (!body.state || typeof body.state !== "object") throw new Error("A valid state object is required.");
 
-  if (!body.state || typeof body.state !== "object") {
-    throw new Error("A valid state object is required.");
+  if (normalizedRole(profile.role) === "admin") {
+    const { error } = await ctx.supabaseAdmin.from("academy_state")
+      .update({ state: cleanState(body.state), updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw error;
+    return { ok: true };
   }
 
-  const { error } = await ctx.supabaseAdmin
-    .from("academy_state")
-    .update({
-      state: cleanState(body.state),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", 1);
+  const full = await getAcademyState(ctx);
+  const incoming = cleanState(body.state);
+  const assignedIds = new Set(full.students
+    .filter((s: any) => lower(s?.teacher) === lower(profile.username))
+    .map((s: any) => lower(s?.id)));
 
+  full.students = full.students.map((existing: any) => {
+    const id = lower(existing?.id);
+    if (!assignedIds.has(id)) return existing;
+    return incoming.students.find((s: any) => lower(s?.id) === id) || existing;
+  });
+
+  full.pay = full.pay.filter((p: any) => !assignedIds.has(lower(p?.sid)));
+  for (const p of incoming.pay || []) {
+    if (assignedIds.has(lower(p?.sid))) full.pay.push(p);
+  }
+
+  for (const date of Object.keys(incoming.att || {})) {
+    if (!full.att[date]) full.att[date] = {};
+    for (const [sid, record] of Object.entries(incoming.att[date] || {})) {
+      if (assignedIds.has(lower(sid))) full.att[date][sid] = record;
+    }
+  }
+
+  if (Array.isArray(incoming.classes)) full.classes = incoming.classes;
+
+  const { error } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(full), updated_at: new Date().toISOString() }).eq("id", 1);
   if (error) throw error;
-
   return { ok: true };
 }
 
