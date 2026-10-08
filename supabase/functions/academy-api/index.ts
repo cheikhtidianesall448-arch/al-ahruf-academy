@@ -702,28 +702,29 @@ async function upsertStudent(ctx: any, body: any) {
   let userId = existing.data?.[0]?.id;
 
   if (!userId) {
-    if (!password) {
-      throw new Error("A password is required for a new student.");
+    // Some older students may exist in academy_state without a matching
+    // Supabase profile. Editing those records should still work; an account
+    // is only created here when a password is supplied.
+    if (password) {
+      const { data: created, error } =
+        await ctx.supabaseAdmin.auth.admin.createUser({
+          email: authEmail,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            name: fullName,
+            full_name: fullName,
+            role: "student",
+            username: studentId,
+          },
+        });
+
+      if (error || !created?.user) {
+        throw error || new Error("Could not create the student account.");
+      }
+
+      userId = created.user.id;
     }
-
-    const { data: created, error } =
-      await ctx.supabaseAdmin.auth.admin.createUser({
-        email: authEmail,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          name: fullName,
-          full_name: fullName,
-          role: "student",
-          username: studentId,
-        },
-      });
-
-    if (error || !created?.user) {
-      throw error || new Error("Could not create the student account.");
-    }
-
-    userId = created.user.id;
   } else {
     const attrs: any = {
       user_metadata: {
