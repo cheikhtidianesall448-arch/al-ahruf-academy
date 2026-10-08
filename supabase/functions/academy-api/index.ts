@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const EMPTY_STATE = {
   students: [],
+  teachers: [],
   pay: [],
   att: {},
   classes: [],
@@ -35,6 +36,7 @@ function lower(value: unknown) {
 function cleanState(state: any) {
   const s = JSON.parse(JSON.stringify(state || EMPTY_STATE));
   s.students = Array.isArray(s.students) ? s.students : [];
+  s.teachers = Array.isArray(s.teachers) ? s.teachers : [];
   s.pay = Array.isArray(s.pay) ? s.pay : [];
   s.att = s.att && typeof s.att === "object" ? s.att : {};
   s.classes = Array.isArray(s.classes) ? s.classes : [];
@@ -65,6 +67,26 @@ function studentState(state: any, username: string) {
   }
   s.att = filteredAttendance;
 
+  return s;
+}
+
+
+function teacherState(state: any, username: string) {
+  const s = cleanState(state);
+  const teacher = lower(username);
+  s.students = s.students.filter((student: any) => lower(student?.teacher) === teacher);
+  const assigned = new Set(s.students.map((student: any) => lower(student?.id)));
+  s.pay = s.pay.filter((payment: any) => assigned.has(lower(payment?.sid)));
+  const filteredAttendance: Record<string, any> = {};
+  for (const [date, value] of Object.entries(s.att || {})) {
+    if (!value || typeof value !== "object") continue;
+    const day: Record<string, any> = {};
+    for (const [sid, record] of Object.entries(value as Record<string, any>)) {
+      if (assigned.has(lower(sid))) day[sid] = record;
+    }
+    if (Object.keys(day).length) filteredAttendance[date] = day;
+  }
+  s.att = filteredAttendance;
   return s;
 }
 
@@ -313,6 +335,75 @@ async function requireStaff(ctx: any, allowed: string[]) {
   return profile;
 }
 
+
+async function upsertTeacher(ctx: any, body: any) {
+  await requireStaff(ctx, ["admin"]);
+  const teacher = body.teacher || {};
+  const name = text(teacher.name), username = text(teacher.username);
+  const emailInput = lower(teacher.email), phone = text(teacher.phone), password = text(teacher.password);
+  if (!name || !username) throw new Error("Teacher name and username are required.");
+  if (!emailInput || !emailInput.includes("@")) throw new Error("A valid teacher email is required.");
+
+  const existing = await ctx.supabaseAdmin.from("profiles").select("id").ilike("username", username).limit(2);
+  if (existing.error) throw existing.error;
+  if ((existing.data?.length || 0) > 1) throw new Error("More than one profile uses this username.");
+
+  let userId = existing.data?.[0]?.id;
+  if (!userId) {
+    if (!password) throw new Error("A password is required for a new teacher.");
+    const { data: created, error } = await ctx.supabaseAdmin.auth.admin.createUser({
+      email: emailInput, password, email_confirm: true,
+      user_metadata: { name, full_name: name, role: "teacher", username },
+    });
+    if (error || !created?.user) throw error || new Error("Could not create the teacher account.");
+    userId = created.user.id;
+  } else {
+    const attrs: any = { user_metadata: { name, full_name: name, role: "teacher", username } };
+    if (emailInput) attrs.email = emailInput;
+    if (password) attrs.password = password;
+    const { error } = await ctx.supabaseAdmin.auth.admin.updateUserById(userId, attrs);
+    if (error) throw error;
+  }
+
+  const { error: profileError } = await ctx.supabaseAdmin.from("profiles").upsert({
+    id: userId, username, name, full_name: name, role: "teacher",
+    email: emailInput, phone, is_active: true,
+  }, { onConflict: "id" });
+  if (profileError) throw new Error("Could not save teacher profile: " + profileError.message);
+
+  const state = await getAcademyState(ctx);
+  state.teachers = (state.teachers || []).filter((x: any) => lower(x?.username) !== lower(username));
+  state.teachers.push({ id: userId, name, username, email: emailInput, phone, active: true });
+
+  const { error: stateError } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (stateError) throw stateError;
+  return { ok: true, state: cleanState(state) };
+}
+
+async function deleteTeacher(ctx: any, body: any) {
+  await requireStaff(ctx, ["admin"]);
+  const username = text(body.username);
+  if (!username) throw new Error("Teacher username is required.");
+  const profileResult = await ctx.supabaseAdmin.from("profiles").select("id").ilike("username", username).limit(2);
+  if (profileResult.error) throw profileResult.error;
+  if (profileResult.data?.length > 1) throw new Error("More than one profile uses this username.");
+  const userId = profileResult.data?.[0]?.id;
+  if (userId) {
+    const { error } = await ctx.supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) throw error;
+  }
+  const state = await getAcademyState(ctx);
+  state.teachers = (state.teachers || []).filter((x: any) => lower(x?.username) !== lower(username));
+  state.students = (state.students || []).map((s: any) =>
+    lower(s?.teacher) === lower(username) ? { ...s, teacher: "" } : s
+  );
+  const { error } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) throw error;
+  return { ok: true, state: cleanState(state) };
+}
+
 async function upsertStudent(ctx: any, body: any) {
   const admin = await requireStaff(ctx, ["admin"]);
   void admin;
@@ -505,6 +596,11 @@ async function getState(ctx: any) {
 
   const state = await getAcademyState(ctx);
   const actualRole = normalizedRole(profile.role);
+  const visibleState = actualRole === "student"
+    ? studentState(state, profile.username)
+    : actualRole === "teacher"
+      ? teacherState(state, profile.username)
+      : cleanState(state);
 
   return {
     user: {
@@ -515,9 +611,7 @@ async function getState(ctx: any) {
       full_name: profileName(profile),
       role: actualRole,
     },
-    state: actualRole === "student"
-      ? studentState(state, profile.username)
-      : cleanState(state),
+    state: visibleState,
   };
 }
 
@@ -578,6 +672,14 @@ export default {
 
         if (action === "upsert_student") {
           return json(await upsertStudent(ctx, body));
+        }
+
+        if (action === "upsert_teacher") {
+          return json(await upsertTeacher(ctx, body));
+        }
+
+        if (action === "delete_teacher") {
+          return json(await deleteTeacher(ctx, body));
         }
 
         if (action === "delete_student") {
