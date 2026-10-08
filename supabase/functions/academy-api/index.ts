@@ -43,7 +43,8 @@ function cleanState(state: any) {
   s.att = s.att && typeof s.att === "object" ? s.att : {};
   s.classes = Array.isArray(s.classes) ? s.classes : [];
   s.messages = Array.isArray(s.messages) ? s.messages : [];
-  s.notifications = Array.isArray(s.notifications) ? s.notifications : [];\n  s.paymentReminders = Array.isArray(s.paymentReminders) ? s.paymentReminders : [];
+  s.notifications = Array.isArray(s.notifications) ? s.notifications : [];
+  s.paymentReminders = Array.isArray(s.paymentReminders) ? s.paymentReminders : [];
 
   // Never return stored passwords to the browser.
   s.students.forEach((student: any) => {
