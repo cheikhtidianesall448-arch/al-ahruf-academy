@@ -43,7 +43,7 @@ export default {
 
         const { data: profile, error: pe } = await ctx.supabaseAdmin
           .from("profiles")
-          .select("id,username,name,role,email,phone")
+          .select("id,username,name,full_name,role,email,phone,is_active")
           .or("username.ilike." + username + ",email.ilike." + username)
           .maybeSingle();
 
