@@ -121,8 +121,7 @@ body.rtl .lang-switch{right:auto;left:50%;transform:translateX(-50%)}
 <div class="wrap" id="app"></div>
 <dialog id="dlg"></dialog><div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>window.addEventListener('error',e=>{console.error('Al-Ahruf startup error:',e.error||e.message);const a=document.getElementById('app');if(a&&!a.innerHTML.trim())a.innerHTML='<div class="card"><h2>Al-Ahruf Academy</h2><p class="mute">The login screen could not start. Please refresh the page.</p><button class="btn" onclick="location.reload()">Refresh</button></div>';});</script>
-<script src="supabase-config.js"></script>
+<script>window.addEventListener('error',e=>{if(!e.error&&!e.message)return;console.error('Al-Ahruf startup error:',e.error||e.message);const a=document.getElementById('app');if(a&&!a.innerHTML.trim())a.innerHTML='<div class="card"><h2>Al-Ahruf Academy</h2><p class="mute">The login screen could not start. Please refresh the page.</p><button class="btn" onclick="location.reload()">Refresh</button></div>';});</script>
 <script>
 /* Built-in fallback for GitHub Pages: the publishable key is safe for browser use. */
 if(!window.AHRUF_SUPABASE){
