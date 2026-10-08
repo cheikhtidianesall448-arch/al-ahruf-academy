@@ -261,7 +261,7 @@ async function getAcademyState(ctx: any) {
 
   if (error) throw error;
 
-  return data?.state || EMPTY_STATE;
+  return cleanState(data?.state || EMPTY_STATE);
 }
 
 async function getProfile(ctx: any, userId: string) {
