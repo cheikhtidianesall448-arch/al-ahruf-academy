@@ -163,7 +163,7 @@ async function sendMessage(ctx: any, body: any) {
   const subject = text(body.subject);
   const message = text(body.message);
   const category = text(body.category) || "general";
-  if (!requestedTo || !message) throw new Error("Recipient and message are required.");
+  if (!requestedTo || (!message && !body.attachment)) throw new Error("Write a message or attach a file.");
 
   const state = ensureMessageState(await getAcademyState(ctx));
   const role = normalizedRole(profile.role);
