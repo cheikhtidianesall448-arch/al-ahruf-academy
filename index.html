@@ -115,6 +115,71 @@ body.rtl .surah-ar{direction:rtl}
 body.rtl .lang-switch{right:auto;left:50%;transform:translateX(-50%)}
 @media(max-width:520px){.lang-switch{top:58px;left:50%;right:auto;transform:translateX(-50%)}.lang-switch select{min-width:104px}}
 
+/* Mobile-first readability and touch layout */
+@media(max-width:700px){
+  body{font-size:15px;overflow-x:hidden}
+  .bar{padding:10px 12px 12px;gap:9px;flex-wrap:wrap;min-height:64px}
+  .bar img{width:38px;height:38px;flex:0 0 38px}
+  .bar>div:not(.sp){min-width:0}
+  .bar b{font-size:1.05rem;line-height:1.15;display:block;white-space:normal}
+  .bar small{font-size:.68rem;line-height:1.2}
+  .bar .sp{display:none}
+  .bar #who{order:5;flex:1 1 100%;text-align:center;font-size:.78rem;margin-top:2px}
+  .bar .chip{font-size:.74rem;padding:7px 10px}
+  .bar .chip[onclick="theme()"]{margin-left:auto}
+  .logout-btn{margin-left:0!important}
+  .lang-switch{position:fixed;top:8px;left:auto;right:10px;transform:none;z-index:200}
+  .lang-switch select{min-width:96px;padding:7px 9px;font-size:.72rem}
+  .wrap{padding:14px 10px 28px}
+  .card{padding:14px;border-radius:12px}
+  .row{gap:8px}
+  .row>*{max-width:100%}
+  .nav{gap:6px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:5px;-webkit-overflow-scrolling:touch}
+  .nav button{flex:0 0 auto;padding:8px 11px;font-size:.76rem;white-space:nowrap}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .stats .card{padding:12px}
+  .stats .card b{font-size:1.55rem}
+  .grid2{grid-template-columns:1fr;gap:10px}
+  .tw{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:520px;font-size:.82rem}
+  th,td{padding:8px}
+  .btn{min-height:42px;padding:9px 12px}
+  .btn.sm{min-height:36px}
+  dialog{width:calc(100vw - 20px);padding:16px;max-height:88vh}
+  input,select,textarea{font-size:16px;min-height:44px}
+  .surah-item{padding:10px;gap:8px}
+  .surah-item .surah-name{min-width:0}
+  .code{font-size:1.35rem;letter-spacing:2px}
+}
+@media(max-width:420px){
+  .bar{padding-right:8px;padding-left:8px}
+  .bar img{width:34px;height:34px;flex-basis:34px}
+  .bar b{font-size:.95rem}
+  .bar .chip{padding:6px 8px;font-size:.7rem}
+  .lang-switch{right:7px}
+  .lang-switch select{min-width:88px;padding:6px 7px}
+  .stats{grid-template-columns:1fr 1fr}
+  .stats .card b{font-size:1.35rem}
+  .end{justify-content:stretch}
+  .end .btn{width:100%}
+}
+
+/* Keep the login screen clear and comfortable on phones */
+@media(max-width:700px){
+  body:has(.hero) .hero{min-height:100svh}
+  body:has(.hero) .brand{padding:28px 18px 24px;min-height:auto}
+  body:has(.hero) .brand img{width:72px;height:72px;margin-bottom:14px}
+  body:has(.hero) .brand h1{font-size:clamp(2.15rem,10vw,3rem);line-height:1.05}
+  body:has(.hero) .brand p{font-size:.92rem;line-height:1.5;margin:14px 0 18px}
+  body:has(.hero) .brand .tabs{gap:7px}
+  body:has(.hero) .brand .tabs button{padding:9px 13px;font-size:.78rem}
+  body:has(.hero) .hero>.card{padding:20px 16px;width:100%;max-width:none}
+  body:has(.hero) .hero>.card .tabs{margin-bottom:18px}
+  body:has(.hero) .hero>.card .tabs button{padding:11px 5px;font-size:.8rem}
+  body:has(.hero) .hero>.card input{font-size:16px;min-height:48px}
+  body:has(.hero) .hero>.card form .btn{min-height:48px}
+}
+
 /* Always-visible Admin login */
 #rt button[data-r="admin"]{display:block!important;background:var(--gold)!important;color:#241a05!important;border:1px solid var(--gold)!important;font-weight:800!important}
 
