@@ -610,8 +610,7 @@ function editS(id){if(user.role!=='admin'){toast('Only the administrator can edi
   }else{
     S.students.push(d);
   }
-  // Persist the complete normalized state so age/sex remain stored online.
-  await onlineApi('save_state',{state:S});
+  // upsert_student already saves the complete student record in Supabase.
 }else{const i=S.students.findIndex(x=>x.id===id);i<0?S.students.push(d):S.students[i]=d;save();}
  toast(ONLINE?'Student account created/updated online':'Student saved');render()})}
 
