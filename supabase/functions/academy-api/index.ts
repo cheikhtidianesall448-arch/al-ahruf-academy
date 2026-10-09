@@ -70,6 +70,12 @@ function studentState(state: any, username: string) {
   };
 
   const me = s.students.find((student: any) => lower(student?.id) === id);
+  // Share only public leaderboard fields; keep payments, contact details and account data private.
+  s.ranking = s.students.map((student: any) => ({
+    id: String(student?.id ?? ""),
+    name: String(student?.name ?? "Student"),
+    surahCount: Array.isArray(student?.sur) ? student.sur.length : 0,
+  }));
   const teacher = teacherKey(me?.teacher);
   s.messagePeers = teacher
     ? s.students
