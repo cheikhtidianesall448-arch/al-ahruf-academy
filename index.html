@@ -502,11 +502,16 @@ function myTeacher(){
  if(!assigned||!teacher)return '<div class="card"><h3>My Teacher</h3><p class="mute">Your teacher has not been assigned yet. Please contact the academy administrator.</p></div>';
  return '<div class="card"><h3>My Teacher</h3><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 0"><div style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--soft);font-size:26px">👨‍🏫</div><div><h3 style="margin:0 0 6px">'+esc(teacher.name||'Teacher')+'</h3><div class="mute">Your assigned Quran teacher</div>'+(teacher.email?'<div>'+esc(teacher.email)+'</div>':'')+(teacher.phone?'<div>'+esc(teacher.phone)+'</div>':'')+'</div></div><p class="mute">Send a private message to ask a question or discuss your lessons.</p><button class="btn" onclick="composeMessage(\''+esc(teacher.username)+'\')">Message My Teacher</button></div>';
 }
+function currentStudent(){
+ const sid=String(user.username||user.studentId||user.student_id||user.id||'').trim().toLowerCase();
+ const students=Array.isArray(S.students)?S.students:[];
+ return students.find(x=>[x.id,x.studentId,x.student_id].some(v=>String(v||'').trim().toLowerCase()===sid))||(user.role==='student'&&students.length===1?students[0]:null);
+}
 function classmates(){
  if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
- const sid=String(user.username||user.id||'').trim().toLowerCase();
+ const sid=String(user.username||user.studentId||user.student_id||user.id||'').trim().toLowerCase();
  const students=Array.isArray(S.students)?S.students:[];
- const me=students.find(x=>String(x.id||'').trim().toLowerCase()===sid)||(students.length===1?students[0]:null);
+ const me=currentStudent();
  const peers=Array.isArray(S.messagePeers)?S.messagePeers:[];
  const teacherKey=value=>{
   const raw=String(value||'').trim().toLowerCase();
@@ -523,7 +528,7 @@ function classmates(){
  const rows=list.map(p=>`<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);gap:12px"><div><b>${esc(p.name||'Student')}</b><div class="mute">${esc(p.sex||'Classmate')}</div></div><button class="btn sm" onclick="composeMessage('${esc(p.id)}')">Message</button></div>`).join('');
  return `<div class="row between" style="margin-bottom:12px"><div><h3>Classmates</h3><span class="mute">Students assigned to the same teacher as you.</span></div></div><div class="card">${rows||'<p class="mute">No classmates have been assigned to your teacher yet.'+(me&&me.teacher?'':' Your teacher assignment may need to be checked by the administrator.')+'</p>'}</div>`;
 }
-function messageRecipients(){const me=String(user.username||user.id||'').toLowerCase();if(user.role==='admin')return [...(S.students||[]).map(s=>({u:s.id,n:s.name,r:'student'})),...(S.teachers||[]).map(t=>({u:t.username,n:t.name,r:'teacher'}))];if(user.role==='teacher')return [{u:'ahruf',n:'Academy Administrator',r:'admin'},...(S.students||[]).filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))];const s=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===me)||((S.students||[]).length===1?(S.students||[])[0]:null);const peerList=Array.isArray(S.messagePeers)?S.messagePeers:[];const peers=(peerList.length?peerList:(S.students||[]).filter(x=>String(x.id||'').toLowerCase()!==String(s?.id||'').toLowerCase()&&s?.teacher&&String(x.teacher||'').trim().toLowerCase()===String(s.teacher).trim().toLowerCase())).map(x=>({u:x.id,n:x.name,r:'student'}));return [...peers,...(s&&s.teacher?[{u:s.teacher,n:teacherName(s.teacher),r:'teacher'}]:[])];}
+function messageRecipients(){const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();if(user.role==='admin')return [...(S.students||[]).map(s=>({u:s.id,n:s.name,r:'student'})),...(S.teachers||[]).map(t=>({u:t.username,n:t.name,r:'teacher'}))];if(user.role==='teacher')return [{u:'ahruf',n:'Academy Administrator',r:'admin'},...(S.students||[]).filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))];const s=currentStudent();const peerList=Array.isArray(S.messagePeers)?S.messagePeers:[];const peers=(peerList.length?peerList:(S.students||[]).filter(x=>String(x.id||'').toLowerCase()!==String(s?.id||'').toLowerCase()&&s?.teacher&&String(x.teacher||'').trim().toLowerCase()===String(s.teacher).trim().toLowerCase())).map(x=>({u:x.id,n:x.name,r:'student'}));const group=s&&s.teacher?[{u:'group:'+String(s.teacher),n:'My class group',r:'group'}]:[];return [...group,...peers,...(s&&s.teacher?[{u:s.teacher,n:teacherName(s.teacher),r:'teacher'}]:[])];}
 let recordedAudioAttachment=null,activeMessageRecorder=null,activeMessageChunks=[];
 async function startMessageRecording(){
  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){toast('Audio recording is not supported by this browser. You can attach an audio file instead.');return}
@@ -544,7 +549,7 @@ function stopMessageRecording(){if(activeMessageRecorder&&activeMessageRecorder.
 async function sendPlatformMessage(f){
  const fileInput=f.attachment,file=fileInput?.files?.[0];
  const d={to:f.to.value,subject:'',category:'general',message:f.message.value.trim()};
- if(f.group?.checked)d.to='group:'+String(((S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(user.username||user.id||'').toLowerCase())||((S.students||[]).length===1?(S.students||[])[0]:null))?.teacher||'');
+ if(f.group?.checked)d.to='group:'+String(currentStudent()?.teacher||'');
  if(!d.to||(!d.message&&!file&&!recordedAudioAttachment))return false;
  if(!file&&recordedAudioAttachment)d.attachment=recordedAudioAttachment;
  if(file){
@@ -569,7 +574,7 @@ function composeMessage(to){
 }
 function replyMessage(to){composeMessage(to)}
 function messages(){
- const me=String(user.username||user.id||'').toLowerCase(),myStudent=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===me);
+ const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase(),myStudent=currentStudent();
  const list=[...(S.messages||[])].filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me||(user.role==='student'&&myStudent?.teacher&&String(m.to||'').toLowerCase()==='group:'+String(myStudent.teacher).toLowerCase()&&(S.students||[]).some(x=>String(x.id||'').toLowerCase()===String(m.from||'').toLowerCase()&&String(x.teacher||'').toLowerCase()===String(myStudent.teacher).toLowerCase()))).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
  return '<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Private messages, class discussions, files and voice notes.</span></div><button class="btn" onclick="composeMessage()">New message</button></div><div class="card">'+(list.map(m=>'<div class="card" style="margin-bottom:10px;border-color:var(--line)"><div class="mute">'+esc(m.fromName||m.from)+' → '+esc(String(m.to||'').startsWith('group:')?'Class group':(m.toName||m.to))+' · '+new Date(m.createdAt||Date.now()).toLocaleString()+(m.editedAt?' · edited':'')+'</div>'+(m.body?'<p style="white-space:pre-wrap;margin:8px 0">'+esc(m.body)+'</p>':'')+(m.attachment?(String(m.attachment.type||'').startsWith('audio/')?'<p>🎙 '+esc(m.attachment.name||'Voice message')+'</p><audio controls preload="none" style="width:100%;max-width:420px" src="'+esc(m.attachment.data||m.attachment.url||'')+'"></audio>':'<p><a href="'+esc(m.attachment.data||m.attachment.url||'#')+'" download="'+esc(m.attachment.name||'attachment')+'" target="_blank" rel="noopener">📎 '+esc(m.attachment.name||'Attached file')+'</a></p>'):'')+((user.role==='admin'||String(m.from||'').toLowerCase()===me)?'<div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost sm" onclick="editPlatformMessage(\''+esc(m.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button></div>':'')+'</div>').join('')||'<p class="mute">No messages yet.</p>')+'</div>'
 }
