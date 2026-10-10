@@ -799,7 +799,7 @@ function editClassLink(id){
  modal(id?'Edit class link':'Add class link',`<label>Class name</label><input name="title" required maxlength="100" value="${esc(c.title)}" placeholder="e.g. Tajwid — Level 1"><label>Jitsi room name or link</label><input name="url" type="text" required value="${esc(savedRoom)}" placeholder="e.g. AlAhrufTajwid or https://meet.jit.si/AlAhrufTajwid"><p class="mute">Enter a room name or paste a meet.jit.si link. Students will go directly to the Jitsi meeting.</p><div class="row"><div style="flex:1;min-width:180px"><label>Student level</label><select name="level">${levelOptions}</select></div>${user.role==='admin'?'<div style="flex:1;min-width:180px"><label>Assigned teacher</label><select name="teacher">'+teacherOptionsHtml+'</select></div>':'<input type="hidden" name="teacher" value="'+esc(c.teacher||user.username||'')+'">'}</div><p class="mute">Leave All levels to show this class to students at every level.</p>`,async f=>{
  const raw=f.url.value.trim();let room='',url='';
  if(/^https?:\\/\\//i.test(raw)){
-  try{const parsed=new URL(raw);if(!['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())||!/^\\/[A-Za-z0-9_-]+\\/?$/.test(parsed.pathname))return toast('Use a valid https://meet.jit.si/room link.'),false;room=parsed.pathname.replace(/^\\//,'').replace(/\\/$/,'')}
+   try{const parsed=new URL(raw);const parts=parsed.pathname.split('/').filter(Boolean);if(!['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())||parts.length!==1||! /^[A-Za-z0-9_-]+$/.test(parts[0]))return toast('Use a valid https://meet.jit.si/room link.'),false;room=parts[0]}
   catch{return toast('Enter a Jitsi room name or a valid meet.jit.si link.'),false}
  }else{
   room=raw.replace(/\\s+/g,'-');
