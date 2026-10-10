@@ -513,6 +513,8 @@ const joinUrl=(c,n)=>'https://meet.jit.si/'+room(c)+'#userInfo.displayName='+enc
 function newCode(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>a[b%a.length]).join('')}
 function parseCode(v){const m=String(v).match(/class=([A-Za-z0-9]+)/);return (m?m[1]:v).trim().toUpperCase()}
 function openCurtains(){
+ // Always reveal the admin Overview after sign-in, rather than a previously selected dashboard section.
+ if(user?.role==='admin'&&tab!=='overview'){tab='overview';render()}
  const old=document.getElementById('ahruf-curtain-intro');
  if(old)old.remove();
  const overlay=document.createElement('div');
