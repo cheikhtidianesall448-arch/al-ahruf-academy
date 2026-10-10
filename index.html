@@ -524,11 +524,29 @@ function classmates(){
  return `<div class="row between" style="margin-bottom:12px"><div><h3>Classmates</h3><span class="mute">Students assigned to the same teacher as you.</span></div></div><div class="card">${rows||'<p class="mute">No classmates have been assigned to your teacher yet.'+(me&&me.teacher?'':' Your teacher assignment may need to be checked by the administrator.')+'</p>'}</div>`;
 }
 function messageRecipients(){const me=String(user.username||user.id||'').toLowerCase();if(user.role==='admin')return [...(S.students||[]).map(s=>({u:s.id,n:s.name,r:'student'})),...(S.teachers||[]).map(t=>({u:t.username,n:t.name,r:'teacher'}))];if(user.role==='teacher')return [{u:'ahruf',n:'Academy Administrator',r:'admin'},...(S.students||[]).filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))];const s=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===me)||((S.students||[]).length===1?(S.students||[])[0]:null);const peerList=Array.isArray(S.messagePeers)?S.messagePeers:[];const peers=(peerList.length?peerList:(S.students||[]).filter(x=>String(x.id||'').toLowerCase()!==String(s?.id||'').toLowerCase()&&s?.teacher&&String(x.teacher||'').trim().toLowerCase()===String(s.teacher).trim().toLowerCase())).map(x=>({u:x.id,n:x.name,r:'student'}));return [...peers,...(s&&s.teacher?[{u:s.teacher,n:teacherName(s.teacher),r:'teacher'}]:[])];}
+let recordedAudioAttachment=null,activeMessageRecorder=null,activeMessageChunks=[];
+async function startMessageRecording(){
+ if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){toast('Audio recording is not supported by this browser. You can attach an audio file instead.');return}
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});activeMessageChunks=[];
+  activeMessageRecorder=new MediaRecorder(stream);
+  activeMessageRecorder.ondataavailable=e=>{if(e.data&&e.data.size)activeMessageChunks.push(e.data)};
+  activeMessageRecorder.onstop=()=>{
+   const recorder=activeMessageRecorder,blob=new Blob(activeMessageChunks,{type:recorder?.mimeType||'audio/webm'});stream.getTracks().forEach(t=>t.stop());
+   if(blob.size>10*1024*1024){recordedAudioAttachment=null;toast('Recording is larger than 10 MB. Please record a shorter message.');return}
+   const reader=new FileReader();reader.onload=()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};const status=document.getElementById('recordingStatus');if(status)status.textContent='Voice message ready to send.'};reader.readAsDataURL(blob)
+  };
+  activeMessageRecorder.start();const status=document.getElementById('recordingStatus');if(status)status.textContent='Recording… press Stop recording when finished.';
+  const start=document.getElementById('recordAudioBtn'),stop=document.getElementById('stopAudioBtn');if(start)start.disabled=true;if(stop)stop.disabled=false
+ }catch(e){toast('Microphone permission was not granted. You can attach an audio file instead.')}
+}
+function stopMessageRecording(){if(activeMessageRecorder&&activeMessageRecorder.state!=='inactive'){activeMessageRecorder.stop();const start=document.getElementById('recordAudioBtn'),stop=document.getElementById('stopAudioBtn');if(start)start.disabled=false;if(stop)stop.disabled=true}}
 async function sendPlatformMessage(f){
  const fileInput=f.attachment,file=fileInput?.files?.[0];
  const d={to:f.to.value,subject:'',category:'general',message:f.message.value.trim()};
  if(f.group?.checked)d.to='group:'+String(((S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(user.username||user.id||'').toLowerCase())||((S.students||[]).length===1?(S.students||[])[0]:null))?.teacher||'');
- if(!d.to||(!d.message&&!file))return false;
+ if(!d.to||(!d.message&&!file&&!recordedAudioAttachment))return false;
+ if(!file&&recordedAudioAttachment)d.attachment=recordedAudioAttachment;
  if(file){
   if(file.size>10*1024*1024){toast('Please choose a file smaller than 10 MB.');return false}
   const reader=new FileReader();
@@ -540,9 +558,10 @@ async function sendPlatformMessage(f){
   const item={id:String(Date.now()),from:user.id,fromName:user.name,fromRole:user.role,to:d.to,toName:rec.n,toRole:rec.r,subject:'',category:'general',body:d.message,attachment:d.attachment||null,status:'open',createdAt:new Date().toISOString(),readBy:[user.id]};
   S.messages.push(item);save()
  }
- toast('Message sent');render()
+ recordedAudioAttachment=null;activeMessageRecorder=null;activeMessageChunks=[];toast('Message sent');render()
 }
 function composeMessage(to){
+ recordedAudioAttachment=null;activeMessageRecorder=null;activeMessageChunks=[];
  const opts=messageRecipients().map(x=>'<option value="'+esc(x.u)+'" '+(x.u===to?'selected':'')+'>'+esc(x.n)+' — '+esc(x.r)+'</option>').join('');
  const student=(S.students||[]).find(x=>String(x.id)===String(user.id));
  const groupOption=user.role==='student'&&student?.teacher?'<label class="row"><input type="checkbox" name="group" style="width:auto" '+(to==='group:'+String(student.teacher)?'checked':'')+'> Send to my class group</label>':'';
@@ -550,9 +569,27 @@ function composeMessage(to){
 }
 function replyMessage(to){composeMessage(to)}
 function messages(){
- const me=String(user.id||'').toLowerCase(),myStudent=(S.students||[]).find(x=>String(x.id).toLowerCase()===me);
- const list=[...(S.messages||[])].filter(m=>user.role==='admin'||String(m.from).toLowerCase()===me||String(m.to).toLowerCase()===me||(user.role==='student'&&myStudent?.teacher&&String(m.to).toLowerCase()==='group:'+String(myStudent.teacher).toLowerCase()&&(S.students||[]).some(x=>String(x.id).toLowerCase()===String(m.from).toLowerCase()&&String(x.teacher||'').toLowerCase()===String(myStudent.teacher).toLowerCase()))).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
- return '<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Simple messages and class discussions.</span></div><button class="btn" onclick="composeMessage()">New message</button></div><div class="card">'+(list.map(m=>'<div class="card" style="margin-bottom:10px;border-color:var(--line)"><div class="mute">'+esc(m.fromName||m.from)+' → '+esc(String(m.to||'').startsWith('group:')?'Class group':(m.toName||m.to))+' · '+new Date(m.createdAt).toLocaleString()+'</div>'+(m.body?'<p style="white-space:pre-wrap;margin:8px 0">'+esc(m.body)+'</p>':'')+(m.attachment?'<p><a href="'+esc(m.attachment.data||m.attachment.url||'#')+'" download="'+esc(m.attachment.name||'attachment')+'" target="_blank" rel="noopener">📎 '+esc(m.attachment.name||'Attached file')+'</a></p>':'')+'</div>').join('')||'<p class="mute">No messages yet.</p>')+'</div>'
+ const me=String(user.username||user.id||'').toLowerCase(),myStudent=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===me);
+ const list=[...(S.messages||[])].filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me||(user.role==='student'&&myStudent?.teacher&&String(m.to||'').toLowerCase()==='group:'+String(myStudent.teacher).toLowerCase()&&(S.students||[]).some(x=>String(x.id||'').toLowerCase()===String(m.from||'').toLowerCase()&&String(x.teacher||'').toLowerCase()===String(myStudent.teacher).toLowerCase()))).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+ return '<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Private messages, class discussions, files and voice notes.</span></div><button class="btn" onclick="composeMessage()">New message</button></div><div class="card">'+(list.map(m=>'<div class="card" style="margin-bottom:10px;border-color:var(--line)"><div class="mute">'+esc(m.fromName||m.from)+' → '+esc(String(m.to||'').startsWith('group:')?'Class group':(m.toName||m.to))+' · '+new Date(m.createdAt||Date.now()).toLocaleString()+(m.editedAt?' · edited':'')+'</div>'+(m.body?'<p style="white-space:pre-wrap;margin:8px 0">'+esc(m.body)+'</p>':'')+(m.attachment?(String(m.attachment.type||'').startsWith('audio/')?'<p>🎙 '+esc(m.attachment.name||'Voice message')+'</p><audio controls preload="none" style="width:100%;max-width:420px" src="'+esc(m.attachment.data||m.attachment.url||'')+'"></audio>':'<p><a href="'+esc(m.attachment.data||m.attachment.url||'#')+'" download="'+esc(m.attachment.name||'attachment')+'" target="_blank" rel="noopener">📎 '+esc(m.attachment.name||'Attached file')+'</a></p>'):'')+((user.role==='admin'||String(m.from||'').toLowerCase()===me)?'<div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost sm" onclick="editPlatformMessage(\''+esc(m.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button></div>':'')+'</div>').join('')||'<p class="mute">No messages yet.</p>')+'</div>'
+}
+async function editPlatformMessage(id){
+ const m=(S.messages||[]).find(x=>String(x.id)===String(id));if(!m)return toast('Message not found.');
+ if(user.role!=='admin'&&String(m.from||'').toLowerCase()!==String(user.username||user.id||'').toLowerCase())return toast('You can edit only your own messages.');
+ modal('Edit message','<label>Message</label><textarea name="message" rows="5">'+esc(m.body||'')+'</textarea><p class="mute">Attached files and voice recordings are kept as they are.</p>',async f=>{
+  const body=f.message.value.trim();if(!body&&!m.attachment)return toast('A message or attachment is required.');
+  if(ONLINE){const r=await onlineApi('edit_message',{id:m.id,message:body});if(r.state)S.messages=r.state.messages||S.messages}
+  else{m.body=body;m.editedAt=new Date().toISOString();save()}
+  toast('Message updated');render()
+ },'Save changes')
+}
+async function deletePlatformMessage(id){
+ const m=(S.messages||[]).find(x=>String(x.id)===String(id));if(!m)return toast('Message not found.');
+ if(user.role!=='admin'&&String(m.from||'').toLowerCase()!==String(user.username||user.id||'').toLowerCase())return toast('You can delete only your own messages.');
+ if(!confirm('Delete this message? This cannot be undone.'))return;
+ if(ONLINE){const r=await onlineApi('delete_message',{id:m.id});if(r.state)S.messages=r.state.messages||S.messages}
+ else{S.messages=S.messages.filter(x=>String(x.id)!==String(id));save()}
+ toast('Message deleted');render()
 }
 async function markNotice(id){if(ONLINE){try{const r=await onlineApi('mark_notification_read',{id});if(r.state){S.messages=r.state.messages||S.messages;S.notifications=r.state.notifications||S.notifications}}catch(e){toast(e.message)}}else{const n=(S.notifications||[]).find(x=>x.id===id);if(n)n.read=true;save()}render()}
 function notifications(){const list=[...(S.notifications||[])].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));return '<div class="row between" style="margin-bottom:12px"><div><h3>Notifications</h3><span class="mute">Messages, payment reminders and academy alerts.</span></div></div><div class="card">'+(list.map(n=>'<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);opacity:'+(n.read?'.6':'1')+'"><div><b>'+esc(n.title)+'</b><div class="mute">'+esc(n.body)+'</div></div>'+(n.read?'':'<button class="btn ghost sm" onclick="markNotice(\''+esc(n.id)+'\')">Mark read</button>')+'</div>').join('')||'<p class="mute">No notifications.</p>')+'</div>'}function timetable(){
