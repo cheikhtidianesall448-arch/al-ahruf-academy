@@ -12,6 +12,7 @@ const EMPTY_STATE = {
   pay: [],
   att: {},
   classes: [],
+  classLinks: [],
   messages: [],
   notifications: [],
 };
@@ -42,6 +43,7 @@ function cleanState(state: any) {
   s.pay = Array.isArray(s.pay) ? s.pay : [];
   s.att = s.att && typeof s.att === "object" ? s.att : {};
   s.classes = Array.isArray(s.classes) ? s.classes : [];
+  s.classLinks = Array.isArray(s.classLinks) ? s.classLinks : [];
   s.messages = Array.isArray(s.messages) ? s.messages : [];
   s.notifications = Array.isArray(s.notifications) ? s.notifications : [];
   s.messagePeers = Array.isArray(s.messagePeers) ? s.messagePeers : [];
@@ -991,6 +993,26 @@ async function saveState(ctx: any, body: any) {
   if (Array.isArray(incoming.classes)) full.classes = incoming.classes;
 
   const teacher = lower(profile.username);
+  // Teachers may create, edit, and delete only their own saved MyClass links.
+  if (Array.isArray(incoming.classLinks)) {
+    const existingLinks = Array.isArray(full.classLinks) ? full.classLinks : [];
+    const submittedOwnLinks = incoming.classLinks
+      .filter((link: any) => lower(link?.owner) === teacher)
+      .filter((link: any) => text(link?.title) && /^https?:\\/\\//i.test(text(link?.url)))
+      .map((link: any) => ({
+        id: text(link.id),
+        title: text(link.title).slice(0, 100),
+        url: text(link.url),
+        level: ["all", "Beginner", "Intermediate", "Advanced"].includes(text(link.level)) ? text(link.level) : "all",
+        teacher: profile.username,
+        owner: profile.username,
+        createdAt: text(link.createdAt),
+      }));
+    full.classLinks = [
+      ...existingLinks.filter((link: any) => lower(link?.owner) !== teacher),
+      ...submittedOwnLinks,
+    ];
+  }
   const assignedIds = new Set(
     full.students
       .filter((student: any) => lower(student?.teacher) === teacher)
