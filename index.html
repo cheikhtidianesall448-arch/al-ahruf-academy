@@ -205,6 +205,22 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 @keyframes ahruf-curtain-fade{0%,82%{opacity:1}100%{opacity:0;visibility:hidden}}
 @media(prefers-reduced-motion:reduce){#ahruf-curtain-intro,#ahruf-curtain-intro .ahruf-curtain.left,#ahruf-curtain-intro .ahruf-curtain.right{animation-duration:.01ms}}
 
+
+/* Quran reader */
+.quran-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin:12px 0}
+.quran-tools label{display:block;font-weight:700;margin-bottom:6px}
+.quran-tools select{width:100%;min-width:0}
+.quran-actions{display:flex;gap:8px;flex-wrap:wrap}
+.quran-reading{margin-top:16px;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:clamp(16px,3vw,30px)}
+.quran-heading{text-align:center;border-bottom:1px solid var(--line);padding:8px 8px 18px;margin-bottom:18px}
+.quran-heading .quran-ar-title{font-family:"Amiri","Noto Naskh Arabic",serif;font-size:2rem;direction:rtl}
+.quran-ayahs{font-family:"Amiri","Noto Naskh Arabic",serif;font-size:clamp(1.45rem,3vw,2rem);line-height:2.25;direction:rtl;text-align:justify;text-align-last:center;word-spacing:.04em}
+.quran-ayah{display:inline}
+.quran-ayah-mark{font-family:"Figtree",sans-serif;display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;border:1px solid var(--gold);border-radius:50%;width:1.8em;height:1.8em;font-size:.55em;line-height:1;color:var(--pri);margin:0 .22em;direction:ltr}
+.quran-loading,.quran-error{text-align:center;padding:24px 10px;color:var(--mute)}
+.quran-page-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0;flex-wrap:wrap}
+.quran-source{font-size:.82rem;color:var(--mute);margin-top:14px}
+@media(max-width:600px){.quran-tools{grid-template-columns:1fr}.quran-actions .btn{flex:1}.quran-reading{padding:14px}.quran-ayahs{line-height:2.05}}
 </style>
 </head>
 <body>
@@ -504,6 +520,39 @@ Object.assign(I18N.ar,{
  'No student is currently behind you.':'لا يوجد طالب خلفك حاليًا.'
 });
 
+
+Object.assign(I18N.en,{
+ 'Quran reader':'Quran reader','Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.':'Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.',
+ 'Read by surah':'Read by surah','Mushaf page view':'Mushaf page view','Choose a surah':'Choose a surah','Open surah':'Open surah',
+ 'Previous page':'Previous page','Next page':'Next page','Page':'Page','Ayahs':'ayahs','Ayah':'Ayah','Loading complete surah…':'Loading complete surah…',
+ 'Loading Mushaf page…':'Loading Mushaf page…','Loading Quran text…':'Loading Quran text…','Try again':'Try again',
+ 'Quran text could not be loaded. Please check your internet connection and try again.':'Quran text could not be loaded. Please check your internet connection and try again.',
+ 'Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.':'Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.',
+ 'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.':'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.',
+ 'Choose a surah or Mushaf page to begin reading.':'Choose a surah or Mushaf page to begin reading.','Meccan':'Meccan','Medinan':'Medinan'
+});
+Object.assign(I18N.fr,{
+ 'Quran reader':'Lecteur du Coran','Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.':'Lisez le texte arabe complet de chaque sourate ou parcourez les 604 pages du Moushaf.',
+ 'Read by surah':'Lire par sourate','Mushaf page view':'Vue du Moushaf','Choose a surah':'Choisir une sourate','Open surah':'Ouvrir la sourate',
+ 'Previous page':'Page précédente','Next page':'Page suivante','Page':'Page','Ayahs':'versets','Ayah':'Verset','Loading complete surah…':'Chargement de la sourate complète…',
+ 'Loading Mushaf page…':'Chargement de la page du Moushaf…','Loading Quran text…':'Chargement du texte coranique…','Try again':'Réessayer',
+ 'Quran text could not be loaded. Please check your internet connection and try again.':'Le texte du Coran n’a pas pu être chargé. Vérifiez votre connexion Internet et réessayez.',
+ 'Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.':'Texte arabe uthmani fourni par AlQuran Cloud. Le texte source est affiché sans modification.',
+ 'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.':'Pour la récitation et la mémorisation, comparez avec un Moushaf imprimé fiable et votre enseignant.',
+ 'Choose a surah or Mushaf page to begin reading.':'Choisissez une sourate ou une page du Moushaf pour commencer.','Meccan':'Mecquoise','Medinan':'Médinoise',
+ 'All 114 Surahs':'Les 114 sourates','Memorized':'Mémorisée','surahs memorized':'sourates mémorisées'
+});
+Object.assign(I18N.ar,{
+ 'Quran reader':'قارئ القرآن','Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.':'اقرأ النص العربي الكامل لأي سورة أو تصفح صفحات المصحف الـ٦٠٤.',
+ 'Read by surah':'القراءة حسب السورة','Mushaf page view':'عرض صفحات المصحف','Choose a surah':'اختر سورة','Open surah':'افتح السورة',
+ 'Previous page':'الصفحة السابقة','Next page':'الصفحة التالية','Page':'الصفحة','Ayahs':'آيات','Ayah':'آية','Loading complete surah…':'جارٍ تحميل السورة كاملة…',
+ 'Loading Mushaf page…':'جارٍ تحميل صفحة المصحف…','Loading Quran text…':'جارٍ تحميل نص القرآن…','Try again':'إعادة المحاولة',
+ 'Quran text could not be loaded. Please check your internet connection and try again.':'تعذر تحميل نص القرآن. تحقق من اتصال الإنترنت وحاول مجددًا.',
+ 'Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.':'النص العربي بالرسم العثماني مقدم من AlQuran Cloud ويُعرض دون تعديل.',
+ 'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.':'للتلاوة والحفظ، راجع مصحفًا مطبوعًا موثوقًا ومعلمك.',
+ 'Choose a surah or Mushaf page to begin reading.':'اختر سورة أو صفحة من المصحف لبدء القراءة.','Meccan':'مكية','Medinan':'مدنية',
+ 'All 114 Surahs':'السور الـ١١٤','Memorized':'تم الحفظ','surahs memorized':'سورة محفوظة'
+});
 let currentLang='en';try{const savedLang=window.localStorage&&window.localStorage.getItem(LANG_KEY);if(savedLang&&LANGS[savedLang])currentLang=savedLang}catch(e){console.warn('Language preference storage unavailable:',e)}
 function t(key){return (I18N[currentLang]&&I18N[currentLang][key])||key}
 function setLanguage(lang){
@@ -1058,6 +1107,50 @@ function startClass(t){S.classes.unshift({title:t.trim(),code:newCode()});save()
 function endClass(i){S.classes.splice(i,1);save();render()}
 function copy(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Invite copied'),()=>modal('Copy invite link',`<input value="${esc(t)}" readonly onfocus="this.select()">`,()=>{}, 'Done'))}
 
+
+let quranRequestId=0;
+const quranSurahCache={};
+const quranPageCache={};
+function quranLoading(target,msg){const el=document.getElementById(target);if(el)el.innerHTML='<div class="quran-loading" role="status">'+esc(msg||t('Loading Quran text…'))+'</div>'}
+function quranFailure(target){const el=document.getElementById(target);if(el)el.innerHTML='<div class="quran-error">'+esc(t('Quran text could not be loaded. Please check your internet connection and try again.'))+'<br><button class="btn ghost" style="margin-top:10px" onclick="loadQuranSurah(1)">'+esc(t('Try again'))+'</button></div>'}
+function quranSurahOptions(){return SUR_META.map(x=>'<option value="'+x.number+'">'+x.number+'. '+esc(x.english)+' — '+esc(x.arabic)+'</option>').join('')}
+async function loadQuranSurah(number){
+ number=Math.max(1,Math.min(114,Number(number)||1));
+ const target='quranReaderContent',request=++quranRequestId;
+ const selector=document.getElementById('quranSurahSelect');if(selector)selector.value=String(number);
+ quranLoading(target,t('Loading complete surah…'));
+ try{
+  let data=quranSurahCache[number];
+  if(!data){const response=await fetch('https://api.alquran.cloud/v1/surah/'+number+'/quran-uthmani',{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(json.code!==200||!json.data||!Array.isArray(json.data.ayahs)||!json.data.ayahs.length)throw new Error('Invalid Quran response');data=json.data;quranSurahCache[number]=data}
+  if(request!==quranRequestId)return;
+  const meta=SUR_META[number-1]||{};
+  const heading='<div class="quran-heading"><div class="quran-ar-title" lang="ar" dir="rtl">'+esc(data.name||meta.arabic||'')+'</div><h3 style="margin:8px 0 4px">'+esc(data.englishName||meta.english||SUR[number-1])+'</h3><div class="mute">'+number+' · '+Number(data.numberOfAyahs||data.ayahs.length)+' '+esc(t('Ayahs'))+' · '+esc(t(data.revelationType||''))+'</div></div>';
+  const ayahs=data.ayahs.map(a=>'<span class="quran-ayah" lang="ar" dir="rtl">'+esc(a.text)+' <span class="quran-ayah-mark" aria-label="'+esc(t('Ayah')+' '+a.numberInSurah)+'">'+String(a.numberInSurah)+'</span></span>').join(' ');
+  const content=document.getElementById(target);if(content)content.innerHTML=heading+'<div class="quran-ayahs" lang="ar" dir="rtl">'+ayahs+'</div><div class="quran-source">'+esc(t('Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.'))+' <a href="https://alquran.cloud/api" target="_blank" rel="noopener">AlQuran Cloud API</a> · <a href="https://tanzil.net/docs/Uthmani" target="_blank" rel="noopener">Uthmani script reference</a></div>';
+ }catch(e){console.warn('Quran surah load failed',e);if(request===quranRequestId)quranFailure(target)}
+}
+async function loadQuranPage(page){
+ page=Math.max(1,Math.min(604,Number(page)||1));
+ const target='quranReaderContent',request=++quranRequestId;
+ const picker=document.getElementById('quranPageSelect');if(picker)picker.value=String(page);
+ quranLoading(target,t('Loading Mushaf page…'));
+ try{
+  let data=quranPageCache[page];
+  if(!data){const response=await fetch('https://api.alquran.cloud/v1/page/'+page+'/quran-uthmani',{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(json.code!==200||!json.data||!Array.isArray(json.data.ayahs)||!json.data.ayahs.length)throw new Error('Invalid Quran page response');data=json.data;quranPageCache[page]=data}
+  if(request!==quranRequestId)return;
+  const groups=[];data.ayahs.forEach(a=>{let g=groups[groups.length-1];if(!g||g.number!==a.surah.number){g={number:a.surah.number,name:a.surah.name,english:a.surah.englishName,ayahs:[]};groups.push(g)}g.ayahs.push(a)});
+  const heading='<div class="quran-heading"><h3>'+esc(t('Mushaf page'))+' '+page+' / 604</h3><div class="mute">'+esc(t('Madinah Mushaf page view'))+'</div></div>';
+  const body=groups.map(g=>'<section><div style="text-align:center;margin:18px 0 12px;padding:8px;border:1px solid var(--gold);border-radius:8px"><div class="quran-ar-title" lang="ar" dir="rtl" style="font-family:Amiri,serif;font-size:1.55rem">'+esc(g.name)+'</div><b>'+esc(g.english)+'</b></div><div class="quran-ayahs" lang="ar" dir="rtl">'+g.ayahs.map(a=>'<span class="quran-ayah">'+esc(a.text)+' <span class="quran-ayah-mark" aria-label="'+esc(t('Ayah')+' '+a.numberInSurah)+'">'+String(a.numberInSurah)+'</span></span>').join(' ')+'</div></section>').join('');
+  const content=document.getElementById(target);if(content)content.innerHTML=heading+body+'<div class="quran-source">'+esc(t('Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.'))+' <a href="https://alquran.cloud/api" target="_blank" rel="noopener">AlQuran Cloud API</a> · <a href="https://tanzil.net/docs/Uthmani" target="_blank" rel="noopener">Uthmani script reference</a></div>';
+ }catch(e){console.warn('Quran page load failed',e);if(request===quranRequestId)quranFailure(target)}
+}
+function changeQuranMode(mode){
+ const surahTools=document.getElementById('quranSurahControls'),pageTools=document.getElementById('quranPageControls');
+ if(surahTools)surahTools.style.display=mode==='surah'?'grid':'none';
+ if(pageTools)pageTools.style.display=mode==='page'?'flex':'none';
+ if(mode==='page')loadQuranPage(Number(document.getElementById('quranPageSelect')?.value||1));
+ else loadQuranSurah(Number(document.getElementById('quranSurahSelect')?.value||1));
+}
 function viewStudent(){const studentId=String(user.username||user.id||'').toLowerCase();const s=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===studentId)||{sur:[],name:user.name||'',id:user.username||user.id,pay:'pending'};s.sur=Array.isArray(s.sur)?s.sur:[];
  const ranking=(Array.isArray(S.ranking)&&S.ranking.length?S.ranking:S.students.map(x=>({id:x.id,name:x.name,surahCount:(x.sur||[]).length}))).slice().sort((a,b)=>Number(b.surahCount||0)-Number(a.surahCount||0));
  const rank=ranking.findIndex(x=>String(x.id).toLowerCase()===String(s.id).toLowerCase())+1;
