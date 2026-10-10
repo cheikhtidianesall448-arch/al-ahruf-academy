@@ -1183,9 +1183,10 @@ async function loadQuranSurah(number){
 function safeTajweedHtml(raw){
  const allowed=new Set(['ikhfa','ikhfa_shafawi','idgham_ghunnah','idgham_shafawi','idgham_wo_ghunnah','idgham_no_ghunnah','iqlab','qalqalah','ghunnah','madda_normal','madda_permissible','madda_obligatory','madda_necessary','madda_2','madda_246','ham_wasl','laam_shamsiyah','silent','slnt','custom-alef-maksora']);
  const stack=[];
- return String(raw||'').replace(/<\\/?(?:tajweed|rule)\\b[^>]*>/gi,tag=>{
-  if(/^<\\//.test(tag)){const known=stack.pop();return known?'</span>':''}
-  const match=tag.match(/\\bclass\\s*=\\s*["']?([a-z_-]+)["']?/i);
+ const source=String(raw||'');
+ return source.replace(/<\/?(?:tajweed|rule)\b[^>]*>/gi,tag=>{
+  if(tag.slice(0,2)==='</'){const known=stack.pop();return known?'</span>':''}
+  const match=tag.match(/\bclass\s*=\s*["']?([a-z_-]+)["']?/i);
   const cls=match?match[1].toLowerCase():'';
   const known=allowed.has(cls);stack.push(known);
   return known?'<span class="tj-'+cls+'">':'';
