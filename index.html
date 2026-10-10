@@ -11,7 +11,9 @@
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#081814;--card:#0F2620;--ink:#E6F1ED;--mute:#93AFA6;--line:#21423A;--pri:#1C8A78;--pri2:#2AA48F;--gold:#E0B55B;--soft:#143229;--bad:#F07A6E;--ok:#58C79A}}
 :root[data-theme="dark"]{--bg:#081814;--card:#0F2620;--ink:#E6F1ED;--mute:#93AFA6;--line:#21423A;--pri:#1C8A78;--pri2:#2AA48F;--gold:#E0B55B;--soft:#143229;--bad:#F07A6E;--ok:#58C79A}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+body{overscroll-behavior-y:auto}
+.card,[style*="overflow-y:auto"],[style*="overflow:auto"]{-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 Figtree,system-ui,sans-serif}
 h1,h2,h3{font-family:'Cormorant Garamond',Georgia,serif;margin:0;line-height:1.15}
