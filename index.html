@@ -484,6 +484,26 @@ Object.assign(I18N.fr,{'Account ID':'Identifiant du compte','Copy ID':'Copier l�
 Object.assign(I18N.ar,{'Account ID':'معرّف الحساب','Copy ID':'نسخ المعرّف','ID copied':'تم نسخ المعرّف'});
 function copyAccountId(value){if(!value)return toast(t('ID unavailable'));(navigator.clipboard?navigator.clipboard.writeText(value):Promise.reject()).then(()=>toast(t('ID copied')),()=>modal(t('Account ID'),'<input value="'+esc(value)+'" readonly onfocus="this.select()">',()=>{},t('Close')))}
 
+
+Object.assign(I18N.fr,{
+ 'Ahead of you':'Devant vous','Behind you':'Derrière vous','surahs':'sourates','at':'à',
+ 'You are tied with':'Vous êtes à égalité avec','You need':'Vous devez mémoriser',
+ 'more surah to catch up with':'sourate de plus pour rattraper','more surahs to catch up with':'sourates de plus pour rattraper',
+ 'You are':'Vous avez','surah ahead of':'sourate d’avance sur','surahs ahead of':'sourates d’avance sur',
+ 'You are #1 — the current top memorizer!':'Vous êtes n° 1 — le meilleur mémorisateur actuel !',
+ 'Your ranking will appear as soon as students are added.':'Votre classement apparaîtra dès que des étudiants seront ajoutés.',
+ 'No student is currently behind you.':'Aucun étudiant n’est actuellement derrière vous.'
+});
+Object.assign(I18N.ar,{
+ 'Ahead of you':'أمامك','Behind you':'خلفك','surahs':'سورة','at':'بعدد',
+ 'You are tied with':'أنت متعادل مع','You need':'تحتاج إلى حفظ',
+ 'more surah to catch up with':'سورة إضافية للحاق بـ','more surahs to catch up with':'سورة إضافية للحاق بـ',
+ 'You are':'أنت متقدم على','surah ahead of':'سورة مقارنةً بـ','surahs ahead of':'سورة مقارنةً بـ',
+ 'You are #1 — the current top memorizer!':'أنت في المركز الأول — الأكثر حفظًا حاليًا!',
+ 'Your ranking will appear as soon as students are added.':'سيظهر ترتيبك عند إضافة الطلاب.',
+ 'No student is currently behind you.':'لا يوجد طالب خلفك حاليًا.'
+});
+
 let currentLang='en';try{const savedLang=window.localStorage&&window.localStorage.getItem(LANG_KEY);if(savedLang&&LANGS[savedLang])currentLang=savedLang}catch(e){console.warn('Language preference storage unavailable:',e)}
 function t(key){return (I18N[currentLang]&&I18N[currentLang][key])||key}
 function setLanguage(lang){
@@ -1052,8 +1072,8 @@ function viewStudent(){const studentId=String(user.username||user.id||'').toLowe
  :tab==='surahs'?`<div class="card"><h3>All 114 Surahs</h3><p class="mute">${s.sur.length} of 114 memorized</p><br><div class="surah-list-vertical">${SUR.map((x,i)=>`<div class="surah-item"><span class="surah-num">${i+1}</span><div class="surah-name">${surahLabel(x,i)}${s.sur.includes(x)?'<span class="badge paid">✓ Memorized</span>':''}</div></div>`).join('')}</div></div>`
  :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>Surahs memorized</span></div><div class="card"><b>${lvl(s)}%</b><span>Of the Quran</span></div><div class="card"><b>${rankText}</b><span>Your ranking</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">Payment</span></div></div>
 <div class="card" style="border-color:var(--gold);margin-bottom:14px"><h3>Your Memorization Ranking</h3><p class="mute">Keep memorizing to move higher in the ranking.</p><br>
-${ahead?'<div class="row between"><span>⬆️ <b>Ahead of you</b></span><span>'+esc(ahead.name)+' — '+Number(ahead.surahCount||0)+' surahs</span></div><div class="mute" style="margin-top:4px">'+(gapAhead===0?'You are tied with '+esc(ahead.name)+' at '+Number(ahead.surahCount||0)+' surahs.':'You need '+gapAhead+' more surah'+(gapAhead===1?'':'s')+' to catch up with '+esc(ahead.name)+'.')+'</div>':rank===1?'<div class="row"><span>🏆 <b>You are #1 — the current top memorizer!</b></span></div>':'<div class="mute">Your ranking will appear as soon as students are added.</div>'}
-${behind?'<div class="row between" style="margin-top:14px"><span>⬇️ <b>Behind you</b></span><span>'+esc(behind.name)+' — '+Number(behind.surahCount||0)+' surahs</span></div><div class="mute" style="margin-top:4px">'+(gapBehind===0?'You are tied with '+esc(behind.name)+' at '+Number(behind.surahCount||0)+' surahs.':'You are '+gapBehind+' surah'+(gapBehind===1?'':'s')+' ahead of '+esc(behind.name)+'.')+'</div>':'<div class="mute" style="margin-top:14px">No student is currently behind you.</div>'}
+${ahead?'<div class="row between"><span>⬆️ <b>'+t('Ahead of you')+'</b></span><span>'+esc(ahead.name)+' — '+Number(ahead.surahCount||0)+' '+t('surahs')+'</span></div><div class="mute" style="margin-top:4px">'+(gapAhead===0?t('You are tied with')+' '+esc(ahead.name)+' '+t('at')+' '+Number(ahead.surahCount||0)+' '+t('surahs')+'.':t('You need')+' '+gapAhead+(gapAhead===1?' '+t('more surah to catch up with'):' '+t('more surahs to catch up with'))+' '+esc(ahead.name)+'.')+'</div>':rank===1?'<div class="row"><span>🏆 <b>'+t('You are #1 — the current top memorizer!')+'</b></span></div>':'<div class="mute">'+t('Your ranking will appear as soon as students are added.')+'</div>'}
+${behind?'<div class="row between" style="margin-top:14px"><span>⬇️ <b>'+t('Behind you')+'</b></span><span>'+esc(behind.name)+' — '+Number(behind.surahCount||0)+' '+t('surahs')+'</span></div><div class="mute" style="margin-top:4px">'+(gapBehind===0?t('You are tied with')+' '+esc(behind.name)+' '+t('at')+' '+Number(behind.surahCount||0)+' '+t('surahs')+'.':t('You are')+' '+gapBehind+(gapBehind===1?' '+t('surah ahead of'):' '+t('surahs ahead of'))+' '+esc(behind.name)+'.')+'</div>':'<div class="mute" style="margin-top:14px">'+t('No student is currently behind you.')+'</div>'}
 </div><div class="card"><h3>Your progress</h3><br><div class="bar2" style="height:14px"><i style="width:${lvl(s)}%"></i></div><br>${s.sur.map(x=>`<span class="tag">${x}</span>`).join('')||'<span class="mute">Your memorized surahs will appear here.</span>'}</div><br><div class="card"><h3>My invoices</h3><p class="mute">Invoices issued to you are available here. Only your own invoices are shown.</p><br>${myInvoices.length?myInvoices.map(x=>{const p=x.p;return `<div class="row between" style="padding:10px 0;border-bottom:1px solid var(--line)"><div><b>${esc(p.inv||'Invoice')}</b><br><span class="mute">${esc(p.description||'Academy tuition')} · Due ${esc(p.due||'')}</span><br><span class="badge ${esc(p.st||'pending')}">$${p.amt??0} · ${esc(p.st||'pending')}</span></div><button class="btn gold sm" onclick="viewInvoiceById('${esc(p.inv||'')}')">View invoice</button></div>`}).join(''):'<span class="mute">No invoices have been issued to you yet.</span>'}</div>`)}
 function doJoin2(f){joinInfo={n:user.name,c:parseCode(f.c.value)};render()}
 function safeLoginFallback(err){
