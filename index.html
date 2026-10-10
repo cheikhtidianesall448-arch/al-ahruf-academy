@@ -192,6 +192,19 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 
 /* Arabic academy name beside the English name */
 .arabic-name{display:inline-block;margin-left:10px;font-family:Arial,sans-serif;font-size:.9em;font-weight:700;letter-spacing:0;white-space:nowrap;direction:rtl}
+
+/* Elegant welcome curtain animation after successful sign-in */
+#ahruf-curtain-intro{position:fixed;inset:0;z-index:99999;pointer-events:none;overflow:hidden;display:flex;background:#0b251d;animation:ahruf-curtain-fade 1.65s ease forwards}
+#ahruf-curtain-intro .ahruf-curtain{position:absolute;top:0;bottom:0;width:51%;background:linear-gradient(100deg,#0a241b 0%,#164a36 42%,#0c3024 82%,#071d16 100%);box-shadow:inset -10px 0 24px #0003,inset 0 0 0 2px #c9a85c55}
+#ahruf-curtain-intro .ahruf-curtain.left{left:0;border-right:3px solid #c9a85c;animation:ahruf-curtain-left 1.35s cubic-bezier(.65,0,.25,1) forwards}
+#ahruf-curtain-intro .ahruf-curtain.right{right:0;transform:scaleX(-1);border-right:3px solid #c9a85c;animation:ahruf-curtain-right 1.35s cubic-bezier(.65,0,.25,1) forwards}
+#ahruf-curtain-intro .ahruf-curtain:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 8%,#d7c08b0d 9%,transparent 12% 18%);border-bottom:8px solid #c9a85c}
+#ahruf-curtain-intro .ahruf-curtain.left:before,#ahruf-curtain-intro .ahruf-curtain.right:before{content:"";position:absolute;top:0;bottom:0;width:16px;right:12%;background:linear-gradient(90deg,#c9a85c99,#f1dfaa,#a27b37);opacity:.65}
+@keyframes ahruf-curtain-left{to{transform:translateX(-102%)}}
+@keyframes ahruf-curtain-right{to{transform:translateX(102%) scaleX(-1)}}
+@keyframes ahruf-curtain-fade{0%,82%{opacity:1}100%{opacity:0;visibility:hidden}}
+@media(prefers-reduced-motion:reduce){#ahruf-curtain-intro,#ahruf-curtain-intro .ahruf-curtain.left,#ahruf-curtain-intro .ahruf-curtain.right{animation-duration:.01ms}}
+
 </style>
 </head>
 <body>
@@ -499,6 +512,16 @@ const room=c=>'AlAhruf'+c.replace(/[^A-Za-z0-9]/g,'');
 const joinUrl=(c,n)=>'https://meet.jit.si/'+room(c)+'#userInfo.displayName='+encodeURIComponent(JSON.stringify(n||'Guest'));
 function newCode(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>a[b%a.length]).join('')}
 function parseCode(v){const m=String(v).match(/class=([A-Za-z0-9]+)/);return (m?m[1]:v).trim().toUpperCase()}
+function openCurtains(){
+ const old=document.getElementById('ahruf-curtain-intro');
+ if(old)old.remove();
+ const overlay=document.createElement('div');
+ overlay.id='ahruf-curtain-intro';
+ overlay.setAttribute('aria-hidden','true');
+ overlay.innerHTML='<div class="ahruf-curtain left"></div><div class="ahruf-curtain right"></div>';
+ document.body.appendChild(overlay);
+ window.setTimeout(()=>overlay.remove(),1750);
+}
 async function login(role,u,p){
  u=u.trim();
  if(ONLINE){
@@ -511,7 +534,7 @@ async function login(role,u,p){
        throw new Error('Account role does not match the selected login.');
      }
      user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
-     toast('Signed in securely');render();
+     toast('Signed in securely');render();openCurtains();
    }catch(e){console.error('Al-Ahruf login failed:',e);const msg=String(e?.message||'Login failed.').replace(/[\r\n\t]+/g,' ').trim();toast(msg.length>0&&msg.length<180?msg:'Login failed. Check the browser console for details.')}
    finally{onlineBusy=false}
    return;
@@ -523,7 +546,7 @@ async function login(role,u,p){
    const a=STAFF[u.toLowerCase()];
    if(a&&a.pw===p&&(role===a.role))user={role:a.role,name:a.name};
  }
- if(!user)return toast('Wrong username or password');tab=user.role==='student'?'home':'overview';render()
+ if(!user)return toast('Wrong username or password');tab=user.role==='student'?'home':'overview';render();openCurtains()
 }
 async function logout(){if(ONLINE&&sb){try{await sb.auth.signOut()}catch(e){}}user=null;joinInfo=null;render()}
 const lvl=s=>Math.round(s.sur.length/114*1000)/10;
