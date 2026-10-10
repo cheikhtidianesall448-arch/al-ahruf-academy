@@ -592,6 +592,36 @@ function classmates(){
  const rows=list.map(p=>`<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);gap:12px"><div><b>${esc(p.name||'Student')}</b><div class="mute">${esc(p.sex||'Classmate')}</div></div><button class="btn sm" onclick="composeMessage('${esc(p.id)}')">Message</button></div>`).join('');
  return `<div class="row between" style="margin-bottom:12px"><div><h3>Classmates</h3><span class="mute">Students assigned to the same teacher as you.</span></div></div><div class="card">${rows||'<p class="mute">No classmates have been assigned to your teacher yet.'+(me&&me.teacher?'':' Your teacher assignment may need to be checked by the administrator.')+'</p>'}</div>`;
 }
+async function sendClassGroupChat(f){
+ if(user.role!=='student')return toast('Only students can use the classmates group chat.');
+ const student=currentStudent(),teacher=String(student?.teacher||'').trim(),message=String(f.message.value||'').trim();
+ if(!teacher)return toast('Your teacher has not been assigned yet. Please contact the administrator.');
+ if(!message)return false;
+ try{
+  if(ONLINE){
+   const result=await onlineApi('send_message',{to:'group:'+teacher,subject:'',category:'general',message});
+   if(result.state){S.messages=result.state.messages||S.messages;S.notifications=result.state.notifications||S.notifications}
+  }else{
+   S.messages.push({id:String(Date.now()),from:user.username||user.id,fromName:user.name,fromRole:'student',to:'group:'+teacher,toName:'Class group',toRole:'group',subject:'',category:'general',body:message,status:'open',createdAt:new Date().toISOString(),readBy:[user.id]});save()
+  }
+  render()
+ }catch(e){toast(e.message||'Could not send your message. Please try again.')}
+ return false
+}
+function classGroupChat(){
+ if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
+ const student=currentStudent(),teacher=String(student?.teacher||'').trim();
+ if(!teacher)return '<div class="card"><h3>Classmates Group Chat</h3><p class="mute">Your teacher has not been assigned yet. Please contact the academy administrator to join your classmates group.</p></div>';
+ const sameClass=(S.students||[]).filter(x=>String(x.teacher||'').trim().toLowerCase()===teacher.toLowerCase());
+ const memberIds=new Set(sameClass.map(x=>String(x.id||'').toLowerCase()));
+ const me=String(user.username||user.id||'').toLowerCase();
+ const groupMessages=(S.messages||[]).filter(m=>String(m.to||'').toLowerCase()===('group:'+teacher).toLowerCase()&&(memberIds.has(String(m.from||'').toLowerCase())||String(m.from||'').toLowerCase()===me)).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+ const roster=sameClass.map(s=>s.name).filter(Boolean);
+ return '<div class="row between" style="margin-bottom:12px;gap:10px"><div><h3>Classmates Group Chat</h3><span class="mute">Discuss lessons, revision, and questions with students assigned to your teacher.</span></div><span class="badge">'+roster.length+' members</span></div>'+
+ '<div class="card" style="margin-bottom:12px"><b>Group members</b><p class="mute" style="margin:6px 0 0">'+(roster.length?roster.map(esc).join(' · '):'Your classmates will appear here.')+'</p></div>'+
+ '<div class="card" style="margin-bottom:12px"><div style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto">'+(groupMessages.map(m=>'<div style="align-self:'+(String(m.from||'').toLowerCase()===me?'flex-end':'stretch')+';max-width:92%;padding:10px 12px;border-radius:12px;background:var(--soft);border:1px solid var(--line)"><b>'+esc(m.fromName||m.from||'Classmate')+'</b><div style="white-space:pre-wrap;margin:5px 0">'+esc(m.body||'')+'</div><div class="mute">'+esc(new Date(m.createdAt||Date.now()).toLocaleString())+'</div></div>').join('')||'<p class="mute">No messages yet. Start the discussion and say hello to your classmates!</p>')+'</div></div>'+
+ '<div class="card"><form onsubmit="event.preventDefault();sendClassGroupChat(this)"><label for="classGroupMessage">Write a message</label><textarea id="classGroupMessage" name="message" rows="3" maxlength="3000" required placeholder="Ask a question or share what you are studying…"></textarea><div class="row end"><button class="btn" type="submit">Send message</button></div></form><p class="mute">Please be respectful and keep the discussion helpful for learning.</p></div>'
+}
 function messageRecipients(){const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();if(user.role==='admin')return [...(S.students||[]).map(s=>({u:s.id,n:s.name,r:'student'})),...(S.teachers||[]).map(t=>({u:t.username,n:t.name,r:'teacher'}))];if(user.role==='teacher')return [{u:'ahruf',n:'Academy Administrator',r:'admin'},...(S.students||[]).filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))];const s=currentStudent();const peerList=Array.isArray(S.messagePeers)?S.messagePeers:[];const peers=(peerList.length?peerList:(S.students||[]).filter(x=>String(x.id||'').toLowerCase()!==String(s?.id||'').toLowerCase()&&s?.teacher&&String(x.teacher||'').trim().toLowerCase()===String(s.teacher).trim().toLowerCase())).map(x=>({u:x.id,n:x.name,r:'student'}));const group=s&&s.teacher?[{u:'group:'+String(s.teacher),n:'My class group',r:'group'}]:[];return [...group,...peers,...(s&&s.teacher?[{u:s.teacher,n:teacherName(s.teacher),r:'teacher'}]:[])];}
 let recordedAudioAttachment=null,activeMessageRecorder=null,activeMessageChunks=[];
 async function startMessageRecording(){
@@ -901,8 +931,8 @@ function viewStudent(){const studentId=String(user.username||user.id||'').toLowe
  const gapAhead=ahead?Math.max(0,Number(ahead.surahCount||0)-s.sur.length):0;
  const gapBehind=behind?Math.max(0,s.sur.length-Number(behind.surahCount||0)):0;
  const myInvoices=(S.pay||[]).map((p,i)=>({p,i})).filter(x=>String(x.p.sid||'').trim().toLowerCase()===String(s.id||'').trim().toLowerCase()).reverse();
- return `<h2>As-salamu alaykum, ${esc(s.name)}</h2><br>`+nav([['home','My progress'],['myclass','MyClass'],['timetable','My Timetable'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['join','Live class']])+
- (tab==='myclass'?myclass():tab==='messages'?messages():tab==='myteacher'?myTeacher():tab==='classmates'?classmates():tab==='notifications'?notifications():tab==='timetable'?timetable():tab==='join'?`<div class="card"><h3>Join your class</h3><p class="mute">Paste the code or invite link from your teacher.</p><form onsubmit="event.preventDefault();doJoin2(this)"><input name="c" required placeholder="Class code or invite link"><br><br><button class="btn">Continue</button></form>${joinInfo?`<br><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(joinInfo.c,s.name))}">Enter classroom</a>`:''}</div>`
+ return `<h2>As-salamu alaykum, ${esc(s.name)}</h2><br>`+nav([['home','My progress'],['myclass','MyClass'],['timetable','My Timetable'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['groupchat','Group Chat'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['join','Live class']])+
+ (tab==='myclass'?myclass():tab==='messages'?messages():tab==='myteacher'?myTeacher():tab==='classmates'?classmates():tab==='groupchat'?classGroupChat():tab==='notifications'?notifications():tab==='timetable'?timetable():tab==='join'?`<div class="card"><h3>Join your class</h3><p class="mute">Paste the code or invite link from your teacher.</p><form onsubmit="event.preventDefault();doJoin2(this)"><input name="c" required placeholder="Class code or invite link"><br><br><button class="btn">Continue</button></form>${joinInfo?`<br><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(joinInfo.c,s.name))}">Enter classroom</a>`:''}</div>`
  :tab==='surahs'?`<div class="card"><h3>All 114 Surahs</h3><p class="mute">${s.sur.length} of 114 memorized</p><br><div class="surah-list-vertical">${SUR.map((x,i)=>`<div class="surah-item"><span class="surah-num">${i+1}</span><div class="surah-name">${surahLabel(x,i)}${s.sur.includes(x)?'<span class="badge paid">✓ Memorized</span>':''}</div></div>`).join('')}</div></div>`
  :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>Surahs memorized</span></div><div class="card"><b>${lvl(s)}%</b><span>Of the Quran</span></div><div class="card"><b>${rankText}</b><span>Your ranking</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">Payment</span></div></div>
 <div class="card" style="border-color:var(--gold);margin-bottom:14px"><h3>Your Memorization Ranking</h3><p class="mute">Keep memorizing to move higher in the ranking.</p><br>
