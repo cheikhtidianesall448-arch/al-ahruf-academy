@@ -670,8 +670,10 @@ async function upsertTeacher(ctx: any, body: any) {
   if (profileError) throw new Error("Could not save teacher profile: " + profileError.message);
 
   const state = await getAcademyState(ctx);
+  const oldTeacher = (state.teachers || []).find((x: any) => lower(x?.username) === lower(username));
+  const picture = text(teacher.picture) || text(oldTeacher?.picture);
   state.teachers = (state.teachers || []).filter((x: any) => lower(x?.username) !== lower(username));
-  state.teachers.push({ id: userId, name, username, email: emailInput, phone, active: true });
+  state.teachers.push({ id: userId, name, username, email: emailInput, phone, picture, active: true });
 
   const { error: stateError } = await ctx.supabaseAdmin.from("academy_state")
     .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
