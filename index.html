@@ -439,7 +439,7 @@ async function login(role,u,p){
      }
      user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
      toast('Signed in securely');render();
-   }catch(e){console.error('Al-Ahruf login failed:',e);const msg=String(e?.message||'');const safe=/^(No account was found with that username or student ID\.|Invalid username or password\.|Your account is missing its Academy profile\.|This account is inactive\. Please contact the administrator\.|Username or student ID is required\.|Password is required\.|This account is registered as (admin|student|teacher), not (admin|student|teacher)\.)$/.test(msg);toast(e.message==='Account role does not match the selected login.'?e.message:(safe?msg:'Wrong email or password'))}
+   }catch(e){console.error('Al-Ahruf login failed:',e);const msg=String(e?.message||'').replace(/[\\r\\n\\t]+/g,' ').trim();const safe=/^(No account was found with that username or student ID\\.|Invalid username or password\\.|Your account is missing its Academy profile\\.|This account is inactive\\. Please contact the administrator\\.|Username or student ID is required\\.|Password is required\\.|This account is registered as (admin|student|teacher), not (admin|student|teacher)\\.|Account role does not match the selected login\\.|The academy server did not respond\\. Please try again\\.)$/.test(msg);const diagnostic=/^[A-Za-z0-9 .,:;_()'’-]{1,180}$/.test(msg)&&!/(key|token|secret|password|authorization|https?:\\/\\/)/i.test(msg);toast(safe||diagnostic?msg:'Login failed. Check the browser console for details.')}
    finally{onlineBusy=false}
    return;
  }
