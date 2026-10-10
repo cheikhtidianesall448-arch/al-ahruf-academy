@@ -758,13 +758,25 @@ function teachers(){
  <div class="card tw"><table><thead><tr><th>Teacher</th><th>Username</th><th>Email</th><th>Phone</th><th>Students</th><th></th></tr></thead><tbody>${list.map(t=>`<tr><td><div style="display:flex;align-items:center;gap:10px">${teacherAvatar(t,38)}<b>${esc(t.name)}</b></div></td><td>${esc(t.username)}</td><td>${esc(t.email)}</td><td>${esc(t.phone||'')}</td><td>${S.students.filter(s=>String(s.teacher||'').toLowerCase()===String(t.username||'').toLowerCase()).length}</td><td class="row"><button class="btn ghost sm" onclick="editT('${esc(t.username)}')">Edit</button><button class="btn ghost sm" onclick="delT('${esc(t.username)}',this)">Delete</button></td></tr>`).join('')||'<tr><td colspan="6" class="mute">No teachers yet.</td></tr>'}</tbody></table></div>`}
 function editT(username){
  const t=(S.teachers||[]).find(x=>String(x.username).toLowerCase()===String(username||'').toLowerCase())||{name:'',username:'',email:'',phone:'',picture:''};
- modal(username?'Edit teacher':'Add teacher',`<label>Full name</label><input name="name" required value="${esc(t.name)}"><div class="row"><div style="flex:1"><label>Username</label><input name="username" required value="${esc(t.username)}" ${username?'readonly':''}></div><div style="flex:1"><label>Password ${username?'<span class="mute">(leave blank to keep current)</span>':''}</label><input name="password" type="password" ${username?'':'required'}></div></div><div class="row"><div style="flex:1"><label>Email</label><input name="email" type="email" required value="${esc(t.email||'')}"></div><div style="flex:1"><label>Phone</label><input name="phone" value="${esc(t.phone||'')}"></div></div><label>Teacher picture (optional)</label><input name="picture" type="file" accept="image/*"><div class="mute" style="font-size:12px;margin-top:5px">Choose a photo up to 5 MB. It will be resized automatically. Leave blank to keep the current picture.</div>${t.picture?'<div style="margin-top:10px">'+teacherAvatar(t,64)+'</div>':''}`,async f=>{
- const pictureFile=f.picture.files&&f.picture.files[0];
- const d={name:f.name.value.trim(),username:f.username.value.trim(),password:f.password.value,email:f.email.value.trim(),phone:f.phone.value.trim(),picture:pictureFile?await readTeacherPicture(pictureFile):(t.picture||'')};
+ modal(username?'Edit teacher':'Add teacher',`<label>Full name</label><input name="name" required value="${esc(t.name)}"><div class="row"><div style="flex:1"><label>Username</label><input name="username" required value="${esc(t.username)}" ${username?'readonly':''}></div><div style="flex:1"><label>Password ${username?'<span class="mute">(leave blank to keep current)</span>':''}</label><input name="password" type="password" ${username?'':'required'}></div></div><div class="row"><div style="flex:1"><label>Email</label><input name="email" type="email" required value="${esc(t.email||'')}"></div><div style="flex:1"><label>Phone</label><input name="phone" value="${esc(t.phone||'')}"></div></div><label>Teacher picture</label><input name="picture" type="file" accept="image/*" onchange="previewTeacherPicture(this)"><div class="mute" style="font-size:12px;margin-top:5px">Choose a new photo (up to 5 MB). The preview below shows the photo selected for saving.</div><div id="teacher-picture-preview" style="margin-top:10px">${t.picture?teacherAvatar(t,80):'<div class="mute">No picture selected.</div>'}</div>`,async f=>{
+ const pictureInput=f.namedItem('picture');
+ const pictureFile=pictureInput&&pictureInput.files&&pictureInput.files[0];
+ const newPicture=pictureFile?await readTeacherPicture(pictureFile):'';
+ const d={name:f.namedItem('name').value.trim(),username:f.namedItem('username').value.trim(),password:f.namedItem('password').value,email:f.namedItem('email').value.trim(),phone:f.namedItem('phone').value.trim(),picture:newPicture||t.picture||''};
  if(ONLINE){const result=await onlineApi('upsert_teacher',{teacher:d});if(result.state)S=result.state;}
  else{const i=(S.teachers||[]).findIndex(x=>String(x.username).toLowerCase()===String(username||'').toLowerCase());if(i<0)S.teachers.push({name:d.name,username:d.username,email:d.email,phone:d.phone,picture:d.picture,active:true});else S.teachers[i]={...S.teachers[i],name:d.name,email:d.email,phone:d.phone,picture:d.picture};S.students.forEach(s=>{if(String(s.teacher||'').toLowerCase()===String(username||'').toLowerCase())s.teacher=d.username});save();}
  toast(ONLINE?'Teacher account saved online':'Teacher saved');render()
  })}
+function previewTeacherPicture(input){
+ const file=input&&input.files&&input.files[0],box=document.getElementById('teacher-picture-preview');
+ if(!box||!file)return;
+ if(!file.type||!file.type.startsWith('image/')){input.value='';toast('Please choose an image file.');return}
+ if(file.size>5*1024*1024){input.value='';toast('Please choose an image smaller than 5 MB.');return}
+ const reader=new FileReader();
+ reader.onload=()=>{if(box)box.innerHTML='<img src="'+String(reader.result).replace(/"/g,'&quot;')+'" alt="Selected teacher picture preview" style="width:80px;height:80px;object-fit:cover;border-radius:50%;display:block">'};
+ reader.onerror=()=>toast('Could not read the selected image.');
+ reader.readAsDataURL(file)
+}
 async function delT(username,b){
  if(user.role!=='admin')return;
  if(!b.dataset.s){b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red');return}
