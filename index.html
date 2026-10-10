@@ -1212,7 +1212,10 @@ async function loadQuranPage(page){
   }
   if(request!==quranRequestId)return;
   const lines=Array.from({length:15},()=>[]);
-  const chapters={};
+  const starts=data.filter(v=>Number(String(v.verse_key||'').split(':')[1]||0)===1);
+  const needsBasmala=starts.some(v=>{const id=Number(v.chapter_id||String(v.verse_key||'').split(':')[0]||0);return id!==1&&id!==9});
+  const basmalaText=needsBasmala?await quranBasmalaText():'';
+  if(request!==quranRequestId)return;
   data.forEach(v=>{
    const words=Array.isArray(v.words)?v.words:[];
    const verseNumber=Number(String(v.verse_key||'').split(':')[1]||0);
@@ -1220,9 +1223,15 @@ async function loadQuranPage(page){
    const firstWord=words.find(w=>Number(w.line_number)>0);
    if(!firstWord)throw new Error('A verse is missing printed line positions');
    const firstLine=Math.max(1,Math.min(15,Number(firstWord.line_number)));
-   if(verseNumber===1&&chapterId!==1&&chapterId!==9){
-    const title=(v.chapter&&v.chapter.name_arabic)||'';
-    if(title)lines[firstLine-1].push('<span class="quran-surah-heading">'+esc(title)+'</span>');
+   if(verseNumber===1){
+    const meta=SUR_META.find(x=>Number(x.number)===chapterId)||{};
+    const hasSeparateBasmala=chapterId!==1&&chapterId!==9;
+    const headingLine=Math.max(1,firstLine-(hasSeparateBasmala?2:1));
+    lines[headingLine-1].push('<span class="quran-surah-heading">'+esc(meta.arabic||meta.english||'')+'</span>');
+    if(hasSeparateBasmala){
+     const basmalaLine=Math.max(1,firstLine-1);
+     lines[basmalaLine-1].push('<span class="quran-basmala-line">'+safeTajweedHtml(basmalaText)+'</span>');
+    }
    }
    words.forEach((w,idx)=>{
     const lineNo=Number(w.line_number);
