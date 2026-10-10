@@ -132,7 +132,7 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
   .bar .sp{display:none}
   .bar #who{order:5;flex:1 1 100%;text-align:center;font-size:.78rem;margin-top:2px}
   .bar .chip{font-size:.74rem;padding:7px 10px}
-  .bar .chip[onclick="theme()"]{margin-left:auto}
+  .bar .chip[onclick="theme()"]{margin-left:auto;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;font-weight:700;box-shadow:0 2px 7px #00000012;transition:background .2s,color .2s,transform .2s}.bar .chip[onclick="theme()"]::before{content:"☾";font-size:1.15rem;line-height:1}.bar .chip[onclick="theme()"]:active{transform:scale(.97)}:root[data-theme="dark"] .bar .chip[onclick="theme()"]::before{content:"☀"}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]) .bar .chip[onclick="theme()"]::before{content:"☀"}}
   .logout-btn{margin-left:0!important}
   .lang-switch{position:fixed;top:8px;left:auto;right:10px;transform:none;z-index:200}
   .lang-switch select{min-width:96px;padding:7px 9px;font-size:.72rem}
@@ -491,7 +491,7 @@ function save(){
 const STAFF={ahruf:{pw:'ahruf25',name:'Cheikh Tidiane Sall',role:'admin'},teacher1:{pw:'teacher123',name:'Ustadh Ibrahim',role:'teacher'}};
 let user=null,tab='overview',lt='in',joinInfo=null;
 const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2800)};
-function theme(){const r=document.documentElement;const d=r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);r.dataset.theme=d?'light':'dark'}
+function theme(){const r=document.documentElement;const dark=r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('ahruf_theme',r.dataset.theme)}catch(e){}}
 function modal(title,body,ok,txt='Save'){const d=$('#dlg');d.innerHTML=`<h2>${title}</h2><form id="mf">${body}<div class="row end"><button type="button" class="btn ghost" onclick="dlg.close()">Cancel</button><button class="btn">${txt}</button></div></form>`;$('#mf').onsubmit=async e=>{e.preventDefault();try{if(await ok($('#mf').elements)!==false)d.close()}catch(err){console.error(err);toast(err.message||'Something went wrong')}};d.showModal()}
 const base=()=>location.href.split('#')[0];
 const room=c=>'AlAhruf'+c.replace(/[^A-Za-z0-9]/g,'');
