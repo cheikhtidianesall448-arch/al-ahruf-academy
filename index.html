@@ -1184,13 +1184,21 @@ function safeTajweedHtml(raw){
  const allowed=new Set(['ikhfa','ikhfa_shafawi','idgham_ghunnah','idgham_shafawi','idgham_wo_ghunnah','idgham_no_ghunnah','iqlab','qalqalah','ghunnah','madda_normal','madda_permissible','madda_obligatory','madda_necessary','madda_2','madda_246','ham_wasl','laam_shamsiyah','silent','slnt','custom-alef-maksora']);
  const stack=[];
  const source=String(raw||'');
- return source.replace(/<\/?(?:tajweed|rule)\b[^>]*>/gi,tag=>{
-  if(tag.slice(0,2)==='</'){const known=stack.pop();return known?'</span>':''}
-  const match=tag.match(/\bclass\s*=\s*["']?([a-z_-]+)["']?/i);
-  const cls=match?match[1].toLowerCase():'';
-  const known=allowed.has(cls);stack.push(known);
-  return known?'<span class="tj-'+cls+'">':'';
- }).replace(/<[^>]*>/g,tag=>esc(tag));
+ return source.replace(/<\/?(?:tajweed|rule)\b[^>]*>|[^<]+|</gi,token=>{
+  if(token.charAt(0)!=='<')return esc(token);
+  if(/^<\/(?:tajweed|rule)\b/i.test(token)){
+   const known=stack.pop();
+   return known?'</span>':'';
+  }
+  if(/^<(?:tajweed|rule)\b/i.test(token)){
+   const match=token.match(/\bclass\s*=\s*["']?([a-z_-]+)["']?/i);
+   const cls=match?match[1].toLowerCase():'';
+   const known=allowed.has(cls);
+   stack.push(known);
+   return known?'<span class="tj-'+cls+'">':esc(token);
+  }
+  return esc(token);
+ });
 }
 function tajweedLegendHtml(){
  return '<div class="quran-legend"><span><b style="color:#17945b">●</b> '+esc(t('Ikhfa'))+'</span><span><b style="color:#1681b7">●</b> '+esc(t('Idgham / Ghunnah'))+'</span><span><b style="color:#8e44ad">●</b> '+esc(t('Iqlab'))+'</span><span><b style="color:#d04435">●</b> '+esc(t('Qalqalah'))+'</span><span><b style="color:#b07808">●</b> '+esc(t('Madd'))+'</span></div>';
@@ -1203,7 +1211,7 @@ async function loadQuranPage(page){
  try{
   let data=quranPageCache[page];
   if(!data){
-   const url='https://api.quran.com/api/v4/verses/by_page/'+page+'?mushaf=11&words=true&word_fields=text_uthmani_tajweed,text_uthmani,line_number,page_number,verse_key&fields=verse_key,chapter_id,page_number';
+   const url='https://api.quran.com/api/v4/verses/by_page/'+page+'?mushaf=11&words=true&word_fields=text_uthmani_tajweed,text_uthmani,line_number,page_number,verse_key,char_type_name&fields=verse_key,chapter_id,page_number';
    const response=await fetch(url,{headers:{Accept:'application/json'}});
    if(!response.ok)throw new Error('Tajweed Mushaf API returned HTTP '+response.status);
    const json=await response.json();
