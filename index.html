@@ -1200,7 +1200,7 @@ async function loadQuranPage(page){
  try{
   let data=quranPageCache[page];
   if(!data){
-   const url='https://api.quran.com/api/v4/verses/by_page/'+page+'?mushaf=11&words=true&word_fields=text_uthmani_tajweed,text_uthmani&fields=verse_key,chapter_id,page_number';
+   const url='https://api.quran.com/api/v4/verses/by_page/'+page+'?mushaf=11&words=true&word_fields=text_uthmani_tajweed,text_uthmani,line_number,page_number,verse_key&fields=verse_key,chapter_id,page_number';
    const response=await fetch(url,{headers:{Accept:'application/json'}});
    if(!response.ok)throw new Error('Tajweed Mushaf API returned HTTP '+response.status);
    const json=await response.json();
@@ -1208,6 +1208,7 @@ async function loadQuranPage(page){
    data=json.verses;
    const lineNumbers=data.flatMap(v=>(v.words||[]).map(w=>Number(w.line_number)).filter(n=>n>0));
    if(!lineNumbers.length)throw new Error('The source did not provide printed line positions');
+   if(lineNumbers.some(n=>n>15))throw new Error('The source line positions do not match the 15-line Mushaf layout');
    quranPageCache[page]=data;
   }
   if(request!==quranRequestId)return;
@@ -1222,6 +1223,7 @@ async function loadQuranPage(page){
    const chapterId=Number(v.chapter_id||String(v.verse_key||'').split(':')[0]||0);
    const firstWord=words.find(w=>Number(w.line_number)>0);
    if(!firstWord)throw new Error('A verse is missing printed line positions');
+   if(words.some(w=>!Number(w.line_number)||Number(w.line_number)<1||Number(w.line_number)>15))throw new Error('A word is missing valid 15-line Mushaf positioning');
    const firstLine=Math.max(1,Math.min(15,Number(firstWord.line_number)));
    if(verseNumber===1){
     const meta=SUR_META.find(x=>Number(x.number)===chapterId)||{};
