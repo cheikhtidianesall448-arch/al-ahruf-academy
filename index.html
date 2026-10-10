@@ -517,6 +517,23 @@ async function login(role,u,p){
 async function logout(){if(ONLINE&&sb){try{await sb.auth.signOut()}catch(e){}}user=null;joinInfo=null;render()}
 const lvl=s=>Math.round(s.sur.length/114*1000)/10;
 
+function applyArabicIndicDigits(root=document.body){
+ const digits={'0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩'};
+ const convert=value=>String(value).replace(/[0-9]/g,d=>digits[d]);
+ const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ let node;
+ while((node=walker.nextNode())){
+  const parent=node.parentElement;
+  if(!parent||parent.closest('script,style,noscript,textarea,[contenteditable="true"]'))continue;
+  if(/[0-9]/.test(node.nodeValue))node.nodeValue=convert(node.nodeValue);
+ }
+ root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(el=>{
+  ['placeholder','title','aria-label'].forEach(attr=>{
+   const value=el.getAttribute(attr);
+   if(value&&/[0-9]/.test(value))el.setAttribute(attr,convert(value));
+  });
+ });
+}
 function render(){
  const who=$('#who'),out=$('#out'),app=$('#app');
  if(who)who.textContent=user?user.name:'';
@@ -524,7 +541,7 @@ function render(){
  if(!app)return;
  app.innerHTML=!user?viewLogin():user.role==='student'?viewStudent():viewStaff();
  document.body.querySelectorAll('.lang-switch').forEach(x=>x.remove());
- try{document.body.appendChild(languageUI());applyI18n()}catch(e){console.warn('Language UI skipped:',e)}
+ try{document.body.appendChild(languageUI());applyI18n();applyArabicIndicDigits(document.body)}catch(e){console.warn('Language UI skipped:',e)}
 }
 
 function viewLogin(){
