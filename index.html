@@ -597,14 +597,37 @@ async function deletePlatformMessage(id){
  toast('Message deleted');render()
 }
 async function markNotice(id){if(ONLINE){try{const r=await onlineApi('mark_notification_read',{id});if(r.state){S.messages=r.state.messages||S.messages;S.notifications=r.state.notifications||S.notifications}}catch(e){toast(e.message)}}else{const n=(S.notifications||[]).find(x=>x.id===id);if(n)n.read=true;save()}render()}
-function notifications(){const list=[...(S.notifications||[])].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));return '<div class="row between" style="margin-bottom:12px"><div><h3>Notifications</h3><span class="mute">Messages, payment reminders and academy alerts.</span></div></div><div class="card">'+(list.map(n=>'<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);opacity:'+(n.read?'.6':'1')+'"><div><b>'+esc(n.title)+'</b><div class="mute">'+esc(n.body)+'</div></div>'+(n.read?'':'<button class="btn ghost sm" onclick="markNotice(\''+esc(n.id)+'\')">Mark read</button>')+'</div>').join('')||'<p class="mute">No notifications.</p>')+'</div>'}function timetable(){
+function notifications(){const list=[...(S.notifications||[])].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));return '<div class="row between" style="margin-bottom:12px"><div><h3>Notifications</h3><span class="mute">Messages, payment reminders and academy alerts.</span></div></div><div class="card">'+(list.map(n=>'<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);opacity:'+(n.read?'.6':'1')+'"><div><b>'+esc(n.title)+'</b><div class="mute">'+esc(n.body)+'</div></div>'+(n.read?'':'<button class="btn ghost sm" onclick="markNotice(\''+esc(n.id)+'\')">Mark read</button>')+'</div>').join('')||'<p class="mute">No notifications.</p>')+'</div>'}function nextScheduledClass(entries){
+ const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],now=new Date();let best=null;
+ (entries||[]).forEach(item=>{
+  const day=dayNames.indexOf(String(item.day||''));if(day<0||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(item.start||'')))return;
+  const [hh,mm]=item.start.split(':').map(Number),date=new Date(now);date.setHours(hh,mm,0,0);
+  let add=(day-now.getDay()+7)%7;date.setDate(date.getDate()+add);if(date<=now)date.setDate(date.getDate()+7);
+  if(!best||date<best.date)best={item,date};
+ });
+ return best;
+}
+function updateNextClassCountdown(){
+ const el=document.getElementById('nextClassCountdown');if(!el)return;
+ const target=Number(el.dataset.timestamp),left=target-Date.now();
+ if(left<=0){el.textContent='Starting now';return}
+ let mins=Math.floor(left/60000),days=Math.floor(mins/1440);mins%=1440;const hours=Math.floor(mins/60);mins%=60;
+ const parts=[];if(days)parts.push(days+' day(s)');if(hours)parts.push(hours+' hour(s)');if(mins||!parts.length)parts.push(mins+' minute(s)');
+ el.textContent='Next class in '+parts.join(', ');
+}
+function timetable(){
  const list=Array.isArray(S.timetable)?S.timetable:[],days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],canManage=user.role==='admin';
  let visible=list;
  if(user.role==='student')visible=list.filter(x=>(x.students||[]).map(String).includes(String(user.id)));
  if(user.role==='teacher')visible=list.filter(x=>String(x.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase());
  visible.sort((a,b)=>days.indexOf(a.day)-days.indexOf(b.day)||String(a.start).localeCompare(String(b.start)));
+ const next=user.role==='student'?nextScheduledClass(visible):null;
+ if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
+ if(next){window._nextClassTimer=setInterval(updateNextClassCountdown,1000)}
+ const countdown=next?'<div class="card" style="margin-bottom:14px;border-left:4px solid var(--accent)"><div class="mute">UPCOMING CLASS</div><h3 style="margin:6px 0">'+esc(next.item.course||'Quran class')+'</h3><div id="nextClassCountdown" data-timestamp="'+next.date.getTime()+'" style="font-size:1.1rem;font-weight:700">Calculating time remaining…</div><div class="mute" style="margin-top:5px">'+esc(next.item.day)+' · '+esc(next.item.start)+' · '+esc(teacherName(next.item.teacher))+'</div></div>':'';
  const byDay=days.map(day=>{const rows=visible.filter(x=>x.day===day);if(!rows.length)return '';return '<div class="card" style="margin-bottom:12px"><h3>'+day+'</h3>'+rows.map(x=>'<div class="row between" style="padding:11px 0;border-bottom:1px solid var(--line);gap:12px"><div><b>'+esc(x.course||'Course')+'</b><br><span class="mute">'+esc(x.start||'')+' – '+esc(x.end||'')+' · '+esc(teacherName(x.teacher))+'</span></div>'+(canManage?'<div class="row"><button class="btn ghost sm" onclick="editTimetable(\''+esc(x.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deleteTimetable(\''+esc(x.id)+'\',this)">Delete</button></div>':'')+'</div>').join('')+'</div>'}).join('');
- return '<div class="row between" style="margin-bottom:12px"><div><h3>'+(canManage?'Timetable & Course Management':'My Timetable')+'</h3><span class="mute">'+(canManage?'Create courses, assign teachers and students, and manage the weekly schedule.':'Your weekly class schedule and assigned courses.')+'</span></div><div class="row">'+(canManage?'<button class="btn" onclick="editTimetable()">Add course</button>':'')+'</div></div>'+(byDay||'<div class="card"><p class="mute">No timetable entries have been assigned yet.</p></div>')
+ const empty=user.role==='student'?'No timetable entries have been assigned to you yet.':'No timetable entries have been assigned yet.';
+ return countdown+'<div class="row between" style="margin-bottom:12px"><div><h3>'+(canManage?'Timetable & Course Management':'My Timetable')+'</h3><span class="mute">'+(canManage?'Create courses, assign teachers and students, and manage the weekly schedule.':'Your weekly class schedule and assigned courses.')+'</span></div><div class="row">'+(canManage?'<button class="btn" onclick="editTimetable()">Add course</button>':'')+'</div></div>'+(byDay||'<div class="card"><p class="mute">'+empty+'</p></div>')
 }
 function editTimetable(id){
  if(user.role!=='admin'){toast('Only the administrator can manage the timetable.');return}
