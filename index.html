@@ -209,6 +209,19 @@ if(!window.AHRUF_SUPABASE){
 }
 </script>
 <script>
+/* Startup safety net: keep the page usable and expose a readable error if the main app fails. */
+(function(){
+  function showBootError(reason){
+    var app=document.getElementById('app');
+    if(!app || app.children.length) return;
+    app.innerHTML='<div style="max-width:680px;margin:40px auto;padding:24px;border:1px solid #d8dee9;border-radius:16px;background:#fff;color:#182033;font-family:Arial,sans-serif"><h2 style="margin-top:0">Al-Ahruf Academy could not start</h2><p>The page opened, but its main interface did not finish loading.</p><p style="color:#586174;font-size:13px;overflow-wrap:anywhere">Diagnostic: '+String(reason||'Startup timed out').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+'</p><button onclick="location.reload()" style="padding:10px 16px;border:0;border-radius:8px;background:#173b67;color:white;cursor:pointer">Reload academy</button></div>';
+  }
+  window.addEventListener('error',function(e){setTimeout(function(){showBootError(e.message||'JavaScript error')},0)});
+  window.addEventListener('unhandledrejection',function(e){setTimeout(function(){showBootError(e.reason&&e.reason.message||'Startup request failed')},0)});
+  setTimeout(function(){showBootError('The app did not render within 4 seconds')},4000);
+})();
+</script>
+<script>
 const AHRUF_CFG=window.AHRUF_SUPABASE||{};
 const SUPABASE_READY=!!(window.supabase&&typeof window.supabase.createClient==='function');
 let sb=null;
