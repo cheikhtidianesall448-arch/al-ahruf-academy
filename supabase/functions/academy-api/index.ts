@@ -255,6 +255,39 @@ async function sendMessage(ctx: any, body: any) {
   return {ok:true,state:{messages:visibleMessages(state,profile),notifications:buildNotifications(state,profile)}};
 }
 
+async function editMessage(ctx: any, body: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  const state = ensureMessageState(await getAcademyState(ctx));
+  const id = text(body.id);
+  const item = state.messages.find((m: any) => text(m?.id) === id);
+  if (!item) throw new Error("Message not found.");
+  const role = normalizedRole(profile.role), me = lower(profile.username);
+  if (role !== "admin" && lower(item.from) !== me) throw new Error("You can edit only your own messages.");
+  item.body = text(body.message);
+  item.editedAt = new Date().toISOString();
+  const { error } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) throw error;
+  return { ok: true, state: { messages: visibleMessages(state, profile), notifications: buildNotifications(state, profile) } };
+}
+
+async function deleteMessage(ctx: any, body: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  const state = ensureMessageState(await getAcademyState(ctx));
+  const id = text(body.id);
+  const item = state.messages.find((m: any) => text(m?.id) === id);
+  if (!item) throw new Error("Message not found.");
+  const role = normalizedRole(profile.role), me = lower(profile.username);
+  if (role !== "admin" && lower(item.from) !== me) throw new Error("You can delete only your own messages.");
+  state.messages = state.messages.filter((m: any) => text(m?.id) !== id);
+  const { error } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) throw error;
+  return { ok: true, state: { messages: visibleMessages(state, profile), notifications: buildNotifications(state, profile) } };
+}
+
 async function sendPaymentReminders(ctx: any) {
   await requireStaff(ctx, ["admin"]);
   const state = await getAcademyState(ctx);
@@ -1018,6 +1051,14 @@ export default {
 
         if (action === "send_message") {
           return json(await sendMessage(ctx, body));
+        }
+
+        if (action === "edit_message") {
+          return json(await editMessage(ctx, body));
+        }
+
+        if (action === "delete_message") {
+          return json(await deleteMessage(ctx, body));
         }
 
         if (action === "send_payment_reminders") {
