@@ -772,7 +772,7 @@ function classLinkTarget(raw){
  const value=String(raw||'').trim();
  const match=value.match(/#class=([A-Za-z0-9_-]+)/i);
  if(match){try{const parsed=new URL(value,location.href);if(parsed.hostname===location.hostname)return 'https://meet.jit.si/'+encodeURIComponent(match[1]);}catch{}}
- try{const parsed=new URL(value);if(['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())&&/^\/[A-Za-z0-9_-]+\/?$/.test(parsed.pathname))return 'https://meet.jit.si/'+encodeURIComponent(parsed.pathname.replace(/^\//,'').replace(/\/$/,''));}catch{}
+ try{const parsed=new URL(value);if(['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())){const parts=parsed.pathname.split('/').filter(Boolean);if(parts.length===1&&/^[A-Za-z0-9_-]+$/.test(parts[0]))return 'https://meet.jit.si/'+encodeURIComponent(parts[0]);}}catch{}
  return value;
 }
 function myclass(){
