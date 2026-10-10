@@ -623,11 +623,11 @@ function deleteTimetable(id,b){if(user.role!=='admin')return;if(!b.dataset.s){b.
 function viewStaff(){
  const admin=user.role==='admin';
  const items=admin
-  ? [['overview','Overview'],['students','Students'],['teachers','Teachers'],['timetable','Timetable'],['attendance','Attendance'],['payments','Payments'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['class','Live class']]
-  : [['students','My students'],['timetable','My timetable'],['attendance','Attendance'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['class','Live class']];
+  ? [['overview','Overview'],['students','Students'],['teachers','Teachers'],['myclass','MyClass'],['timetable','Timetable'],['attendance','Attendance'],['payments','Payments'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['class','Live class']]
+  : [['students','My students'],['myclass','MyClass'],['timetable','My timetable'],['attendance','Attendance'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['class','Live class']];
  const allowed=items.map(x=>x[0]);
  if(!allowed.includes(tab))tab=admin?'overview':'students';
- const pages={overview,students,teachers,attendance,payments,messages,notifications,timetable,klass};
+ const pages={overview,students,teachers,attendance,payments,messages,notifications,timetable,klass,myclass};
  return `<div class="row between"><h2>Welcome, ${esc(user.name)}</h2><span class="badge">${admin?'Administrator':'Teacher'}</span></div><br>`+nav(items)+pages[tab==='class'?'klass':tab]()
 }
 function teacherName(v){const x=(S.teachers||[]).find(t=>String(t.username).toLowerCase()===String(v||'').toLowerCase());return x?.name||v||'Unassigned'}
@@ -745,6 +745,40 @@ function payments(){if(user.role!=='admin')return '<div class="card"><b>Permissi
 function markPaid(i){if(user.role!=='admin')return toast('Only the administrator can edit payments.');const p=S.pay[i];p.st='paid';const s=S.students.find(x=>x.id===p.sid);if(s)s.pay='paid';save();toast('Marked as paid');render()}
 function newInv(){if(user.role!=='admin')return toast('Only the administrator can create invoices.');if(!S.students.length)return toast('Add a student first');const today=new Date().toISOString().slice(0,10),due=new Date(Date.now()+2592e6).toISOString().slice(0,10);
  modal('New invoice',`<label>Student</label><select name="s">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><label>Amount (USD)</label><input name="a" type="number" min="1" step="0.01" value="50" required><label>Description / Month</label><input name="desc" placeholder="e.g. October 2026 tuition" required><label>Due date</label><input name="d" type="date" required value="${due}">`,f=>{const inv='INV-'+new Date().getFullYear()+String(Date.now()).slice(-6);S.pay.push({inv,sid:f.s.value,amt:+f.a.value,due:f.d.value,date:today,description:f.desc.value.trim(),st:'pending'});save();toast('Invoice created and saved for the selected student');render()},'Create')}
+function myclass(){
+ S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
+ const admin=user.role==='admin',teacher=user.role==='teacher',student=user.role==='student';
+ const me=String(user.username||user.id||'').trim().toLowerCase();
+ const studentRec=student?((S.students||[]).find(x=>String(x.id||'').trim().toLowerCase()===me)||currentStudent()):null;
+ const myTeacher=String(studentRec?.teacher||'').trim().toLowerCase();
+ const rows=student?S.classLinks.filter(c=>(!c.level||String(c.level).toLowerCase()==='all'||String(c.level).toLowerCase()===String(studentRec?.level||'').toLowerCase())&&(!c.teacher||String(c.teacher).toLowerCase()===myTeacher)):S.classLinks.filter(c=>admin||String(c.owner||'').toLowerCase()===me);
+ return `<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">${student?'Class links saved by your academy or teacher. New links appear automatically when they match your level and assigned teacher.':'Save reusable class links here. Students will see matching links automatically, including students enrolled later.'}</span></div>${!student?'<button class="btn" onclick="editClassLink()">+ Add class link</button>':''}</div>
+ ${rows.map(c=>`<div class="card" style="margin-bottom:12px"><h3 style="margin-top:0">${esc(c.title)}</h3><div class="mute">${esc(c.level&&c.level!=='all'?'Level: '+c.level:'All levels')}${c.teacher?' · Teacher: '+esc(teacherName(c.teacher)):' · Available across teachers'}</div><p style="word-break:break-all">${esc(c.url)}</p><div class="row"><a class="btn gold" href="${esc(c.url)}" target="_blank" rel="noopener">Open class</a><button class="btn ghost" onclick="copy('${esc(c.url)}')">Copy link</button>${!student&&(admin||String(c.owner||'').toLowerCase()===me)?'<button class="btn ghost" onclick="editClassLink(\''+esc(c.id)+'\')">Edit</button><button class="btn ghost" onclick="deleteClassLink(\''+esc(c.id)+'\')">Delete</button>':''}</div></div>`).join('')||'<div class="card mute">'+(student?'No class links are assigned to your level or teacher yet. Please contact your teacher or administrator.':'No saved class links yet. Add a link once and eligible students will see it automatically.')+'</div>'}`
+}
+function editClassLink(id){
+ if(user.role!=='admin'&&user.role!=='teacher')return;
+ S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
+ const me=String(user.username||user.id||'').trim().toLowerCase();
+ const c=S.classLinks.find(x=>String(x.id)===String(id))||{title:'',url:'',level:'all',teacher:user.role==='teacher'?(user.username||''):'',owner:me};
+ if(id&&user.role!=='admin'&&String(c.owner||'').toLowerCase()!==me)return toast('You can only edit your own class links.');
+ const levelOptions=['all','Beginner','Intermediate','Advanced'].map(v=>'<option value="'+v+'" '+(String(c.level||'all')===v?'selected':'')+'>'+(v==='all'?'All levels':v)+'</option>').join('');
+ const teacherOptionsHtml='<option value="">All teachers</option>'+(S.teachers||[]).map(t=>'<option value="'+esc(t.username)+'" '+(String(c.teacher||'').toLowerCase()===String(t.username||'').toLowerCase()?'selected':'')+'>'+esc(t.name)+' — '+esc(t.username)+'</option>').join('');
+ modal(id?'Edit class link':'Add class link',`<label>Class name</label><input name="title" required maxlength="100" value="${esc(c.title)}" placeholder="e.g. Tajwid — Level 1"><label>Class link (URL)</label><input name="url" type="url" required value="${esc(c.url)}" placeholder="https://..."><div class="row"><div style="flex:1;min-width:180px"><label>Student level</label><select name="level">${levelOptions}</select></div>${user.role==='admin'?'<div style="flex:1;min-width:180px"><label>Assigned teacher</label><select name="teacher">'+teacherOptionsHtml+'</select></div>':'<input type="hidden" name="teacher" value="'+esc(c.teacher||user.username||'')+'">'}</div><p class="mute">Optional targeting helps enrolled students see the right link automatically. Leave All levels to show it to every level.</p>`,async f=>{
+ let url;try{url=new URL(f.url.value.trim())}catch{return toast('Enter a valid class link URL'),false}
+ if(!['http:','https:'].includes(url.protocol))return toast('Class links must start with https:// or http://'),false;
+ const item={id:c.id||('cl-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)),title:f.title.value.trim(),url:url.href,level:f.level.value||'all',teacher:user.role==='teacher'?(user.username||''):f.teacher.value,owner:c.owner||me,createdAt:c.createdAt||new Date().toISOString()};
+ if(!item.title)return false;
+ const index=S.classLinks.findIndex(x=>String(x.id)===String(id));
+ if(index>=0)S.classLinks[index]=item;else S.classLinks.unshift(item);
+ save();toast('Class link saved');render();
+ });
+}
+function deleteClassLink(id){
+ const c=(S.classLinks||[]).find(x=>String(x.id)===String(id));if(!c)return;
+ if(user.role!=='admin'&&String(c.owner||'').toLowerCase()!==String(user.username||user.id||'').toLowerCase())return toast('You can only delete your own class links.');
+ if(!confirm('Delete this saved class link?'))return;
+ S.classLinks=S.classLinks.filter(x=>String(x.id)!==String(id));save();toast('Class link deleted');render();
+}
 function klass(){
  return `<div class="card"><h3>Start a live class</h3><p class="mute">Each class gets its own private room and code. Students join from any phone or computer. No account needed.</p><form class="row" onsubmit="event.preventDefault();startClass(this.t.value)"><input name="t" placeholder="Class title, e.g. Tajwid, Level 2" required style="flex:1;min-width:220px"><button class="btn">Start class</button></form></div><br>
  <div class="grid2">${S.classes.map((c,i)=>{const inv=base()+'#class='+c.code;return `<div class="card" style="border-color:var(--gold)"><div><span class="live"></span><b>${esc(c.title)}</b></div><div class="code">${c.code}</div><p class="mute" style="word-break:break-all">${esc(inv)}</p><div class="row"><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(c.code,user.name))}">Open as host</a><button class="btn ghost" onclick="copy('${inv}')">Copy invite</button><a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('Join our live class "'+c.title+'" at Al-Ahruf Academy: '+inv)}">WhatsApp</a><button class="btn ghost" onclick="endClass(${i})">End</button></div></div>`}).join('')||'<div class="card mute">No active classes. Start one above.</div>'}</div>
@@ -762,7 +796,7 @@ function viewStudent(){const studentId=String(user.username||user.id||'').toLowe
  const gapAhead=ahead?Math.max(0,Number(ahead.surahCount||0)-s.sur.length):0;
  const gapBehind=behind?Math.max(0,s.sur.length-Number(behind.surahCount||0)):0;
  const myInvoices=(S.pay||[]).map((p,i)=>({p,i})).filter(x=>String(x.p.sid||'').trim().toLowerCase()===String(s.id||'').trim().toLowerCase()).reverse();
- return `<h2>As-salamu alaykum, ${esc(s.name)}</h2><br>`+nav([['home','My progress'],['timetable','My Timetable'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['join','Live class']])+
+ return `<h2>As-salamu alaykum, ${esc(s.name)}</h2><br>`+nav([['home','My progress'],['myclass','MyClass'],['timetable','My Timetable'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['join','Live class']])+
  (tab==='messages'?messages():tab==='myteacher'?myTeacher():tab==='classmates'?classmates():tab==='notifications'?notifications():tab==='timetable'?timetable():tab==='join'?`<div class="card"><h3>Join your class</h3><p class="mute">Paste the code or invite link from your teacher.</p><form onsubmit="event.preventDefault();doJoin2(this)"><input name="c" required placeholder="Class code or invite link"><br><br><button class="btn">Continue</button></form>${joinInfo?`<br><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(joinInfo.c,s.name))}">Enter classroom</a>`:''}</div>`
  :tab==='surahs'?`<div class="card"><h3>All 114 Surahs</h3><p class="mute">${s.sur.length} of 114 memorized</p><br><div class="surah-list-vertical">${SUR.map((x,i)=>`<div class="surah-item"><span class="surah-num">${i+1}</span><div class="surah-name">${surahLabel(x,i)}${s.sur.includes(x)?'<span class="badge paid">✓ Memorized</span>':''}</div></div>`).join('')}</div></div>`
  :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>Surahs memorized</span></div><div class="card"><b>${lvl(s)}%</b><span>Of the Quran</span></div><div class="card"><b>${rankText}</b><span>Your ranking</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">Payment</span></div></div>
