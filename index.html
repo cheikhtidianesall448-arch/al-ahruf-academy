@@ -218,7 +218,7 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 .quran-heading .quran-ar-title{font-family:"Amiri","Noto Naskh Arabic",serif;font-size:2rem;direction:rtl}
 .quran-page-paper{max-width:850px;margin:0 auto;border:1px solid #d5c9ad;border-radius:8px;padding:clamp(10px,2.5vw,26px);background:linear-gradient(180deg,#fffef9,#fffdf5);box-shadow:0 2px 8px #0000000a}
 .quran-lines{display:grid;grid-template-rows:repeat(15,minmax(2.15em,auto));direction:rtl}
-.quran-line{min-height:2.15em;display:flex;align-items:center;justify-content:center;text-align:center;direction:rtl;white-space:normal;overflow-wrap:anywhere;font-family:"Amiri","Noto Naskh Arabic",serif;font-size:clamp(1.15rem,2.2vw,1.7rem);line-height:1.75;border-bottom:1px solid #e8e0ce}
+.quran-line{min-height:2.15em;display:block;text-align:justify;text-align-last:center;direction:rtl;white-space:normal;overflow-wrap:normal;word-spacing:.08em;font-family:"Amiri","Noto Naskh Arabic",serif;font-size:clamp(1rem,2vw,1.55rem);line-height:1.8;padding:2px 0;border-bottom:1px solid #e8e0ce}.quran-line>span:not(.quran-surah-heading):not(.quran-basmala-line){display:inline;margin-inline:.025em}
 .quran-line:last-child{border-bottom:0}
 .quran-line-empty{min-height:2.15em}
 .quran-surah-heading{font-family:"Amiri","Noto Naskh Arabic",serif;font-size:1.35em;font-weight:700;text-align:center;line-height:1.5;width:100%;border:1px solid #c9ad6c;border-radius:5px;padding:2px 8px}
@@ -236,7 +236,7 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 .tj-qalqalah{color:#d04435}
 .tj-madda_normal,.tj-madda_permissible,.tj-madda_obligatory,.tj-madda_necessary,.tj-madda_2,.tj-madda_246{color:#b07808}
 .tj-ham_wasl,.tj-laam_shamsiyah,.tj-silent,.tj-slnt{color:inherit}
-@media(max-width:600px){.quran-tools{grid-template-columns:1fr}.quran-actions .btn{flex:1}.quran-reading{padding:8px}.quran-page-paper{padding:6px}.quran-line{font-size:clamp(1rem,4.3vw,1.35rem);line-height:1.85}.quran-lines{grid-template-rows:repeat(15,minmax(2.05em,auto))}}
+@media(max-width:600px){.quran-tools{grid-template-columns:1fr}.quran-actions .btn{flex:1}.quran-reading{padding:8px}.quran-page-paper{padding:6px}.quran-line{font-size:clamp(.92rem,3.6vw,1.15rem);line-height:1.8;word-spacing:.04em}.quran-lines{grid-template-rows:repeat(15,minmax(2.05em,auto))}}
 </style>
 </head>
 <body>
