@@ -366,7 +366,10 @@ async function getCurrentProfile(ctx: any) {
   const claimUserId = ctx.userClaims?.sub;
 
   if (claimUserId) {
-    return await getProfile(ctx, claimUserId);
+    const profile = await getProfile(ctx, claimUserId);
+    if (profile) return profile;
+    // If the wrapper's claim does not map to an Academy profile, try the
+    // authenticated Supabase client before rejecting the request.
   }
 
   const { data, error } = await ctx.supabase.auth.getUser();
