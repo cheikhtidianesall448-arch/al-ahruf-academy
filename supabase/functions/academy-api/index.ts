@@ -998,7 +998,7 @@ async function saveState(ctx: any, body: any) {
     const existingLinks = Array.isArray(full.classLinks) ? full.classLinks : [];
     const submittedOwnLinks = incoming.classLinks
       .filter((link: any) => lower(link?.owner) === teacher)
-      .filter((link: any) => text(link?.title) && /^https?:\\/\\//i.test(text(link?.url)))
+      .filter((link: any) => text(link?.title) && /^https?:\/\//i.test(text(link?.url)))
       .map((link: any) => ({
         id: text(link.id),
         title: text(link.title).slice(0, 100),
