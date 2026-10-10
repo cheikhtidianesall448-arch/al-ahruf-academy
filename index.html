@@ -211,7 +211,7 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 .quran-tools label{display:block;font-weight:700;margin-bottom:6px}
 .quran-tools select{width:100%;min-width:0}
 .quran-actions{display:flex;gap:8px;flex-wrap:wrap}
-.quran-reading{margin-top:16px;border:1px solid #d5c9ad;border-radius:14px;background:#fffdf5;color:#25251f;padding:clamp(12px,2vw,24px)}
+.quran-reading{margin-top:16px;border:1px solid #d5c9ad;border-radius:14px;background:#fffdf5;color:#25251f;padding:clamp(12px,2vw,24px)}.quran-reading{touch-action:pan-y;overscroll-behavior-x:contain;cursor:grab}.quran-reading.quran-swiping{cursor:grabbing;user-select:none}
 .quran-heading{text-align:center;border-bottom:1px solid #d5c9ad;padding:8px 8px 14px;margin-bottom:14px;color:#25251f}
 .quran-heading .quran-ar-title{font-family:"Amiri","Noto Naskh Arabic",serif;font-size:2rem;direction:rtl}
 .quran-page-paper{max-width:850px;margin:0 auto;border:1px solid #d5c9ad;border-radius:8px;padding:clamp(10px,2.5vw,26px);background:linear-gradient(180deg,#fffef9,#fffdf5);box-shadow:0 2px 8px #0000000a}
@@ -1274,6 +1274,24 @@ async function loadQuranPage(page){
   }
  }
 }
+let quranSwipeOrigin=null;
+function quranSwipeStart(event){
+ const controls=document.getElementById('quranPageControls');
+ if(!controls||controls.style.display==='none'||event.button>0)return;
+ quranSwipeOrigin={x:event.clientX,y:event.clientY};
+ const reader=document.getElementById('quranReaderContent');if(reader)reader.classList.add('quran-swiping');
+}
+function quranSwipeCancel(){quranSwipeOrigin=null;const reader=document.getElementById('quranReaderContent');if(reader)reader.classList.remove('quran-swiping');}
+function quranSwipeEnd(event){
+ if(!quranSwipeOrigin)return;
+ const dx=event.clientX-quranSwipeOrigin.x,dy=event.clientY-quranSwipeOrigin.y;
+ quranSwipeCancel();
+ if(Math.abs(dx)<65||Math.abs(dx)<Math.abs(dy)*1.25)return;
+ const picker=document.getElementById('quranPageSelect');
+ const page=Math.max(1,Math.min(604,Number(picker&&picker.value)||1));
+ if(dx<0&&page<604)loadQuranPage(page+1);
+ else if(dx>0&&page>1)loadQuranPage(page-1);
+}
 async function openSurahInMushaf(){
  const selector=document.getElementById('quranSurahSelect');
  const number=Math.max(1,Math.min(114,Number(selector&&selector.value)||1));
@@ -1312,7 +1330,7 @@ function viewStudent(){const studentId=String(user.username||user.id||'').toLowe
  const myInvoices=(S.pay||[]).map((p,i)=>({p,i})).filter(x=>String(x.p.sid||'').trim().toLowerCase()===String(s.id||'').trim().toLowerCase()).reverse();
  return `<h2>As-salamu alaykum, ${esc(s.name)}</h2><div class="card" style="margin:10px 0 16px;border-color:var(--gold)"><div class="row between" style="align-items:center"><div><span class="mute">${t('Student ID')}</span><div style="font-size:1.2rem;font-weight:800;letter-spacing:.04em;margin-top:4px">${esc(s.id||'—')}</div></div><button class="btn ghost sm" type="button" onclick="copyAccountId('${esc(s.id||'')}')">${t('Copy ID')}</button></div></div>`+nav([['home','My progress'],['myclass','MyClass'],['timetable','My Timetable'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]])+
  (tab==='myclass'?myclass():tab==='messages'?messages():tab==='myteacher'?myTeacher():tab==='classmates'?classmates():tab==='notifications'?notifications():tab==='timetable'?timetable():tab==='join'?`<div class="card"><h3>Join your class</h3><p class="mute">Paste the code or invite link from your teacher.</p><form onsubmit="event.preventDefault();doJoin2(this)"><input name="c" required placeholder="Class code or invite link"><br><br><button class="btn">Continue</button></form>${joinInfo?`<br><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(joinInfo.c,s.name))}">Enter classroom</a>`:''}</div>`
- :tab==='surahs'?`<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${s.sur.length} of 114 ${t('surahs memorized')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><button class="btn gold" type="button" onclick="loadQuranPage(Math.min(604,Number(document.getElementById('quranPageSelect').value||1)+1))">${t('Next page')} →</button><label>${t('Page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><button class="btn ghost" type="button" onclick="loadQuranPage(Math.max(1,Number(document.getElementById('quranPageSelect').value||1)-1))">← ${t('Previous page')}</button></div><div id="quranReaderContent" class="quran-reading"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
+ :tab==='surahs'?`<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${s.sur.length} of 114 ${t('surahs memorized')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><button class="btn gold" type="button" onclick="loadQuranPage(Math.min(604,Number(document.getElementById('quranPageSelect').value||1)+1))">${t('Next page')} →</button><label>${t('Page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><button class="btn ghost" type="button" onclick="loadQuranPage(Math.max(1,Number(document.getElementById('quranPageSelect').value||1)-1))">← ${t('Previous page')}</button></div><div id="quranReaderContent" class="quran-reading" onpointerdown="quranSwipeStart(event)" onpointerup="quranSwipeEnd(event)" onpointercancel="quranSwipeCancel()"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
  :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>Surahs memorized</span></div><div class="card"><b>${lvl(s)}%</b><span>Of the Quran</span></div><div class="card"><b>${rankText}</b><span>Your ranking</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">Payment</span></div></div>
 <div class="card" style="border-color:var(--gold);margin-bottom:14px"><h3>Your Memorization Ranking</h3><p class="mute">Keep memorizing to move higher in the ranking.</p><br>
 ${ahead?'<div class="row between"><span>⬆️ <b>'+t('Ahead of you')+'</b></span><span>'+esc(ahead.name)+' — '+Number(ahead.surahCount||0)+' '+t('surahs')+'</span></div><div class="mute" style="margin-top:4px">'+(gapAhead===0?t('You are tied with')+' '+esc(ahead.name)+' '+t('at')+' '+Number(ahead.surahCount||0)+' '+t('surahs')+'.':t('You need')+' '+gapAhead+(gapAhead===1?' '+t('more surah to catch up with'):' '+t('more surahs to catch up with'))+' '+esc(ahead.name)+'.')+'</div>':rank===1?'<div class="row"><span>🏆 <b>'+t('You are #1 — the current top memorizer!')+'</b></span></div>':'<div class="mute">'+t('Your ranking will appear as soon as students are added.')+'</div>'}
