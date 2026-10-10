@@ -249,8 +249,18 @@ async function onlineApi(action,payload={}){
   const headers={'Content-Type':'application/json','apikey':AHRUF_CFG.key};
 
   if(action!=='login'){
-    const {data:{session}}=await sb.auth.getSession();
-    if(session?.access_token) headers.Authorization='Bearer '+session.access_token;
+    // Recover an expired/missing access token before calling protected academy actions.
+    let {data:{session},error:sessionError}=await sb.auth.getSession();
+    if(sessionError) console.warn('Could not read academy session:',sessionError.message);
+    if(!session?.access_token && session?.refresh_token){
+      const refreshed=await sb.auth.refreshSession({refresh_token:session.refresh_token});
+      session=refreshed?.data?.session||null;
+      if(refreshed?.error) console.warn('Academy session refresh failed:',refreshed.error.message);
+    }
+    if(!session?.access_token){
+      throw new Error('Your login session has expired. Please log out, sign in again, and then save the student.');
+    }
+    headers.Authorization='Bearer '+session.access_token;
   }
 
   const controller=new AbortController();
