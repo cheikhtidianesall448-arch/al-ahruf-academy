@@ -1118,6 +1118,15 @@ const quranPageCache={};
 function quranLoading(target,msg){const el=document.getElementById(target);if(el)el.innerHTML='<div class="quran-loading" role="status">'+esc(msg||t('Loading Quran text…'))+'</div>'}
 function quranFailure(target){const el=document.getElementById(target);if(el)el.innerHTML='<div class="quran-error">'+esc(t('Quran text could not be loaded. Please check your internet connection and try again.'))+'<br><button class="btn ghost" style="margin-top:10px" onclick="loadQuranSurah(1)">'+esc(t('Try again'))+'</button></div>'}
 function quranSurahOptions(){return SUR_META.map(x=>'<option value="'+x.number+'">'+x.number+'. '+esc(x.english)+' — '+esc(x.arabic)+'</option>').join('')}
+async function quranBasmalaText(){
+ if(quranSurahCache[1]&&quranSurahCache[1].ayahs&&quranSurahCache[1].ayahs[0])return quranSurahCache[1].ayahs[0].text;
+ const response=await fetch('https://api.alquran.cloud/v1/surah/1/quran-uthmani',{headers:{Accept:'application/json'}});
+ if(!response.ok)throw new Error('Could not load basmala from source');
+ const json=await response.json();
+ if(json.code!==200||!json.data||!json.data.ayahs||!json.data.ayahs[0])throw new Error('Invalid basmala source response');
+ quranSurahCache[1]=json.data;
+ return json.data.ayahs[0].text;
+}
 async function loadQuranSurah(number){
  number=Math.max(1,Math.min(114,Number(number)||1));
  const target='quranReaderContent',request=++quranRequestId;
@@ -1128,9 +1137,11 @@ async function loadQuranSurah(number){
   if(!data){const response=await fetch('https://api.alquran.cloud/v1/surah/'+number+'/quran-uthmani',{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(json.code!==200||!json.data||!Array.isArray(json.data.ayahs)||!json.data.ayahs.length)throw new Error('Invalid Quran response');data=json.data;quranSurahCache[number]=data}
   if(request!==quranRequestId)return;
   const meta=SUR_META[number-1]||{};
+  const basmala=number!==1&&number!==9?'<div class="quran-bismillah" lang="ar" dir="rtl">'+esc(await quranBasmalaText())+'</div>':'';
+  if(request!==quranRequestId)return;
   const heading='<div class="quran-heading"><div class="quran-ar-title" lang="ar" dir="rtl">'+esc(data.name||meta.arabic||'')+'</div><h3 style="margin:8px 0 4px">'+esc(data.englishName||meta.english||SUR[number-1])+'</h3><div class="mute">'+number+' · '+Number(data.numberOfAyahs||data.ayahs.length)+' '+esc(t('Ayahs'))+' · '+esc(t(data.revelationType||''))+'</div></div>';
   const ayahs=data.ayahs.map(a=>'<span class="quran-ayah" lang="ar" dir="rtl">'+esc(a.text)+' <span class="quran-ayah-mark" aria-label="'+esc(t('Ayah')+' '+a.numberInSurah)+'">'+String(a.numberInSurah)+'</span></span>').join(' ');
-  const content=document.getElementById(target);if(content)content.innerHTML=heading+'<div class="quran-ayahs" lang="ar" dir="rtl">'+ayahs+'</div><div class="quran-source">'+esc(t('Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.'))+' <a href="https://alquran.cloud/api" target="_blank" rel="noopener">AlQuran Cloud API</a> · <a href="https://tanzil.net/docs/Uthmani" target="_blank" rel="noopener">Uthmani script reference</a></div>';
+  const content=document.getElementById(target);if(content)content.innerHTML=heading+basmala+'<div class="quran-ayahs" lang="ar" dir="rtl">'+ayahs+'</div><div class="quran-source">'+esc(t('Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.'))+' <a href="https://alquran.cloud/api" target="_blank" rel="noopener">AlQuran Cloud API</a> · <a href="https://tanzil.net/docs/Uthmani" target="_blank" rel="noopener">Uthmani script reference</a></div>';
  }catch(e){console.warn('Quran surah load failed',e);if(request===quranRequestId)quranFailure(target)}
 }
 async function loadQuranPage(page){
@@ -1144,7 +1155,10 @@ async function loadQuranPage(page){
   if(request!==quranRequestId)return;
   const groups=[];data.ayahs.forEach(a=>{let g=groups[groups.length-1];if(!g||g.number!==a.surah.number){g={number:a.surah.number,name:a.surah.name,english:a.surah.englishName,ayahs:[]};groups.push(g)}g.ayahs.push(a)});
   const heading='<div class="quran-heading"><h3>'+esc(t('Mushaf page'))+' '+page+' / 604</h3><div class="mute">'+esc(t('Madinah Mushaf page view'))+'</div></div>';
-  const body=groups.map(g=>'<section><div style="text-align:center;margin:18px 0 12px;padding:8px;border:1px solid var(--gold);border-radius:8px"><div class="quran-ar-title" lang="ar" dir="rtl" style="font-family:Amiri,serif;font-size:1.55rem">'+esc(g.name)+'</div><b>'+esc(g.english)+'</b></div><div class="quran-ayahs" lang="ar" dir="rtl">'+g.ayahs.map(a=>'<span class="quran-ayah">'+esc(a.text)+' <span class="quran-ayah-mark" aria-label="'+esc(t('Ayah')+' '+a.numberInSurah)+'">'+String(a.numberInSurah)+'</span></span>').join(' ')+'</div></section>').join('');
+  const needsBasmala=groups.some(g=>g.number!==1&&g.number!==9&&g.ayahs[0]&&g.ayahs[0].numberInSurah===1);
+  const basmalaText=needsBasmala?await quranBasmalaText():'';
+  if(request!==quranRequestId)return;
+  const body=groups.map(g=>'<section>'+(g.ayahs[0]&&g.ayahs[0].numberInSurah===1?'<div style="text-align:center;margin:18px 0 12px;padding:8px;border:1px solid var(--gold);border-radius:8px"><div class="quran-ar-title" lang="ar" dir="rtl" style="font-family:Amiri,serif;font-size:1.55rem">'+esc(g.name)+'</div><b>'+esc(g.english)+'</b></div>':'')+(g.number!==1&&g.number!==9&&g.ayahs[0]&&g.ayahs[0].numberInSurah===1?'<div class="quran-bismillah" lang="ar" dir="rtl">'+esc(basmalaText)+'</div>':'')+'<div class="quran-ayahs" lang="ar" dir="rtl">'+g.ayahs.map(a=>'<span class="quran-ayah">'+esc(a.text)+' <span class="quran-ayah-mark" aria-label="'+esc(t('Ayah')+' '+a.numberInSurah)+'">'+String(a.numberInSurah)+'</span></span>').join(' ')+'</div></section>').join('');
   const content=document.getElementById(target);if(content)content.innerHTML=heading+body+'<div class="quran-source">'+esc(t('Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.'))+' <a href="https://alquran.cloud/api" target="_blank" rel="noopener">AlQuran Cloud API</a> · <a href="https://tanzil.net/docs/Uthmani" target="_blank" rel="noopener">Uthmani script reference</a></div>';
  }catch(e){console.warn('Quran page load failed',e);if(request===quranRequestId)quranFailure(target)}
 }
