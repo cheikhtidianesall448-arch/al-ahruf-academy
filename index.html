@@ -787,14 +787,23 @@ function editClassLink(id){
  if(id&&user.role!=='admin'&&String(c.owner||'').toLowerCase()!==me)return toast('You can only edit your own class links.');
  const levelOptions=['all','Beginner','Intermediate','Advanced'].map(v=>'<option value="'+v+'" '+(String(c.level||'all')===v?'selected':'')+'>'+(v==='all'?'All levels':v)+'</option>').join('');
  const teacherOptionsHtml='<option value="">All teachers</option>'+(S.teachers||[]).map(t=>'<option value="'+esc(t.username)+'" '+(String(c.teacher||'').toLowerCase()===String(t.username||'').toLowerCase()?'selected':'')+'>'+esc(t.name)+' — '+esc(t.username)+'</option>').join('');
- modal(id?'Edit class link':'Add class link',`<label>Class name</label><input name="title" required maxlength="100" value="${esc(c.title)}" placeholder="e.g. Tajwid — Level 1"><label>Class link (URL)</label><input name="url" type="url" required value="${esc(c.url)}" placeholder="https://..."><div class="row"><div style="flex:1;min-width:180px"><label>Student level</label><select name="level">${levelOptions}</select></div>${user.role==='admin'?'<div style="flex:1;min-width:180px"><label>Assigned teacher</label><select name="teacher">'+teacherOptionsHtml+'</select></div>':'<input type="hidden" name="teacher" value="'+esc(c.teacher||user.username||'')+'">'}</div><p class="mute">Optional targeting helps enrolled students see the right link automatically. Leave All levels to show it to every level.</p>`,async f=>{
- let url;try{url=new URL(f.url.value.trim())}catch{return toast('Enter a valid class link URL'),false}
- if(!['http:','https:'].includes(url.protocol))return toast('Class links must start with https:// or http://'),false;
- const item={id:c.id||('cl-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)),title:f.title.value.trim(),url:url.href,level:f.level.value||'all',teacher:user.role==='teacher'?(user.username||''):f.teacher.value,owner:c.owner||me,createdAt:c.createdAt||new Date().toISOString()};
+ const savedRoom=String(c.url||'').replace(/^https?:\\/\\/(?:www\\.)?meet\\.jit\\.si\\//i,'').replace(/\\?.*$/,'').replace(/#.*$/,'').replace(/\\/$/,'');
+ modal(id?'Edit class link':'Add class link',`<label>Class name</label><input name="title" required maxlength="100" value="${esc(c.title)}" placeholder="e.g. Tajwid — Level 1"><label>Jitsi room name or link</label><input name="url" type="text" required value="${esc(savedRoom)}" placeholder="e.g. AlAhrufTajwid or https://meet.jit.si/AlAhrufTajwid"><p class="mute">Enter a room name or paste a meet.jit.si link. Students will go directly to the Jitsi meeting.</p><div class="row"><div style="flex:1;min-width:180px"><label>Student level</label><select name="level">${levelOptions}</select></div>${user.role==='admin'?'<div style="flex:1;min-width:180px"><label>Assigned teacher</label><select name="teacher">'+teacherOptionsHtml+'</select></div>':'<input type="hidden" name="teacher" value="'+esc(c.teacher||user.username||'')+'">'}</div><p class="mute">Leave All levels to show this class to students at every level.</p>`,async f=>{
+ const raw=f.url.value.trim();let room='',url='';
+ if(/^https?:\\/\\//i.test(raw)){
+  try{const parsed=new URL(raw);if(!['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())||!/^\\/[A-Za-z0-9_-]+\\/?$/.test(parsed.pathname))return toast('Use a valid https://meet.jit.si/room link.'),false;room=parsed.pathname.replace(/^\\//,'').replace(/\\/$/,'')}
+  catch{return toast('Enter a Jitsi room name or a valid meet.jit.si link.'),false}
+ }else{
+  room=raw.replace(/\\s+/g,'-');
+  if(!/^[A-Za-z0-9_-]+$/.test(room))return toast('Room names can contain only letters, numbers, hyphens, and underscores.'),false;
+ }
+ if(!room)return toast('Enter a Jitsi room name.'),false;
+ url='https://meet.jit.si/'+encodeURIComponent(room);
+ const item={id:c.id||('cl-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)),title:f.title.value.trim(),url,level:f.level.value||'all',teacher:user.role==='teacher'?(user.username||''):f.teacher.value,owner:c.owner||me,createdAt:c.createdAt||new Date().toISOString()};
  if(!item.title)return false;
  const index=S.classLinks.findIndex(x=>String(x.id)===String(id));
  if(index>=0)S.classLinks[index]=item;else S.classLinks.unshift(item);
- save();toast('Class link saved');render();
+ save();toast('Jitsi class link saved');render();
  });
 }
 function deleteClassLink(id){
