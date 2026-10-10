@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Ranking-message refresh: 2026-10-09 -->
+<!-- Timetable country selector removed: 2026-10-10 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -733,9 +733,8 @@ function timetable(){
  if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
  if(next)window._nextClassTimer=setInterval(updateNextClassCountdown,1000);
  const countdown=next?'<div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold)"><div class="mute">UPCOMING CLASS · SENEGAL TIME (GMT/UTC+0)</div><h3 style="margin:6px 0">'+esc(next.item.course||'Quran class')+'</h3><div id="nextClassCountdown" data-timestamp="'+next.date.getTime()+'" style="font-size:1.1rem;font-weight:700">Calculating time remaining…</div><div class="mute" style="margin-top:5px">'+esc(next.item.day)+' · '+esc(next.item.start)+' · '+esc(teacherName(next.item.teacher))+'</div></div>':'';
- const selected='Africa/Dakar';
- const timeAt=(day,time,zone)=>{const idx=days.indexOf(day);if(idx<0||!/^\\d{2}:\\d{2}$/.test(String(time||'')))return {day,time};const [h,m]=time.split(':').map(Number);const date=new Date(Date.UTC(2026,9,12+idx,h,m));const parts=new Intl.DateTimeFormat('en-GB',{timeZone:zone,weekday:'long',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);return {day:parts.find(p=>p.type==='weekday')?.value||day,time:(parts.find(p=>p.type==='hour')?.value||'00')+':'+(parts.find(p=>p.type==='minute')?.value||'00')};};
- const converted=visible.map(x=>{const a=timeAt(x.day,x.start,selected),b=timeAt(x.day,x.end,selected);return {...x,displayDay:a.day,displayStart:a.time,displayEnd:b.time,senegalDay:x.day,senegalStart:x.start,senegalEnd:x.end}});
+ // Schedules are stored and displayed only in Senegal time (Africa/Dakar, UTC+0).
+ const converted=visible.map(x=>({...x,displayDay:x.day,displayStart:x.start,displayEnd:x.end,senegalDay:x.day,senegalStart:x.start,senegalEnd:x.end}));
  const displayDays=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
  const hourRows=Array.from({length:18},(_,i)=>i+5);
  const cellMap={};converted.forEach(x=>{const h=Number(String(x.displayStart||'').split(':')[0]);if(!Number.isFinite(h))return;const key=x.displayDay+'|'+h;(cellMap[key]||(cellMap[key]=[])).push(x)});
