@@ -768,8 +768,16 @@ function payments(){if(user.role!=='admin')return '<div class="card"><b>Permissi
 function markPaid(i){if(user.role!=='admin')return toast('Only the administrator can edit payments.');const p=S.pay[i];p.st='paid';const s=S.students.find(x=>x.id===p.sid);if(s)s.pay='paid';save();toast('Marked as paid');render()}
 function newInv(){if(user.role!=='admin')return toast('Only the administrator can create invoices.');if(!S.students.length)return toast('Add a student first');const today=new Date().toISOString().slice(0,10),due=new Date(Date.now()+2592e6).toISOString().slice(0,10);
  modal('New invoice',`<label>Student</label><select name="s">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><label>Amount (USD)</label><input name="a" type="number" min="1" step="0.01" value="50" required><label>Description / Month</label><input name="desc" placeholder="e.g. October 2026 tuition" required><label>Due date</label><input name="d" type="date" required value="${due}">`,f=>{const inv='INV-'+new Date().getFullYear()+String(Date.now()).slice(-6);S.pay.push({inv,sid:f.s.value,amt:+f.a.value,due:f.d.value,date:today,description:f.desc.value.trim(),st:'pending'});save();toast('Invoice created and saved for the selected student');render()},'Create')}
+function classLinkTarget(raw){
+ const value=String(raw||'').trim();
+ const match=value.match(/#class=([A-Za-z0-9_-]+)/i);
+ if(match){try{const parsed=new URL(value,location.href);if(parsed.hostname===location.hostname)return 'https://meet.jit.si/'+encodeURIComponent(match[1]);}catch{}}
+ try{const parsed=new URL(value);if(['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())&&/^\/[A-Za-z0-9_-]+\/?$/.test(parsed.pathname))return 'https://meet.jit.si/'+encodeURIComponent(parsed.pathname.replace(/^\//,'').replace(/\/$/,''));}catch{}
+ return value;
+}
 function myclass(){
  S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
+ S.classLinks=S.classLinks.map(c=>({...c,url:classLinkTarget(c.url)}));
  const admin=user.role==='admin',teacher=user.role==='teacher',student=user.role==='student';
  const me=String(user.username||user.id||'').trim().toLowerCase();
  const studentRec=student?((S.students||[]).find(x=>String(x.id||'').trim().toLowerCase()===me)||currentStudent()):null;
