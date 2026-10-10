@@ -518,6 +518,7 @@ async function logout(){if(ONLINE&&sb){try{await sb.auth.signOut()}catch(e){}}us
 const lvl=s=>Math.round(s.sur.length/114*1000)/10;
 
 function applyArabicIndicDigits(root=document.body){
+ if(currentLang!=='ar')return;
  const digits={'0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩'};
  const convert=value=>String(value).replace(/[0-9]/g,d=>digits[d]);
  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
