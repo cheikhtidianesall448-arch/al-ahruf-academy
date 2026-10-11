@@ -254,6 +254,11 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 .quran-page-paper .quran-lines .quran-line>.quran-surah-heading{display:block!important;position:static!important;float:none!important;clear:both!important;width:max-content!important;max-width:92%!important;box-sizing:border-box!important;text-align:center!important;text-align-last:center!important;direction:rtl!important;margin:0 auto!important;padding:3px 18px!important;border:1px solid #b79a52!important;border-radius:5px!important;background:#efe3bd!important;color:#55421d!important;font-size:1.12em!important;font-weight:700!important;line-height:1.25!important;}
 .quran-page-paper .quran-lines .quran-line>.quran-basmala-line{display:block!important;position:static!important;float:none!important;clear:both!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;text-align:center!important;text-align-last:center!important;direction:rtl!important;margin:0 auto!important;padding:0!important;font-size:1.04em!important;line-height:1.25!important;}
 .quran-page-paper .quran-lines .quran-line .quran-ayah-mark{display:inline!important;white-space:nowrap!important;margin:0 .08em!important;}
+/* Compact Mushaf words and keep chapter title/basmala in a distinct centered panel. */
+.quran-page-paper .quran-lines .quran-line{word-spacing:0!important;letter-spacing:0!important;text-align:right!important;text-align-last:right!important;}
+.quran-page-paper .quran-lines .quran-line>span:not(.quran-ayah-mark){margin:0!important;padding:0!important;letter-spacing:0!important;word-spacing:0!important;}
+.quran-surah-title-panel{position:relative;z-index:2;width:max-content;max-width:92%;margin:0 auto 3px;padding:3px 18px;border:1px solid #b79a52;border-radius:5px;background:#efe3bd;color:#55421d;text-align:center;font-size:1.05em;font-weight:700;line-height:1.2;}
+.quran-basmala-panel{position:relative;z-index:2;margin:0 auto 3px;text-align:center;font-size:1em;line-height:1.2;}
 /* Keep every Mushaf page on the same rectangular template at every screen size. */
 .quran-page-paper{width:100%;aspect-ratio:720/1024;height:auto;min-height:0;padding:0!important;border-width:7px;border-radius:0;}
 .quran-lines{position:absolute!important;top:7%!important;bottom:7%!important;left:5%!important;right:5%!important;display:grid!important;grid-template-rows:repeat(15,minmax(0,1fr))!important;overflow:hidden!important;}
@@ -1276,16 +1281,8 @@ async function loadQuranPage(page){
    if(!firstWord)throw new Error('A verse is missing printed line positions');
    if(words.some(w=>!Number(w.line_number)||Number(w.line_number)<1||Number(w.line_number)>15))throw new Error('A word is missing valid 15-line Mushaf positioning');
    const firstLine=Math.max(1,Math.min(15,Number(firstWord.line_number)));
-   if(verseNumber===1){
-    const meta=SUR_META.find(x=>Number(x.number)===chapterId)||{};
-    const hasSeparateBasmala=chapterId!==1&&chapterId!==9;
-    const headingLine=Math.max(1,firstLine-(hasSeparateBasmala?2:1));
-    lines[headingLine-1].push('<span class="quran-surah-heading">'+esc(meta.arabic||meta.english||'')+'</span>');
-    if(hasSeparateBasmala){
-     const basmalaLine=Math.max(1,firstLine-1);
-     lines[basmalaLine-1].push('<span class="quran-basmala-line">'+safeTajweedHtml(basmalaText)+'</span>');
-    }
-   }
+   /* Surah titles and basmala are rendered separately from Quran text lines.
+      Adding them to the API's printed line arrays can collide with the previous surah's final ayat. */
    const textWords=words.filter(w=>String(w.char_type_name||'').toLowerCase()!=='end'&&String(w.char_type_name||'').toLowerCase()!=='pause');
    textWords.forEach((w,idx)=>{
     const lineNo=Number(w.line_number);
@@ -1300,8 +1297,13 @@ async function loadQuranPage(page){
    });
   });
   if(request!==quranRequestId)return;
-  const firstChapter=Number(String(data[0]?.verse_key||'').split(':')[0]||data[0]?.chapter_id||1);const lastVerse=data[data.length-1]||{};const lastChapter=Number(String(lastVerse.verse_key||'').split(':')[0]||lastVerse.chapter_id||firstChapter);const firstMeta=SUR_META.find(x=>Number(x.number)===firstChapter)||{};const lastMeta=SUR_META.find(x=>Number(x.number)===lastChapter)||firstMeta;const heading='<div class="quran-heading"><h3>'+esc(firstMeta.arabic||firstMeta.english||t('Mushaf page'))+(lastChapter!==firstChapter?' — '+esc(lastMeta.arabic||lastMeta.english||''):'')+'</h3><div class="mute">'+esc(t('Mushaf page'))+' '+page+' / 604 · '+esc(t('15-line Tajweed Mushaf'))+'</div></div>';
-  const paper='<div class="quran-page-paper"><div class="quran-lines" lang="ar" dir="rtl">'+lines.map((line,i)=>'<div class="quran-line'+(line.length?'':' quran-line-empty')+'" aria-label="'+esc(t('Line')+' '+(i+1))+'">'+line.join(' ')+'</div>').join('')+'</div><div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';
+  const firstChapter=Number(String(data[0]?.verse_key||'').split(':')[0]||data[0]?.chapter_id||1);const lastVerse=data[data.length-1]||{};const lastChapter=Number(String(lastVerse.verse_key||'').split(':')[0]||lastVerse.chapter_id||firstChapter);const firstMeta=SUR_META.find(x=>Number(x.number)===firstChapter)||{};const lastMeta=SUR_META.find(x=>Number(x.number)===lastChapter)||firstMeta;
+  const pageHasNewSurah=lastChapter!==firstChapter;
+  const pageTitleMeta=pageHasNewSurah?lastMeta:firstMeta;
+  const pageTitle='<div class="quran-surah-title-panel" lang="ar" dir="rtl">'+esc(pageTitleMeta.arabic||pageTitleMeta.english||t('Mushaf page'))+'</div>';
+  const pageBasmala=pageHasNewSurah&&lastChapter!==9&&lastChapter!==1?'<div class="quran-basmala-panel" lang="ar" dir="rtl">'+safeTajweedHtml(basmalaText)+'</div>':'';
+  const heading='<div class="quran-heading"><div class="mute">'+esc(t('Mushaf page'))+' '+page+' / 604 · '+esc(t('15-line Tajweed Mushaf'))+'</div></div>';
+  const paper='<div class="quran-page-paper">'+(pageHasNewSurah?pageTitle+pageBasmala:'')+'<div class="quran-lines" lang="ar" dir="rtl">'+lines.map((line,i)=>'<div class="quran-line'+(line.length?'':' quran-line-empty')+'" aria-label="'+esc(t('Line')+' '+(i+1))+'">'+line.join(' ')+'</div>').join('')+'</div><div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';
   const content=document.getElementById(target);
   if(content){content.innerHTML=heading+paper+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';applyArabicIndicDigits(content)}
  }catch(e){
