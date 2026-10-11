@@ -238,6 +238,12 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 .tj-ham_wasl,.tj-laam_shamsiyah,.tj-silent,.tj-slnt{color:inherit}
 @media(max-width:600px){.quran-tools{grid-template-columns:1fr}.quran-actions .btn{flex:1}.quran-reading{padding:8px}.quran-page-paper{padding:6px}.quran-line{font-size:clamp(.92rem,3.6vw,1.15rem);line-height:1.8;word-spacing:.04em}.quran-lines{grid-template-rows:repeat(15,minmax(2.05em,auto))}}
 /* Refine Mushaf spacing and center chapter headings/Basmala consistently. */
+/* Final fix: chapter title and Basmala must be real full-width centered rows, not inline words. */
+.quran-line .quran-surah-heading{display:block!important;float:none!important;position:static!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;text-align:center!important;margin:0 auto!important;direction:rtl!important;}
+.quran-line .quran-basmala-line{display:block!important;float:none!important;position:static!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;text-align:center!important;margin:0 auto!important;direction:rtl!important;}
+.quran-line{word-spacing:.08em!important;}
+.quran-line>span:not(.quran-surah-heading):not(.quran-basmala-line):not(.quran-ayah-mark){display:inline!important;width:auto!important;max-width:none!important;}
+
 .quran-line{word-spacing:.06em!important;letter-spacing:0!important;text-align:justify!important;text-align-last:justify!important;line-height:1.22!important;}
 .quran-line>span:not(.quran-surah-heading):not(.quran-basmala-line){margin-inline:.025em!important;}
 .quran-surah-heading{display:block!important;position:relative;left:auto!important;right:auto!important;float:none!important;width:100%!important;max-width:100%!important;text-align:center!important;direction:rtl!important;margin:0 auto!important;font-size:1.2em!important;line-height:1.35!important;padding:2px 0!important;}
