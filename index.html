@@ -361,6 +361,17 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
   .quran-page-paper .quran-basmala-panel{font-size:clamp(9px,2.3vw,14px)!important}
 }
 
+
+/* Tighten the Mushaf text block so it uses the full page width and avoids an oversized blank gutter. */
+.quran-page-paper .quran-lines{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;grid-template-rows:none!important;gap:0!important;}
+.quran-page-paper .quran-lines>.quran-line{flex:1 1 0!important;width:100%!important;box-sizing:border-box!important;height:auto!important;min-height:0!important;overflow:hidden!important;}
+.quran-page-paper .quran-lines>.quran-surah-row,.quran-page-paper .quran-lines>.quran-basmala-row{flex:0 0 auto!important;width:100%!important;box-sizing:border-box!important;height:auto!important;min-height:0!important;overflow:visible!important;text-align:center!important;text-align-last:center!important;}
+.quran-page-paper .quran-lines>.quran-surah-row{padding:1px 0!important;}
+.quran-page-paper .quran-lines>.quran-basmala-row{padding:0 0 2px!important;}
+.quran-page-paper .quran-lines .quran-surah-title-panel{display:table!important;width:max-content!important;max-width:88%!important;margin:0 auto!important;padding:2px 14px!important;border:1px solid #b79a52!important;border-radius:5px!important;background:#efe3bd!important;color:#55421d!important;font-size:clamp(10px,1.8vw,16px)!important;font-weight:700!important;line-height:1.2!important;}
+.quran-page-paper .quran-lines .quran-basmala-panel{display:block!important;width:100%!important;max-width:100%!important;margin:0 auto!important;text-align:center!important;font-size:clamp(9px,1.65vw,15px)!important;line-height:1.15!important;}
+.quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row){text-align:justify!important;text-align-last:justify!important;direction:rtl!important;}
+@media(max-width:600px){.quran-page-paper .quran-lines .quran-surah-title-panel{font-size:clamp(9px,2.3vw,13px)!important;padding:1px 7px!important}.quran-page-paper .quran-lines .quran-basmala-panel{font-size:clamp(8px,2vw,12px)!important}}
 </style>
 </head>
 <body>
@@ -1205,15 +1216,7 @@ function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not f
  app.insertAdjacentHTML('beforeend',`<div id="invoiceOverlay" style="position:fixed;inset:0;z-index:9999;overflow:auto;background:#f5f7fb;color:#172033;padding:16px;box-sizing:border-box;font-family:Arial,sans-serif">
  <div class="row between" style="position:sticky;top:0;z-index:2;max-width:850px;margin:0 auto 14px;padding:10px 0;background:#f5f7fb;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost" onclick="closeInvoice()">← Back to dashboard</button><div class="row" style="gap:8px"><button type="button" class="btn gold" onclick="window.print()">Print / Save PDF</button><button type="button" class="btn ghost" onclick="closeInvoice()" aria-label="Close invoice">Close ✕</button></div></div>
  <style>@page{size:A4 landscape;margin:0}@media print{body>*{visibility:hidden!important}#invoiceOverlay,#invoiceOverlay *{visibility:visible!important}#invoiceOverlay{position:absolute!important;inset:0!important;overflow:visible!important;background:#fff!important;padding:0!important}#invoiceOverlay .invoice-actions{display:none!important}.invoice-paper{width:297mm!important;min-height:210mm!important;padding:15mm!important;box-sizing:border-box!important;box-shadow:none!important;border:0!important;border-radius:0!important;margin:0 auto!important}}
-/* QuranFlash-inspired page flow: chapter headings and basmala sit directly before their surah text. */
-.quran-page-paper .quran-lines{display:flex!important;flex-direction:column!important;justify-content:space-between!important;grid-template-rows:none!important;gap:0!important;}
-.quran-page-paper .quran-lines>.quran-line{flex:1 1 0!important;height:auto!important;min-height:0!important;overflow:hidden!important;}
-.quran-page-paper .quran-lines>.quran-surah-row,.quran-page-paper .quran-lines>.quran-basmala-row{flex:0 0 auto!important;height:auto!important;min-height:0!important;overflow:visible!important;text-align:center!important;text-align-last:center!important;}
-.quran-page-paper .quran-lines>.quran-surah-row{padding:1px 0!important;}
-.quran-page-paper .quran-lines>.quran-basmala-row{padding:0 0 2px!important;}
-.quran-page-paper .quran-lines .quran-surah-title-panel{display:table!important;width:max-content!important;max-width:88%!important;margin:0 auto!important;padding:2px 14px!important;border:1px solid #b79a52!important;border-radius:5px!important;background:#efe3bd!important;color:#55421d!important;font-size:clamp(10px,1.8vw,16px)!important;font-weight:700!important;line-height:1.2!important;}
-.quran-page-paper .quran-lines .quran-basmala-panel{display:block!important;width:100%!important;max-width:100%!important;margin:0 auto!important;text-align:center!important;font-size:clamp(9px,1.65vw,15px)!important;line-height:1.15!important;}
-@media(max-width:600px){.quran-page-paper .quran-lines .quran-surah-title-panel{font-size:clamp(9px,2.3vw,13px)!important;padding:1px 7px!important}.quran-page-paper .quran-lines .quran-basmala-panel{font-size:clamp(8px,2vw,12px)!important}}
+
 </style>
  <div class="invoice-paper" style="width:min(100%,297mm);min-height:210mm;margin:0 auto 36px;background:#fff;padding:clamp(18px,5vw,20mm);border:1px solid #ddd;border-radius:0;box-shadow:0 8px 30px #0001;box-sizing:border-box">
  <div style="display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;border-bottom:3px solid #c9a227;padding-bottom:20px"><div><div style="font-size:24px;font-weight:800">Al-Ahruf International Academy</div><div style="color:#687386">Nurturing faith, enhancing learning</div></div><div><b>Invoice</b><br>${esc(p.inv||'')}</div></div>
