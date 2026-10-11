@@ -2003,6 +2003,72 @@ function tajweedLegendHtml(){
  document.head.appendChild(style);
 })();
 let quranDisplayedMushafPage=null;
+// Mushaf reading preferences inspired by dedicated Quran reader apps.
+function quranReaderPrefs(){
+ const defaults={theme:'sepia',fontScale:1};
+ try{return Object.assign(defaults,JSON.parse(localStorage.getItem('ahrufQuranReaderPrefs')||'{}'))}catch(_){return defaults}
+}
+function quranApplyReaderSettings(){
+ const reader=document.getElementById('quranReaderContent');if(!reader)return;
+ const p=quranReaderPrefs();
+ reader.classList.remove('quran-theme-day','quran-theme-sepia','quran-theme-night');
+ reader.classList.add('quran-theme-'+(['day','sepia','night'].includes(p.theme)?p.theme:'sepia'));
+ reader.style.setProperty('--quran-font-scale',String(Math.max(.8,Math.min(1.5,Number(p.fontScale)||1))));
+ const themeSelect=document.getElementById('quranThemeSelect');if(themeSelect)themeSelect.value=p.theme;
+ const sizeLabel=document.getElementById('quranFontScaleLabel');if(sizeLabel)sizeLabel.textContent=Math.round((Number(p.fontScale)||1)*100)+'%';
+}
+function quranSetReaderPref(key,value){
+ const p=quranReaderPrefs();p[key]=value;
+ try{localStorage.setItem('ahrufQuranReaderPrefs',JSON.stringify(p))}catch(_){}
+ quranApplyReaderSettings();
+}
+function quranChangeTextSize(delta){
+ const p=quranReaderPrefs();p.fontScale=Math.max(.8,Math.min(1.5,Math.round(((Number(p.fontScale)||1)+delta)*100)/100));
+ try{localStorage.setItem('ahrufQuranReaderPrefs',JSON.stringify(p))}catch(_){}
+ quranApplyReaderSettings();
+}
+function quranSaveBookmark(){
+ const page=Math.max(1,Math.min(604,Number(document.getElementById('quranPageSelect')?.value)||quranDisplayedMushafPage||1));
+ try{localStorage.setItem('ahrufQuranBookmark',String(page))}catch(_){}
+ const status=document.getElementById('quranBookmarkStatus');if(status)status.textContent='Saved page '+page;
+}
+function quranRestoreBookmark(){
+ let page=1;try{page=Math.max(1,Math.min(604,Number(localStorage.getItem('ahrufQuranBookmark'))||1))}catch(_){}
+ const picker=document.getElementById('quranPageSelect');if(picker)picker.value=String(page);
+ changeQuranMode('page');loadQuranPage(page);
+}
+function quranResetReaderSettings(){
+ try{localStorage.removeItem('ahrufQuranReaderPrefs')}catch(_){}
+ quranApplyReaderSettings();
+}
+(function installQuranReaderSettingsStyles(){
+ if(document.getElementById('ahrufQuranReaderSettingsStyles'))return;
+ const style=document.createElement('style');style.id='ahrufQuranReaderSettingsStyles';
+ style.textContent=[
+ '#quranReaderSettings{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:12px;margin:12px 0;border:1px solid var(--line,#ddd);border-radius:12px;background:var(--card,#fff)}',
+ '#quranReaderSettings label{font-size:.86rem;font-weight:600}',
+ '#quranReaderSettings select{min-width:110px;padding:7px;border:1px solid var(--line,#ccc);border-radius:8px;background:var(--card,#fff);color:var(--text,inherit)}',
+ '#quranReaderSettings .quran-setting-group{display:flex;align-items:center;gap:6px}',
+ '#quranReaderContent .quran-page-paper .quran-line{font-size:calc(clamp(9px,2.05vw,18px)*var(--quran-font-scale,1))!important}',
+ '#quranReaderContent.quran-theme-day .quran-page-paper{background:#fff!important;color:#191919!important;border-color:#c7c7c7!important;box-shadow:inset 0 0 0 4px #eee,0 5px 18px #00000012!important}',
+ '#quranReaderContent.quran-theme-day .quran-page-paper:before,#quranReaderContent.quran-theme-day .quran-page-paper:after{background:#fff!important;border-color:#ddd!important;color:#777!important}',
+ '#quranReaderContent.quran-theme-day .quran-line{color:#191919!important;border-bottom-color:#eee!important}',
+ '#quranReaderContent.quran-theme-day .quran-surah-title-panel{background:#f5f5f5!important;color:#222!important;border-color:#bbb!important}',
+ '#quranReaderContent.quran-theme-day .quran-page-number{background:#fff!important;color:#333!important;border-color:#bbb!important}',
+ '#quranReaderContent.quran-theme-sepia .quran-page-paper{background:#fbf2df!important;color:#30271b!important}',
+ '#quranReaderContent.quran-theme-night{background:#151515!important;color:#eee!important;border-color:#444!important}',
+ '#quranReaderContent.quran-theme-night .quran-heading{color:#eee!important;border-color:#444!important}',
+ '#quranReaderContent.quran-theme-night .quran-page-paper{background:#171717!important;color:#eee!important;border-color:#555!important;box-shadow:inset 0 0 0 4px #252525,0 5px 18px #00000040!important}',
+ '#quranReaderContent.quran-theme-night .quran-page-paper:before,#quranReaderContent.quran-theme-night .quran-page-paper:after{background:#171717!important;border-color:#444!important;color:#b6a16c!important}',
+ '#quranReaderContent.quran-theme-night .quran-line{color:#f0f0f0!important;border-bottom-color:#333!important}',
+ '#quranReaderContent.quran-theme-night .quran-surah-title-panel{background:#292929!important;color:#f2dfad!important;border-color:#7b6b48!important}',
+ '#quranReaderContent.quran-theme-night .quran-page-number{background:#222!important;color:#f2dfad!important;border-color:#7b6b48!important}',
+ '#quranReaderContent.quran-theme-night .quran-ayah-mark{color:#f2dfad!important;border-color:#9c895c!important}',
+ '@media(max-width:600px){#quranReaderSettings{gap:8px;padding:9px}#quranReaderSettings .quran-setting-group{flex-wrap:wrap}}'
+ ].join('\n');
+ document.head.appendChild(style);
+})();
+
 async function loadQuranPage(page){
  page=Math.max(1,Math.min(604,Number(page)||1));
  const target='quranReaderContent',request=++quranRequestId;
@@ -2075,7 +2141,7 @@ async function loadQuranPage(page){
   const paper='<div class="quran-page-paper">'+
    '<div class="quran-lines" lang="ar" dir="rtl">'+renderedRows.join('')+'</div>'+
    '<div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';  const content=document.getElementById(target);
-  if(content){content.innerHTML=heading+paper+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';const turnPaper=content.querySelector('.quran-page-paper');const turnDirection=quranDisplayedMushafPage===null?null:(page>quranDisplayedMushafPage?'next':page<quranDisplayedMushafPage?'previous':null);quranDisplayedMushafPage=page;if(turnPaper&&turnDirection)turnPaper.classList.add('quran-turn-'+turnDirection);const lineGrid=content.querySelector('.quran-lines');if(lineGrid)lineGrid.style.setProperty('grid-template-rows','repeat('+renderedRows.length+',minmax(0,1fr))','important');applyArabicIndicDigits(content)}
+  if(content){content.innerHTML=heading+paper+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';const turnPaper=content.querySelector('.quran-page-paper');const turnDirection=quranDisplayedMushafPage===null?null:(page>quranDisplayedMushafPage?'next':page<quranDisplayedMushafPage?'previous':null);quranDisplayedMushafPage=page;if(turnPaper&&turnDirection)turnPaper.classList.add('quran-turn-'+turnDirection);const lineGrid=content.querySelector('.quran-lines');if(lineGrid)lineGrid.style.setProperty('grid-template-rows','repeat('+renderedRows.length+',minmax(0,1fr))','important');applyArabicIndicDigits(content);quranApplyReaderSettings()}
  }catch(e){
   console.warn('15-line Tajweed Mushaf page failed',e);
   if(request===quranRequestId){
@@ -2130,7 +2196,7 @@ function changeQuranMode(mode){
  else loadQuranSurah(Number(document.getElementById('quranSurahSelect')?.value||1));
 }
 function adminSurahs(){
-  return `<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${t('Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><button class="btn gold" type="button" onclick="loadQuranPage(Math.min(604,Number(document.getElementById('quranPageSelect').value||1)+1))">${t('Next page')} →</button><label>${t('Page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><button class="btn ghost" type="button" onclick="loadQuranPage(Math.max(1,Number(document.getElementById('quranPageSelect').value||1)-1))">← ${t('Previous page')}</button></div><div id="quranReaderContent" class="quran-reading" onpointerdown="quranSwipeStart(event)" onpointerup="quranSwipeEnd(event)" onpointercancel="quranSwipeCancel()"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
+  return `<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${t('Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><button class="btn gold" type="button" onclick="loadQuranPage(Math.min(604,Number(document.getElementById('quranPageSelect').value||1)+1))">${t('Next page')} →</button><label>${t('Page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><button class="btn ghost" type="button" onclick="loadQuranPage(Math.max(1,Number(document.getElementById('quranPageSelect').value||1)-1))">← ${t('Previous page')}</button></div><div id="quranReaderSettings" aria-label="Quran reading settings"><div class="quran-setting-group"><label for="quranThemeSelect">Page theme</label><select id="quranThemeSelect" onchange="quranSetReaderPref('theme',this.value)"><option value="day">Day</option><option value="sepia" selected>Sepia</option><option value="night">Night</option></select></div><div class="quran-setting-group"><label>Text size</label><button class="btn ghost sm" type="button" aria-label="Decrease text size" onclick="quranChangeTextSize(-.1)">−</button><span id="quranFontScaleLabel">100%</span><button class="btn ghost sm" type="button" aria-label="Increase text size" onclick="quranChangeTextSize(.1)">+</button></div><div class="quran-setting-group"><button class="btn ghost sm" type="button" onclick="quranSaveBookmark()">Save bookmark</button><button class="btn ghost sm" type="button" onclick="quranRestoreBookmark()">Resume bookmark</button></div><button class="btn ghost sm" type="button" onclick="quranResetReaderSettings()">Reset settings</button><span id="quranBookmarkStatus" class="mute" aria-live="polite"></span></div><div id="quranReaderContent" class="quran-reading" onpointerdown="quranSwipeStart(event)" onpointerup="quranSwipeEnd(event)" onpointercancel="quranSwipeCancel()"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
  }
  function viewStudent(){const studentId=String(user.username||user.id||'').toLowerCase();const s=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===studentId)||{sur:[],name:user.name||'',id:user.username||user.id,pay:'pending'};s.sur=Array.isArray(s.sur)?s.sur:[];
  const ranking=(Array.isArray(S.ranking)&&S.ranking.length?S.ranking:S.students.map(x=>({id:x.id,name:x.name,surahCount:(x.sur||[]).length}))).slice().sort((a,b)=>Number(b.surahCount||0)-Number(a.surahCount||0));
