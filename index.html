@@ -237,6 +237,14 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 .tj-madda_normal,.tj-madda_permissible,.tj-madda_obligatory,.tj-madda_necessary,.tj-madda_2,.tj-madda_246{color:#b07808}
 .tj-ham_wasl,.tj-laam_shamsiyah,.tj-silent,.tj-slnt{color:inherit}
 @media(max-width:600px){.quran-tools{grid-template-columns:1fr}.quran-actions .btn{flex:1}.quran-reading{padding:8px}.quran-page-paper{padding:6px}.quran-line{font-size:clamp(.92rem,3.6vw,1.15rem);line-height:1.8;word-spacing:.04em}.quran-lines{grid-template-rows:repeat(15,minmax(2.05em,auto))}}
+/* Keep every Mushaf page on the same rectangular template at every screen size. */
+.quran-page-paper{width:100%;aspect-ratio:720/1024;height:auto;min-height:0;padding:0!important;border-width:7px;border-radius:0;}
+.quran-lines{position:absolute!important;top:7%!important;bottom:7%!important;left:5%!important;right:5%!important;display:grid!important;grid-template-rows:repeat(15,minmax(0,1fr))!important;overflow:hidden!important;}
+.quran-line{height:100%!important;min-height:0!important;display:flex!important;flex-wrap:nowrap;align-items:center;justify-content:space-between;text-align:justify;text-align-last:justify;white-space:nowrap;overflow:hidden;font-size:clamp(8px,2.05vw,18px)!important;line-height:1.15!important;padding:0!important;}
+.quran-line-empty{min-height:0!important;}
+.quran-surah-heading{display:block!important;flex:1 1 100%!important;width:100%!important;text-align:center!important;font-size:1.05em!important;line-height:1.2!important;border:1px solid #c9ad6c;border-radius:3px;padding:0 3px!important;}
+.quran-basmala-line{display:block!important;flex:1 1 100%!important;width:100%!important;text-align:center!important;font-size:1.05em!important;line-height:1.2!important;}
+.quran-page-number{bottom:1.8%!important;}
 </style>
 </head>
 <body>
