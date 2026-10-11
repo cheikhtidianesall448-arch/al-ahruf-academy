@@ -1737,6 +1737,26 @@ function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not f
   line-height:1!important;
 }
 
+
+/* Refined tazhib band around the inner Mushaf box: single beaded rule,
+   pale lozenge strip, scalloped gold-green medallions and mirrored finials. */
+#quranReaderContent>.quran-page-paper>.quran-lines{
+  border:12px solid transparent!important;
+  border-image-source:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cpattern id='bead' width='4' height='4' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='2' cy='2' r='.8' fill='%23f9edcf' stroke='%23867448' stroke-width='.45'/%3E%3C/pattern%3E%3Cpattern id='small' width='8' height='8' patternUnits='userSpaceOnUse'%3E%3Cpath d='M4 .5Q7.5 4 4 7.5Q.5 4 4 .5Z' fill='%23e0e9cf' stroke='%238b8051' stroke-width='.6'/%3E%3Ccircle cx='4' cy='4' r='.7' fill='%233e6943'/%3E%3C/pattern%3E%3Cpattern id='med' width='18' height='18' patternUnits='userSpaceOnUse'%3E%3Cpath d='M9 1C11 4 14 5 17 9 14 11 11 14 9 17 7 14 4 11 1 9 4 7 7 4 9 1Z' fill='%23d99b43' stroke='%23916b3b' stroke-width='.75'/%3E%3Cpath d='M9 5 13 9 9 13 5 9Z' fill='%23a7bd63' stroke='%23fff0cf' stroke-width='.65'/%3E%3Ccircle cx='9' cy='9' r='.8' fill='%237d5839'/%3E%3Cpath d='M0 9 3 6 6 9 3 12Z' fill='%23f5e7d8' stroke='%23c78391' stroke-width='.5'/%3E%3Cpath d='M3 6 6 9 3 12 0 9M3 6 3 12M0 9 6 9' fill='none' stroke='%23c78391' stroke-width='.45'/%3E%3Ccircle cx='3' cy='9' r='.65' fill='%23bd5b56'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='%23f8efdf'/%3E%3Crect width='100' height='100' fill='url(%23med)'/%3E%3Crect x='0' y='0' width='100' height='100' fill='url(%23small)' opacity='.95'/%3E%3Crect x='1' y='1' width='98' height='98' fill='none' stroke='%23867448' stroke-width='2.8'/%3E%3Crect x='2' y='2' width='96' height='96' fill='none' stroke='url(%23bead)' stroke-width='1.2'/%3E%3Crect x='4' y='4' width='92' height='92' fill='none' stroke='%23d2b16a' stroke-width='.8'/%3E%3Cg fill='none' stroke='%23a64f4b' stroke-width='.65' stroke-linecap='round'%3E%3Cpath d='M1 1 7 7 4 8 8 11M1 1 8 4 7 7M99 1 93 7 96 8 92 11M99 1 92 4 93 7M1 99 7 93 4 92 8 89M1 99 8 96 7 93M99 99 93 93 96 92 92 89M99 99 92 96 93 93'/%3E%3C/g%3E%3Cg fill='%23c55c57'%3E%3Ccircle cx='1' cy='1' r='1'/%3E%3Ccircle cx='8' cy='4' r='.8'/%3E%3Ccircle cx='4' cy='8' r='.8'/%3E%3Ccircle cx='99' cy='1' r='1'/%3E%3Ccircle cx='92' cy='4' r='.8'/%3E%3Ccircle cx='96' cy='8' r='.8'/%3E%3Ccircle cx='1' cy='99' r='1'/%3E%3Ccircle cx='8' cy='96' r='.8'/%3E%3Ccircle cx='4' cy='92' r='.8'/%3E%3Ccircle cx='99' cy='99' r='1'/%3E%3Ccircle cx='92' cy='96' r='.8'/%3E%3Ccircle cx='96' cy='92' r='.8'/%3E%3C/g%3E%3C/svg%3E")!important;
+  border-image-slice:20!important;
+  border-image-width:12px!important;
+  border-image-repeat:round!important;
+  border-radius:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:#fffdf7!important;
+  overflow:visible!important;
+  padding:5px 4px!important;
+  position:absolute!important;
+}
+#quranReaderContent>.quran-page-paper>.quran-lines:before,
+#quranReaderContent>.quran-page-paper>.quran-lines:after{content:none!important}
+
 </style>
  <div class="invoice-paper" style="width:min(100%,297mm);min-height:210mm;margin:0 auto 36px;background:#fff;padding:clamp(18px,5vw,20mm);border:1px solid #ddd;border-radius:0;box-shadow:0 8px 30px #0001;box-sizing:border-box">
  <div style="display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;border-bottom:3px solid #c9a227;padding-bottom:20px"><div><div style="font-size:24px;font-weight:800">Al-Ahruf International Academy</div><div style="color:#687386">Nurturing faith, enhancing learning</div></div><div><b>Invoice</b><br>${esc(p.inv||'')}</div></div>
