@@ -511,6 +511,37 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 /* Center the entire Mushaf page inside the reader, not just its Arabic text. */
 #quranReaderContent{display:flex!important;flex-direction:column!important;align-items:center!important;text-align:center!important;width:100%;box-sizing:border-box}
 #quranReaderContent>.quran-page-paper{display:block!important;float:none!important;position:relative!important;left:auto!important;right:auto!important;width:100%!important;max-width:472px!important;margin-left:auto!important;margin-right:auto!important;align-self:center!important;box-sizing:border-box!important}
+
+/* Hard-align the Mushaf page and give its text a centered rectangular frame. */
+#quranReaderContent{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+}
+#quranReaderContent>.quran-page-paper{
+  position:relative!important;
+  left:auto!important;
+  right:auto!important;
+  float:none!important;
+  flex:0 0 auto!important;
+  width:min(100%,472px)!important;
+  max-width:472px!important;
+  margin:0 auto!important;
+  align-self:center!important;
+  box-sizing:border-box!important;
+}
+#quranReaderContent>.quran-page-paper>.quran-lines{
+  left:6%!important;
+  right:6%!important;
+  width:auto!important;
+  box-sizing:border-box!important;
+  border:1px solid #c3a65f!important;
+  padding:3px 5px!important;
+  background:rgba(255,253,244,.35)!important;
+}
 </style>
 </head>
 <body>
