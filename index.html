@@ -2190,7 +2190,7 @@ async function openSurahInMushaf(){
   }
   const page=Math.max(1,Math.min(604,Number(data.ayahs[0].page)||1));
   const surahTools=document.getElementById('quranSurahControls'),pageTools=document.getElementById('quranPageControls'),pageSelect=document.getElementById('quranPageSelect');
-  if(surahTools)surahTools.style.display='none';
+  if(surahTools)surahTools.style.display='grid';
   if(pageTools)pageTools.style.display='flex';
   if(pageSelect)pageSelect.value=String(page);
   loadQuranPage(page);
@@ -2199,7 +2199,7 @@ async function openSurahInMushaf(){
 function changeQuranMode(mode){
  quranContinuousMode=mode==='page';quranContinuousLoading=false;
  const surahTools=document.getElementById('quranSurahControls'),pageTools=document.getElementById('quranPageControls');
- if(surahTools)surahTools.style.display=mode==='surah'?'grid':'none';
+ if(surahTools)surahTools.style.display='grid';
  if(pageTools)pageTools.style.display=mode==='page'?'flex':'none';
  if(mode==='page')loadQuranPage(Number(document.getElementById('quranPageSelect')?.value||1));
  else loadQuranSurah(Number(document.getElementById('quranSurahSelect')?.value||1));
