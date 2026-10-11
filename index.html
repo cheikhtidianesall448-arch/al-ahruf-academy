@@ -2139,10 +2139,7 @@ async function loadQuranPage(page,append=false){
    const insertionIndex=Math.max(0,Math.min(14,Number(firstWord.line_number)-1))+insertedRows;
    const title='<div class="quran-line quran-surah-row" lang="ar" dir="rtl" aria-label="'+esc(meta.english||t('Surah'))+'"><div class="quran-surah-title-panel">'+esc(meta.arabic||meta.english||t('Surah'))+'</div></div>';
    const rows=[];
-   /* Add a visible blank line only when this Surah follows another Surah on the same Mushaf page. */
-   const startPosition=data.indexOf(v);
-   const hasPreviousSurahOnPage=data.slice(0,startPosition).some(previous=>Number(previous.chapter_id||String(previous.verse_key||'').split(':')[0]||0)!==chapterId);
-   if(hasPreviousSurahOnPage)rows.push('<div class="quran-line quran-line-empty quran-surah-spacer" aria-hidden="true" style="display:block!important;visibility:visible!important;height:.15em!important;min-height:.15em!important;max-height:.15em!important;flex:0 0 .15em!important;width:100%!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;line-height:.15em!important"></div>');
+   /* No extra blank row between Surahs: keep consecutive Surah sections close together on every page. */
    rows.push(title);
    if(chapterId!==1&&chapterId!==9&&basmalaText)rows.push('<div class="quran-line quran-basmala-row" lang="ar" dir="rtl"><div class="quran-basmala-panel">'+safeTajweedHtml(basmalaText)+'</div></div>');
    renderedRows.splice(insertionIndex,0,...rows);
