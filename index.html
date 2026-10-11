@@ -1393,11 +1393,16 @@ async function loadQuranPage(page){
   if(request!==quranRequestId)return;
   const firstChapter=Number(String(data[0]?.verse_key||'').split(':')[0]||data[0]?.chapter_id||1);const lastVerse=data[data.length-1]||{};const lastChapter=Number(String(lastVerse.verse_key||'').split(':')[0]||lastVerse.chapter_id||firstChapter);const firstMeta=SUR_META.find(x=>Number(x.number)===firstChapter)||{};const lastMeta=SUR_META.find(x=>Number(x.number)===lastChapter)||firstMeta;
   const pageHasNewSurah=lastChapter!==firstChapter;
+  const firstVerseNumber=Number(String(data[0]?.verse_key||'').split(':')[1]||0);
+  const startsAtPageTop=firstVerseNumber===1;
+  const showPageTitle=pageHasNewSurah||startsAtPageTop;
   const pageTitleMeta=pageHasNewSurah?lastMeta:firstMeta;
+  const titleChapter=Number(pageTitleMeta.number|| (pageHasNewSurah?lastChapter:firstChapter));
+  const titleStartsHere=starts.some(v=>Number(v.chapter_id||String(v.verse_key||'').split(':')[0]||0)===titleChapter);
   const pageTitle='<div class="quran-surah-title-panel" lang="ar" dir="rtl">'+esc(pageTitleMeta.arabic||pageTitleMeta.english||t('Mushaf page'))+'</div>';
-  const pageBasmala=pageHasNewSurah&&lastChapter!==9&&lastChapter!==1?'<div class="quran-basmala-panel" lang="ar" dir="rtl">'+safeTajweedHtml(basmalaText)+'</div>':'';
+  const pageBasmala=showPageTitle&&titleStartsHere&&titleChapter!==9&&titleChapter!==1?'<div class="quran-basmala-panel" lang="ar" dir="rtl">'+safeTajweedHtml(basmalaText)+'</div>':'';
   const heading='<div class="quran-heading"><div class="mute">'+esc(t('Mushaf page'))+' '+page+' / 604 · '+esc(t('15-line Tajweed Mushaf'))+'</div></div>';
-  const paper='<div class="quran-page-paper">'+(pageHasNewSurah?pageTitle+pageBasmala:'')+'<div class="quran-lines" lang="ar" dir="rtl">'+lines.map((line,i)=>'<div class="quran-line'+(line.length?'':' quran-line-empty')+'" aria-label="'+esc(t('Line')+' '+(i+1))+'">'+line.join(' ')+'</div>').join('')+'</div><div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';
+  const paper='<div class="quran-page-paper">'+(showPageTitle?pageTitle+pageBasmala:'')+'<div class="quran-lines" lang="ar" dir="rtl">'+lines.map((line,i)=>'<div class="quran-line'+(line.length?'':' quran-line-empty')+'" aria-label="'+esc(t('Line')+' '+(i+1))+'">'+line.join(' ')+'</div>').join('')+'</div><div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';
   const content=document.getElementById(target);
   if(content){content.innerHTML=heading+paper+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';applyArabicIndicDigits(content)}
  }catch(e){
