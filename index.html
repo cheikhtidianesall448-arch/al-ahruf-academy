@@ -1204,7 +1204,17 @@ function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not f
  closeInvoice();const app=$('#app');if(!app)return toast('Academy page is not ready');
  app.insertAdjacentHTML('beforeend',`<div id="invoiceOverlay" style="position:fixed;inset:0;z-index:9999;overflow:auto;background:#f5f7fb;color:#172033;padding:16px;box-sizing:border-box;font-family:Arial,sans-serif">
  <div class="row between" style="position:sticky;top:0;z-index:2;max-width:850px;margin:0 auto 14px;padding:10px 0;background:#f5f7fb;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost" onclick="closeInvoice()">← Back to dashboard</button><div class="row" style="gap:8px"><button type="button" class="btn gold" onclick="window.print()">Print / Save PDF</button><button type="button" class="btn ghost" onclick="closeInvoice()" aria-label="Close invoice">Close ✕</button></div></div>
- <style>@page{size:A4 landscape;margin:0}@media print{body>*{visibility:hidden!important}#invoiceOverlay,#invoiceOverlay *{visibility:visible!important}#invoiceOverlay{position:absolute!important;inset:0!important;overflow:visible!important;background:#fff!important;padding:0!important}#invoiceOverlay .invoice-actions{display:none!important}.invoice-paper{width:297mm!important;min-height:210mm!important;padding:15mm!important;box-sizing:border-box!important;box-shadow:none!important;border:0!important;border-radius:0!important;margin:0 auto!important}}</style>
+ <style>@page{size:A4 landscape;margin:0}@media print{body>*{visibility:hidden!important}#invoiceOverlay,#invoiceOverlay *{visibility:visible!important}#invoiceOverlay{position:absolute!important;inset:0!important;overflow:visible!important;background:#fff!important;padding:0!important}#invoiceOverlay .invoice-actions{display:none!important}.invoice-paper{width:297mm!important;min-height:210mm!important;padding:15mm!important;box-sizing:border-box!important;box-shadow:none!important;border:0!important;border-radius:0!important;margin:0 auto!important}}
+/* QuranFlash-inspired page flow: chapter headings and basmala sit directly before their surah text. */
+.quran-page-paper .quran-lines{display:flex!important;flex-direction:column!important;justify-content:space-between!important;grid-template-rows:none!important;gap:0!important;}
+.quran-page-paper .quran-lines>.quran-line{flex:1 1 0!important;height:auto!important;min-height:0!important;overflow:hidden!important;}
+.quran-page-paper .quran-lines>.quran-surah-row,.quran-page-paper .quran-lines>.quran-basmala-row{flex:0 0 auto!important;height:auto!important;min-height:0!important;overflow:visible!important;text-align:center!important;text-align-last:center!important;}
+.quran-page-paper .quran-lines>.quran-surah-row{padding:1px 0!important;}
+.quran-page-paper .quran-lines>.quran-basmala-row{padding:0 0 2px!important;}
+.quran-page-paper .quran-lines .quran-surah-title-panel{display:table!important;width:max-content!important;max-width:88%!important;margin:0 auto!important;padding:2px 14px!important;border:1px solid #b79a52!important;border-radius:5px!important;background:#efe3bd!important;color:#55421d!important;font-size:clamp(10px,1.8vw,16px)!important;font-weight:700!important;line-height:1.2!important;}
+.quran-page-paper .quran-lines .quran-basmala-panel{display:block!important;width:100%!important;max-width:100%!important;margin:0 auto!important;text-align:center!important;font-size:clamp(9px,1.65vw,15px)!important;line-height:1.15!important;}
+@media(max-width:600px){.quran-page-paper .quran-lines .quran-surah-title-panel{font-size:clamp(9px,2.3vw,13px)!important;padding:1px 7px!important}.quran-page-paper .quran-lines .quran-basmala-panel{font-size:clamp(8px,2vw,12px)!important}}
+</style>
  <div class="invoice-paper" style="width:min(100%,297mm);min-height:210mm;margin:0 auto 36px;background:#fff;padding:clamp(18px,5vw,20mm);border:1px solid #ddd;border-radius:0;box-shadow:0 8px 30px #0001;box-sizing:border-box">
  <div style="display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;border-bottom:3px solid #c9a227;padding-bottom:20px"><div><div style="font-size:24px;font-weight:800">Al-Ahruf International Academy</div><div style="color:#687386">Nurturing faith, enhancing learning</div></div><div><b>Invoice</b><br>${esc(p.inv||'')}</div></div>
  <div style="text-align:center;font-size:28px;font-weight:800;margin:30px 0">PAYMENT INVOICE</div>
@@ -1370,13 +1380,9 @@ async function loadQuranPage(page){
   data.forEach(v=>{
    const words=Array.isArray(v.words)?v.words:[];
    const verseNumber=Number(String(v.verse_key||'').split(':')[1]||0);
-   const chapterId=Number(v.chapter_id||String(v.verse_key||'').split(':')[0]||0);
    const firstWord=words.find(w=>Number(w.line_number)>0);
    if(!firstWord)throw new Error('A verse is missing printed line positions');
    if(words.some(w=>!Number(w.line_number)||Number(w.line_number)<1||Number(w.line_number)>15))throw new Error('A word is missing valid 15-line Mushaf positioning');
-   const firstLine=Math.max(1,Math.min(15,Number(firstWord.line_number)));
-   /* Surah titles and basmala are rendered separately from Quran text lines.
-      Adding them to the API's printed line arrays can collide with the previous surah's final ayat. */
    const textWords=words.filter(w=>String(w.char_type_name||'').toLowerCase()!=='end'&&String(w.char_type_name||'').toLowerCase()!=='pause');
    textWords.forEach((w,idx)=>{
     const lineNo=Number(w.line_number);
@@ -1391,19 +1397,28 @@ async function loadQuranPage(page){
    });
   });
   if(request!==quranRequestId)return;
-  const firstChapter=Number(String(data[0]?.verse_key||'').split(':')[0]||data[0]?.chapter_id||1);const lastVerse=data[data.length-1]||{};const lastChapter=Number(String(lastVerse.verse_key||'').split(':')[0]||lastVerse.chapter_id||firstChapter);const firstMeta=SUR_META.find(x=>Number(x.number)===firstChapter)||{};const lastMeta=SUR_META.find(x=>Number(x.number)===lastChapter)||firstMeta;
-  const pageHasNewSurah=lastChapter!==firstChapter;
-  const firstVerseNumber=Number(String(data[0]?.verse_key||'').split(':')[1]||0);
-  const startsAtPageTop=firstVerseNumber===1;
-  const showPageTitle=pageHasNewSurah||startsAtPageTop;
-  const pageTitleMeta=pageHasNewSurah?lastMeta:firstMeta;
-  const titleChapter=Number(pageTitleMeta.number|| (pageHasNewSurah?lastChapter:firstChapter));
-  const titleStartsHere=starts.some(v=>Number(v.chapter_id||String(v.verse_key||'').split(':')[0]||0)===titleChapter);
-  const pageTitle='<div class="quran-surah-title-panel" lang="ar" dir="rtl">'+esc(pageTitleMeta.arabic||pageTitleMeta.english||t('Mushaf page'))+'</div>';
-  const pageBasmala=showPageTitle&&titleStartsHere&&titleChapter!==9&&titleChapter!==1?'<div class="quran-basmala-panel" lang="ar" dir="rtl">'+safeTajweedHtml(basmalaText)+'</div>':'';
+  const firstChapter=Number(String(data[0]?.verse_key||'').split(':')[0]||data[0]?.chapter_id||1);
+  const lastVerse=data[data.length-1]||{};
+  const lastChapter=Number(String(lastVerse.verse_key||'').split(':')[0]||lastVerse.chapter_id||firstChapter);
+  const firstMeta=SUR_META.find(x=>Number(x.number)===firstChapter)||{};
   const heading='<div class="quran-heading"><div class="mute">'+esc(t('Mushaf page'))+' '+page+' / 604 · '+esc(t('15-line Tajweed Mushaf'))+'</div></div>';
-  const paper='<div class="quran-page-paper">'+(showPageTitle?pageTitle+pageBasmala:'')+'<div class="quran-lines" lang="ar" dir="rtl">'+lines.map((line,i)=>'<div class="quran-line'+(line.length?'':' quran-line-empty')+'" aria-label="'+esc(t('Line')+' '+(i+1))+'">'+line.join(' ')+'</div>').join('')+'</div><div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';
-  const content=document.getElementById(target);
+  const renderedRows=lines.map((line,i)=>'<div class="quran-line'+(line.length?'':' quran-line-empty')+'" aria-label="'+esc(t('Line')+' '+(i+1))+'">'+line.join(' ')+'</div>');
+  let insertedRows=0;
+  starts.forEach(v=>{
+   const chapterId=Number(v.chapter_id||String(v.verse_key||'').split(':')[0]||0);
+   const meta=SUR_META.find(x=>Number(x.number)===chapterId)||{};
+   const firstWord=(v.words||[]).find(w=>Number(w.line_number)>0);
+   if(!firstWord)return;
+   const insertionIndex=Math.max(0,Math.min(14,Number(firstWord.line_number)-1))+insertedRows;
+   const title='<div class="quran-line quran-surah-row" lang="ar" dir="rtl" aria-label="'+esc(meta.english||t('Surah'))+'"><div class="quran-surah-title-panel">'+esc(meta.arabic||meta.english||t('Surah'))+'</div></div>';
+   const rows=[title];
+   if(chapterId!==1&&chapterId!==9&&basmalaText)rows.push('<div class="quran-line quran-basmala-row" lang="ar" dir="rtl"><div class="quran-basmala-panel">'+safeTajweedHtml(basmalaText)+'</div></div>');
+   renderedRows.splice(insertionIndex,0,...rows);
+   insertedRows+=rows.length;
+  });
+  const paper='<div class="quran-page-paper">'+
+   '<div class="quran-lines" lang="ar" dir="rtl">'+renderedRows.join('')+'</div>'+
+   '<div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';  const content=document.getElementById(target);
   if(content){content.innerHTML=heading+paper+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';applyArabicIndicDigits(content)}
  }catch(e){
   console.warn('15-line Tajweed Mushaf page failed',e);
