@@ -1054,7 +1054,7 @@ function editS(id){if(user.role!=='admin'){toast('Only the administrator can edi
  const nid=f.id.value.trim();
  if(!nid){toast('Enter a full name and a valid phone number to generate the Student ID.');return false}
  if(S.students.some(x=>x.id===nid&&x.id!==id)){toast('That generated ID is already used');return false}
- const age=Number(f.age.value);if(!Number.isInteger(age)||age<1||age>120){toast('Enter a valid age between 1 and 120.');return false}if(!['Male','Female'].includes(f.sex.value)){toast('Select Male or Female.');return false}const d={id:nid,name:f.name.value.trim(),age,sex:f.sex.value,pw:f.pw.value,phone:f.phone.value.trim(),email:f.email.value.trim(),teacher:f.teacher.value.trim(),level:f.level.value,pay:f.pay.value,sur:[...f.querySelectorAll('input[name="surah"]:checked')].map(o=>o.value)};
+ const age=Number(f.age.value);if(!Number.isInteger(age)||age<1||age>120){toast('Enter a valid age between 1 and 120.');return false}if(!['Male','Female'].includes(f.sex.value)){toast('Select Male or Female.');return false}const d={id:nid,name:f.name.value.trim(),age,sex:f.sex.value,pw:f.pw.value,phone:f.phone.value.trim(),email:f.email.value.trim(),teacher:f.teacher.value.trim(),level:f.level.value,pay:f.pay.value,sur:[...document.querySelectorAll('#mf input[name="surah"]:checked')].map(o=>o.value)};
  if(ONLINE){
   toast('Saving student...');
   // Do not replace the browser's complete student list with a partial API response.
