@@ -501,8 +501,8 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 }
 
 
-/* Remove unused blank line slots that create a large gap before a new Surah. */
-.quran-page-paper .quran-lines>.quran-line-empty{display:none!important;flex:0 0 0!important;height:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;}
+/* Collapse only the single empty line immediately before a new Surah. */
+.quran-page-paper .quran-lines>.quran-line-empty:has(+ .quran-surah-row){display:none!important;flex:0 0 0!important;height:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;}
 
 </style>
 </head>
