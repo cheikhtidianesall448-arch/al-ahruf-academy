@@ -504,6 +504,9 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 /* Collapse only the single empty line immediately before a new Surah. */
 .quran-page-paper .quran-lines>.quran-line-empty:has(+ .quran-surah-row){display:none!important;flex:0 0 0!important;height:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;}
 
+
+/* Center Quran text within each printed Mushaf line instead of pushing it to the right. */
+.quran-page-paper .quran-line{justify-content:center!important;text-align:center!important;text-align-last:center!important}
 </style>
 </head>
 <body>
