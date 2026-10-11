@@ -715,6 +715,22 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 #quranReaderContent .quran-page-paper>.quran-lines:before,
 #quranReaderContent .quran-page-paper>.quran-lines:after{content:none!important;}
 
+
+/* Keep one full blank line between Surahs; override older compact-gap rules. */
+#quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-surah-spacer{
+  display:block!important;
+  flex:1 1 0!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  visibility:visible!important;
+  overflow:hidden!important;
+}
+
 </style>
 </head>
 <body>
@@ -1974,7 +1990,10 @@ async function loadQuranPage(page){
    if(!firstWord)return;
    const insertionIndex=Math.max(0,Math.min(14,Number(firstWord.line_number)-1))+insertedRows;
    const title='<div class="quran-line quran-surah-row" lang="ar" dir="rtl" aria-label="'+esc(meta.english||t('Surah'))+'"><div class="quran-surah-title-panel">'+esc(meta.arabic||meta.english||t('Surah'))+'</div></div>';
-   const rows=[title];
+   const rows=[];
+   /* Add one full blank Mushaf line between Surahs, but not before the first Surah on a page. */
+   if(starts.indexOf(v)>0)rows.push('<div class="quran-line quran-line-empty quran-surah-spacer" aria-hidden="true"></div>');
+   rows.push(title);
    if(chapterId!==1&&chapterId!==9&&basmalaText)rows.push('<div class="quran-line quran-basmala-row" lang="ar" dir="rtl"><div class="quran-basmala-panel">'+safeTajweedHtml(basmalaText)+'</div></div>');
    renderedRows.splice(insertionIndex,0,...rows);
    insertedRows+=rows.length;
