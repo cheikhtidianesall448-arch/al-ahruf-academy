@@ -594,6 +594,39 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
   text-align:center!important;
   text-align-last:center!important;
 }
+
+
+/* Traditional illuminated Mushaf frame: cream text field, green-and-gold vine band, and square corners. */
+#quranReaderContent>.quran-page-paper>.quran-lines{
+  border:9px solid transparent!important;
+  border-radius:0!important;
+  padding:5px 4px!important;
+  background:
+    linear-gradient(rgba(255,253,245,.97),rgba(255,250,237,.97)) padding-box,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' fill='%23f2e6c7'/%3E%3Cpath d='M-4 18 Q5 4 18 18 T40 18' fill='none' stroke='%234b7041' stroke-width='2.2'/%3E%3Cpath d='M2 12 Q2 4 10 7 Q9 14 2 12 M13 23 Q13 15 21 18 Q20 25 13 23 M25 12 Q25 4 33 7 Q32 14 25 12 M24 27 Q24 20 32 21 Q31 29 24 27' fill='%237f9859' stroke='%233f6639' stroke-width='1'/%3E%3Ccircle cx='18' cy='18' r='3.2' fill='%23d7b95d' stroke='%23a78436' stroke-width='1'/%3E%3Ccircle cx='18' cy='18' r='1' fill='%23b84e35'/%3E%3C/svg%3E") border-box!important;
+  border-image-source:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' fill='%23f2e6c7'/%3E%3Cpath d='M-4 18 Q5 4 18 18 T40 18' fill='none' stroke='%234b7041' stroke-width='2.2'/%3E%3Cpath d='M2 12 Q2 4 10 7 Q9 14 2 12 M13 23 Q13 15 21 18 Q20 25 13 23 M25 12 Q25 4 33 7 Q32 14 25 12 M24 27 Q24 20 32 21 Q31 29 24 27' fill='%237f9859' stroke='%233f6639' stroke-width='1'/%3E%3Ccircle cx='18' cy='18' r='3.2' fill='%23d7b95d' stroke='%23a78436' stroke-width='1'/%3E%3Ccircle cx='18' cy='18' r='1' fill='%23b84e35'/%3E%3C/svg%3E")!important;
+  border-image-slice:18!important;
+  border-image-width:9px!important;
+  border-image-repeat:round!important;
+  box-shadow:inset 0 0 0 1px #527344!important;
+  overflow:hidden!important;
+}
+/* Keep the text panel pale and preserve all 15 printed line slots inside the frame. */
+#quranReaderContent>.quran-page-paper>.quran-lines>.quran-line{
+  border-bottom-color:#e9dfc8!important;
+}
+/* Surah name cartouches: centered, gently raised over the top of the text area. */
+#quranReaderContent .quran-page-paper .quran-lines>.quran-surah-row .quran-surah-title-panel,
+#quranReaderContent .quran-page-paper .quran-lines .quran-surah-title-panel{
+  border:3px double #b99a50!important;
+  outline:1px solid #557b45!important;
+  outline-offset:2px!important;
+  border-radius:0!important;
+  background:linear-gradient(90deg,#e9d9ad,#fff5d9 48%,#e9d9ad)!important;
+  box-shadow:0 2px 0 rgba(65,91,48,.18)!important;
+  color:#284d35!important;
+}
+
 </style>
 </head>
 <body>
