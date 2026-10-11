@@ -1932,47 +1932,60 @@ function tajweedLegendHtml(){
  return '<div class="quran-legend"><span><b style="color:#17945b">●</b> '+esc(t('Ikhfa'))+'</span><span><b style="color:#1681b7">●</b> '+esc(t('Idgham / Ghunnah'))+'</span><span><b style="color:#8e44ad">●</b> '+esc(t('Iqlab'))+'</span><span><b style="color:#d04435">●</b> '+esc(t('Qalqalah'))+'</span><span><b style="color:#b07808">●</b> '+esc(t('Madd'))+'</span></div>';
 }
 
-// Allow two-finger pinch zoom on the Mushaf page without changing the Quran text.
+// Allow natural two-finger zoom and pan in every direction on the Mushaf page.
 (function enableMushafPinchZoom(){
  if(window.__ahrufMushafPinchZoom)return;
  window.__ahrufMushafPinchZoom=true;
- let pinch=null,zoom=1,baseWidth=0;
+ let pinch=null,pan=null,zoom=1;
  function bind(){
   const paper=document.querySelector('#quranReaderContent .quran-page-paper');
   const wrap=document.querySelector('#quranReaderContent')?.closest('.quran-reading');
   if(!paper||!wrap||paper.dataset.pinchZoomBound)return;
   paper.dataset.pinchZoomBound='1';
+  wrap.style.setProperty('overflow','auto','important');
   wrap.style.setProperty('overflow-x','auto','important');
-  wrap.style.setProperty('overscroll-behavior-x','contain','important');
+  wrap.style.setProperty('overflow-y','auto','important');
+  wrap.style.setProperty('overscroll-behavior','contain','important');
   paper.style.setProperty('touch-action','none','important');
-  paper.style.setProperty('transform-origin','top center','important');
+  paper.style.setProperty('transform-origin','top left','important');
+  paper.style.setProperty('will-change','transform','important');
   const distance=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+  const applyZoom=()=>paper.style.setProperty('transform','scale('+zoom+')','important');
   paper.addEventListener('touchstart',e=>{
    if(e.touches.length===2){
+    e.preventDefault();pan=null;
+    pinch={distance:Math.max(1,distance(e.touches[0],e.touches[1])),zoom};
+   }else if(e.touches.length===1&&zoom>1){
     e.preventDefault();
-    baseWidth=paper.getBoundingClientRect().width/zoom;
-    pinch={distance:distance(e.touches[0],e.touches[1]),zoom};
+    pan={x:e.touches[0].clientX,y:e.touches[0].clientY,left:wrap.scrollLeft,top:wrap.scrollTop};
    }
   },{passive:false});
   paper.addEventListener('touchmove',e=>{
-   if(!pinch||e.touches.length!==2)return;
-   e.preventDefault();
-   zoom=Math.max(.75,Math.min(3,pinch.zoom*distance(e.touches[0],e.touches[1])/pinch.distance));
-   paper.style.setProperty('width',(baseWidth*zoom)+'px','important');
-   paper.style.setProperty('max-width','none','important');
-   paper.style.setProperty('min-width',(baseWidth*zoom)+'px','important');
-   paper.style.setProperty('margin-left','auto','important');
-   paper.style.setProperty('margin-right','auto','important');
+   if(e.touches.length===2&&pinch){
+    e.preventDefault();
+    const next=Math.max(.75,Math.min(3,pinch.zoom*distance(e.touches[0],e.touches[1])/pinch.distance));
+    const rect=paper.getBoundingClientRect();
+    const midX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+    const midY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+    const anchorX=(midX-rect.left)/zoom,anchorY=(midY-rect.top)/zoom;
+    zoom=next;applyZoom();
+    wrap.scrollLeft=Math.max(0,wrap.scrollLeft+anchorX*(next-pinch.zoom));
+    wrap.scrollTop=Math.max(0,wrap.scrollTop+anchorY*(next-pinch.zoom));
+   }else if(e.touches.length===1&&pan&&zoom>1){
+    e.preventDefault();
+    wrap.scrollLeft=pan.left-(e.touches[0].clientX-pan.x);
+    wrap.scrollTop=pan.top-(e.touches[0].clientY-pan.y);
+   }
   },{passive:false});
-  const finish=()=>{pinch=null};
+  const finish=()=>{pinch=null;pan=null};
   paper.addEventListener('touchend',finish,{passive:true});
   paper.addEventListener('touchcancel',finish,{passive:true});
+  applyZoom();
  }
  const observer=new MutationObserver(bind);
  observer.observe(document.getElementById('quranReaderContent')||document.body,{childList:true,subtree:true});
  bind();
 })();
-
 async function loadQuranPage(page){
  page=Math.max(1,Math.min(604,Number(page)||1));
  const target='quranReaderContent',request=++quranRequestId;
