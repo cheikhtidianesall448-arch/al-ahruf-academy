@@ -2196,6 +2196,7 @@ async function openSurahInMushaf(){
  }catch(error){console.warn('Could not open selected surah in Mushaf view',error);quranFailure('quranReaderContent');}
 }
 function changeQuranMode(mode){
+ quranContinuousMode=mode==='page';quranContinuousLoading=false;
  const surahTools=document.getElementById('quranSurahControls'),pageTools=document.getElementById('quranPageControls');
  if(surahTools)surahTools.style.display=mode==='surah'?'grid':'none';
  if(pageTools)pageTools.style.display=mode==='page'?'flex':'none';
