@@ -2073,11 +2073,13 @@ function quranResetReaderSettings(){
  document.head.appendChild(style);
 })();
 
-async function loadQuranPage(page){
+let quranContinuousMode=false,quranContinuousLoading=false,quranContinuousNextPage=1,quranScrollHandlerReady=false;
+async function loadQuranPage(page,append=false){
  page=Math.max(1,Math.min(604,Number(page)||1));
  const target='quranReaderContent',request=++quranRequestId;
  const picker=document.getElementById('quranPageSelect');if(picker)picker.value=String(page);
- quranLoading(target,t('Loading 15-line Mushaf page with Tajweed…'));
+ if(!append){quranContinuousMode=true;quranContinuousNextPage=page+1;quranContinuousLoading=false;quranLoading(target,t('Loading 15-line Mushaf page with Tajweed…'));}else{quranContinuousLoading=true;}
+ if(!quranScrollHandlerReady){quranScrollHandlerReady=true;window.addEventListener('scroll',()=>{if(!quranContinuousMode||quranContinuousLoading||quranContinuousNextPage>604)return;if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-900)loadQuranPage(quranContinuousNextPage,true);},{passive:true});}
  try{
   let data=quranPageCache[page];
   if(!data){
@@ -2145,12 +2147,13 @@ async function loadQuranPage(page){
   const paper='<div class="quran-page-paper">'+
    '<div class="quran-lines" lang="ar" dir="rtl">'+renderedRows.join('')+'</div>'+
    '<div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';  const content=document.getElementById(target);
-  if(content){content.innerHTML=heading+paper+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';const turnPaper=content.querySelector('.quran-page-paper');const turnDirection=quranDisplayedMushafPage===null?null:(page>quranDisplayedMushafPage?'next':page<quranDisplayedMushafPage?'previous':null);quranDisplayedMushafPage=page;if(turnPaper&&turnDirection)turnPaper.classList.add('quran-turn-'+turnDirection);const lineGrid=content.querySelector('.quran-lines');if(lineGrid)lineGrid.style.setProperty('grid-template-rows','repeat('+renderedRows.length+',minmax(0,1fr))','important');applyArabicIndicDigits(content);quranApplyReaderSettings()}
+  if(content){const pageMarkup=heading+paper;if(append){content.insertAdjacentHTML('beforeend',pageMarkup);quranContinuousNextPage=page+1;}else{content.innerHTML=pageMarkup+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';quranContinuousNextPage=page+1;}const papers=content.querySelectorAll('.quran-page-paper');const turnPaper=papers[papers.length-1];const turnDirection=quranDisplayedMushafPage===null?null:(page>quranDisplayedMushafPage?'next':page<quranDisplayedMushafPage?'previous':null);quranDisplayedMushafPage=page;if(turnPaper&&turnDirection&&!append)turnPaper.classList.add('quran-turn-'+turnDirection);const lineGrid=turnPaper&&turnPaper.querySelector('.quran-lines');if(lineGrid)lineGrid.style.setProperty('grid-template-rows','none','important');applyArabicIndicDigits(turnPaper||content);quranApplyReaderSettings();quranContinuousLoading=false;if(page===604){quranContinuousNextPage=605;const status=document.createElement('p');status.className='quran-source';status.textContent=t('End of the 604-page Mushaf.');content.appendChild(status);}}
  }catch(e){
   console.warn('15-line Tajweed Mushaf page failed',e);
+  if(append)quranContinuousLoading=false;
   if(request===quranRequestId){
    const content=document.getElementById(target);
-   if(content)content.innerHTML='<div class="quran-error">'+esc(t('The exact 15-line Tajweed page could not be loaded from the verified source. No reflowed text is shown, to avoid changing the Mushaf layout.'))+'<br><button class="btn ghost" style="margin-top:10px" onclick="loadQuranPage('+page+')">'+esc(t('Try again'))+'</button></div>';
+   if(content&&!append)content.innerHTML='<div class="quran-error">'+esc(t('The exact 15-line Tajweed page could not be loaded from the verified source. No reflowed text is shown, to avoid changing the Mushaf layout.'))+'<br><button class="btn ghost" style="margin-top:10px" onclick="loadQuranPage('+page+')">'+esc(t('Try again'))+'</button></div>';
   }
  }
 }
