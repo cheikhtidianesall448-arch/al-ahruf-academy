@@ -543,6 +543,57 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
   background:rgba(255,253,244,.35)!important;
 }
 
+
+/* Mushaf layout: justify each printed Arabic line inside the inner ruled rectangle. */
+#quranReaderContent>.quran-page-paper>.quran-lines{
+  left:6%!important;
+  right:6%!important;
+  width:auto!important;
+  transform:none!important;
+  box-sizing:border-box!important;
+  border:1px solid #557b45!important;
+  padding:3px 4px!important;
+  background:transparent!important;
+  overflow:hidden!important;
+}
+#quranReaderContent .quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row){
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  width:100%!important;
+  box-sizing:border-box!important;
+  text-align:justify!important;
+  text-align-last:justify!important;
+  direction:rtl!important;
+  white-space:nowrap!important;
+  word-spacing:0!important;
+  letter-spacing:0!important;
+  gap:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+#quranReaderContent .quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row)>span:not(.quran-ayah-mark){
+  display:inline!important;
+  flex:0 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+}
+#quranReaderContent .quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row)>.quran-ayah-mark{
+  flex:0 0 auto!important;
+  margin-inline:0!important;
+}
+#quranReaderContent .quran-page-paper .quran-lines>.quran-surah-row,
+#quranReaderContent .quran-page-paper .quran-lines>.quran-basmala-row{
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  text-align:center!important;
+  text-align-last:center!important;
+}
 </style>
 </head>
 <body>
