@@ -627,6 +627,74 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
   color:#284d35!important;
 }
 
+
+/* Simple ornamental detail around the inner rectangular Mushaf frame. */
+#quranReaderContent>.quran-page-paper>.quran-lines{
+  border:1px solid #557b45!important;
+  border-radius:0!important;
+  padding:5px 4px!important;
+  background:rgba(255,253,245,.45)!important;
+  outline:1px solid #c3a65f!important;
+  outline-offset:3px!important;
+  box-shadow:
+    0 0 0 5px #f3e7c9,
+    0 0 0 6px #557b45,
+    0 0 0 8px #c3a65f!important;
+  overflow:visible!important;
+  position:absolute!important;
+}
+/* Small repeated leaf-and-diamond ornaments on all four sides of the frame. */
+#quranReaderContent>.quran-page-paper>.quran-lines:before{
+  content:"❧  ◆  ❧  ◆  ❧  ◆  ❧";
+  position:absolute;
+  top:-14px;
+  left:8px;
+  right:8px;
+  height:12px;
+  overflow:hidden;
+  text-align:center;
+  white-space:nowrap;
+  font-family:serif;
+  font-size:11px;
+  line-height:12px;
+  letter-spacing:2px;
+  color:#557b45;
+  text-shadow:1px 0 #c3a65f;
+  pointer-events:none;
+}
+#quranReaderContent>.quran-page-paper>.quran-lines:after{
+  content:"❧  ◆  ❧  ◆  ❧  ◆  ❧";
+  position:absolute;
+  bottom:-14px;
+  left:8px;
+  right:8px;
+  height:12px;
+  overflow:hidden;
+  text-align:center;
+  white-space:nowrap;
+  font-family:serif;
+  font-size:11px;
+  line-height:12px;
+  letter-spacing:2px;
+  color:#557b45;
+  text-shadow:1px 0 #c3a65f;
+  pointer-events:none;
+}
+#quranReaderContent>.quran-page-paper>.quran-lines>.quran-line{
+  border-bottom-color:#e9dfc8!important;
+}
+/* Leave one visible blank line before each new Surah heading. */
+#quranReaderContent .quran-page-paper .quran-lines>.quran-line-empty:has(+ .quran-surah-row){
+  display:flex!important;
+  visibility:visible!important;
+  height:auto!important;
+  min-height:1.2em!important;
+  flex:0 0 auto!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+}
+
 </style>
 </head>
 <body>
