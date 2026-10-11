@@ -716,13 +716,13 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 #quranReaderContent .quran-page-paper>.quran-lines:after{content:none!important;}
 
 
-/* Keep one full blank line between Surahs; override older compact-gap rules. */
+/* A Surah spacer must occupy one complete grid row; the row count is set from rendered children. */
 #quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-surah-spacer{
   display:block!important;
-  flex:1 1 0!important;
+  grid-column:1!important;
   width:100%!important;
-  height:auto!important;
-  min-height:0!important;
+  height:100%!important;
+  min-height:100%!important;
   max-height:none!important;
   margin:0!important;
   padding:0!important;
@@ -2001,7 +2001,7 @@ async function loadQuranPage(page){
   const paper='<div class="quran-page-paper">'+
    '<div class="quran-lines" lang="ar" dir="rtl">'+renderedRows.join('')+'</div>'+
    '<div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';  const content=document.getElementById(target);
-  if(content){content.innerHTML=heading+paper+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';applyArabicIndicDigits(content)}
+  if(content){content.innerHTML=heading+paper+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';const lineGrid=content.querySelector('.quran-lines');if(lineGrid)lineGrid.style.setProperty('grid-template-rows','repeat('+renderedRows.length+',minmax(0,1fr))','important');applyArabicIndicDigits(content)}
  }catch(e){
   console.warn('15-line Tajweed Mushaf page failed',e);
   if(request===quranRequestId){
