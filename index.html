@@ -1932,54 +1932,7 @@ function tajweedLegendHtml(){
  return '<div class="quran-legend"><span><b style="color:#17945b">●</b> '+esc(t('Ikhfa'))+'</span><span><b style="color:#1681b7">●</b> '+esc(t('Idgham / Ghunnah'))+'</span><span><b style="color:#8e44ad">●</b> '+esc(t('Iqlab'))+'</span><span><b style="color:#d04435">●</b> '+esc(t('Qalqalah'))+'</span><span><b style="color:#b07808">●</b> '+esc(t('Madd'))+'</span></div>';
 }
 
-// Natural two-finger zoom with free horizontal and vertical panning of the Mushaf.
-(function enableMushafPinchZoom(){
- if(window.__ahrufMushafPinchZoom)return;
- window.__ahrufMushafPinchZoom=true;
- let pinch=null,zoom=1;
- function bind(){
-  const paper=document.querySelector('#quranReaderContent .quran-page-paper');
-  const wrap=document.querySelector('#quranReaderContent')?.closest('.quran-reading');
-  if(!paper||!wrap||paper.dataset.pinchZoomBound)return;
-  paper.dataset.pinchZoomBound='1';
-  wrap.style.setProperty('overflow','auto','important');
-  wrap.style.setProperty('overflow-x','auto','important');
-  wrap.style.setProperty('overflow-y','auto','important');
-  wrap.style.setProperty('overscroll-behavior','contain','important');
-  paper.style.setProperty('touch-action','none','important');
-  paper.style.setProperty('transform','none','important');
-  paper.style.setProperty('transform-origin','top left','important');
-  paper.style.setProperty('will-change','zoom','important');
-  const distance=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
-  paper.addEventListener('touchstart',e=>{
-   if(e.touches.length===2){
-    e.preventDefault();
-    const rect=wrap.getBoundingClientRect();
-    const midX=(e.touches[0].clientX+e.touches[1].clientX)/2;
-    const midY=(e.touches[0].clientY+e.touches[1].clientY)/2;
-    pinch={distance:Math.max(1,distance(e.touches[0],e.touches[1])),zoom,
-     anchorX:wrap.scrollLeft+midX-rect.left,
-     anchorY:wrap.scrollTop+midY-rect.top,
-     offsetX:midX-rect.left,offsetY:midY-rect.top};
-   }
-  },{passive:false});
-  paper.addEventListener('touchmove',e=>{
-   if(!pinch||e.touches.length!==2)return;
-   e.preventDefault();
-   zoom=Math.max(.75,Math.min(3,pinch.zoom*distance(e.touches[0],e.touches[1])/pinch.distance));
-   paper.style.setProperty('zoom',String(zoom),'important');
-   wrap.scrollLeft=Math.max(0,pinch.anchorX*zoom-pinch.offsetX);
-   wrap.scrollTop=Math.max(0,pinch.anchorY*zoom-pinch.offsetY);
-  },{passive:false});
-  const finish=()=>{pinch=null};
-  paper.addEventListener('touchend',finish,{passive:true});
-  paper.addEventListener('touchcancel',finish,{passive:true});
-  paper.style.setProperty('zoom',String(zoom),'important');
- }
- const observer=new MutationObserver(bind);
- observer.observe(document.getElementById('quranReaderContent')||document.body,{childList:true,subtree:true});
- bind();
-})();
+// Mushaf zoom controls are removed; reading text stays fixed at 110%.
 // Book-like page-turn animation for the Mushaf reader.
 (function installMushafPageTurn(){
  if(document.getElementById('ahrufMushafPageTurnStyle'))return;
@@ -2005,15 +1958,15 @@ function tajweedLegendHtml(){
 let quranDisplayedMushafPage=null;
 // Mushaf reading preferences inspired by dedicated Quran reader apps.
 function quranReaderPrefs(){
- const defaults={theme:'sepia',fontScale:1};
- try{return Object.assign(defaults,JSON.parse(localStorage.getItem('ahrufQuranReaderPrefs')||'{}'))}catch(_){return defaults}
+ let saved={};try{saved=JSON.parse(localStorage.getItem('ahrufQuranReaderPrefs')||'{}')}catch(_){}
+ return {theme:['day','sepia','night'].includes(saved.theme)?saved.theme:'sepia',fontScale:1.1};
 }
 function quranApplyReaderSettings(){
  const reader=document.getElementById('quranReaderContent');if(!reader)return;
  const p=quranReaderPrefs();
  reader.classList.remove('quran-theme-day','quran-theme-sepia','quran-theme-night');
  reader.classList.add('quran-theme-'+(['day','sepia','night'].includes(p.theme)?p.theme:'sepia'));
- const fontScale=Math.max(.8,Math.min(1.5,Number(p.fontScale)||1));
+ const fontScale=1.1;
  reader.style.setProperty('--quran-font-scale',String(fontScale));
  reader.classList.toggle('quran-zoom-reflow',fontScale>1);
  const themeSelect=document.getElementById('quranThemeSelect');if(themeSelect)themeSelect.value=p.theme;
@@ -2024,11 +1977,7 @@ function quranSetReaderPref(key,value){
  try{localStorage.setItem('ahrufQuranReaderPrefs',JSON.stringify(p))}catch(_){}
  quranApplyReaderSettings();
 }
-function quranChangeTextSize(delta){
- const p=quranReaderPrefs();p.fontScale=Math.max(.8,Math.min(1.5,Math.round(((Number(p.fontScale)||1)+delta)*100)/100));
- try{localStorage.setItem('ahrufQuranReaderPrefs',JSON.stringify(p))}catch(_){}
- quranApplyReaderSettings();
-}
+
 function quranSaveBookmark(){
  const page=Math.max(1,Math.min(604,Number(document.getElementById('quranPageSelect')?.value)||quranDisplayedMushafPage||1));
  try{localStorage.setItem('ahrufQuranBookmark',String(page))}catch(_){}
@@ -2191,7 +2140,7 @@ function changeQuranMode(mode){
  else loadQuranSurah(Number(document.getElementById('quranSurahSelect')?.value||1));
 }
 function adminSurahs(){
-  return `<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${t('Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><label>${t('Start at Mushaf page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><span class="mute">${t('Scroll up and down inside the Mushaf box to continue reading.')}</span></div><div id="quranReaderSettings" aria-label="Quran reading settings"><div class="quran-setting-group"><label for="quranThemeSelect">Page theme</label><select id="quranThemeSelect" onchange="quranSetReaderPref('theme',this.value)"><option value="day">Day</option><option value="sepia" selected>Sepia</option><option value="night">Night</option></select></div><div class="quran-setting-group"><label>Text size</label><button class="btn ghost sm" type="button" aria-label="Decrease text size" onclick="quranChangeTextSize(-.1)">−</button><span id="quranFontScaleLabel">100%</span><button class="btn ghost sm" type="button" aria-label="Increase text size" onclick="quranChangeTextSize(.1)">+</button></div><div class="quran-setting-group"><button class="btn ghost sm" type="button" onclick="quranSaveBookmark()">Save bookmark</button><button class="btn ghost sm" type="button" onclick="quranRestoreBookmark()">Resume bookmark</button></div><button class="btn ghost sm" type="button" onclick="quranResetReaderSettings()">Reset settings</button><span id="quranBookmarkStatus" class="mute" aria-live="polite"></span></div><div id="quranReaderContent" class="quran-reading" onpointerdown="quranSwipeStart(event)" onpointerup="quranSwipeEnd(event)" onpointercancel="quranSwipeCancel()"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
+  return `<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${t('Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><label>${t('Start at Mushaf page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><span class="mute">${t('Scroll up and down inside the Mushaf box to continue reading.')}</span></div><div id="quranReaderSettings" aria-label="Quran reading settings"><div class="quran-setting-group"><label for="quranThemeSelect">Page theme</label><select id="quranThemeSelect" onchange="quranSetReaderPref('theme',this.value)"><option value="day">Day</option><option value="sepia" selected>Sepia</option><option value="night">Night</option></select></div><div class="quran-setting-group"><span class="mute">Text view fixed at 110%</span></div><div class="quran-setting-group"><button class="btn ghost sm" type="button" onclick="quranSaveBookmark()">Save bookmark</button><button class="btn ghost sm" type="button" onclick="quranRestoreBookmark()">Resume bookmark</button></div><button class="btn ghost sm" type="button" onclick="quranResetReaderSettings()">Reset settings</button><span id="quranBookmarkStatus" class="mute" aria-live="polite"></span></div><div id="quranReaderContent" class="quran-reading" onpointerdown="quranSwipeStart(event)" onpointerup="quranSwipeEnd(event)" onpointercancel="quranSwipeCancel()"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
  }
  function viewStudent(){const studentId=String(user.username||user.id||'').toLowerCase();const s=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===studentId)||{sur:[],name:user.name||'',id:user.username||user.id,pay:'pending'};s.sur=Array.isArray(s.sur)?s.sur:[];
  const ranking=(Array.isArray(S.ranking)&&S.ranking.length?S.ranking:S.students.map(x=>({id:x.id,name:x.name,surahCount:(x.sur||[]).length}))).slice().sort((a,b)=>Number(b.surahCount||0)-Number(a.surahCount||0));
