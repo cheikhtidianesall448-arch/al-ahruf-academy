@@ -1992,7 +1992,7 @@ async function loadQuranPage(page){
    const title='<div class="quran-line quran-surah-row" lang="ar" dir="rtl" aria-label="'+esc(meta.english||t('Surah'))+'"><div class="quran-surah-title-panel">'+esc(meta.arabic||meta.english||t('Surah'))+'</div></div>';
    const rows=[];
    /* Add one full blank Mushaf line between Surahs, but not before the first Surah on a page. */
-   if(starts.indexOf(v)>0)rows.push('<div class="quran-line quran-line-empty quran-surah-spacer" aria-hidden="true"></div>');
+   if(insertionIndex>0)rows.push('<div class="quran-line quran-line-empty quran-surah-spacer" aria-hidden="true"></div>');
    rows.push(title);
    if(chapterId!==1&&chapterId!==9&&basmalaText)rows.push('<div class="quran-line quran-basmala-row" lang="ar" dir="rtl"><div class="quran-basmala-panel">'+safeTajweedHtml(basmalaText)+'</div></div>');
    renderedRows.splice(insertionIndex,0,...rows);
