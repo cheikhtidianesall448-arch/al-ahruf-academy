@@ -2161,24 +2161,10 @@ async function loadQuranPage(page,append=false){
   }
  }
 }
-let quranSwipeOrigin=null;
-function quranSwipeStart(event){
- const controls=document.getElementById('quranPageControls');
- if(!controls||controls.style.display==='none'||event.button>0)return;
- quranSwipeOrigin={x:event.clientX,y:event.clientY};
- const reader=document.getElementById('quranReaderContent');if(reader)reader.classList.add('quran-swiping');
-}
-function quranSwipeCancel(){quranSwipeOrigin=null;const reader=document.getElementById('quranReaderContent');if(reader)reader.classList.remove('quran-swiping');}
-function quranSwipeEnd(event){
- if(!quranSwipeOrigin)return;
- const dx=event.clientX-quranSwipeOrigin.x,dy=event.clientY-quranSwipeOrigin.y;
- quranSwipeCancel();
- if(Math.abs(dx)<65||Math.abs(dx)<Math.abs(dy)*1.25)return;
- const picker=document.getElementById('quranPageSelect');
- const page=Math.max(1,Math.min(604,Number(picker&&picker.value)||1));
- if(dx<0&&page<604)loadQuranPage(page+1);
- else if(dx>0&&page>1)loadQuranPage(page-1);
-}
+// Horizontal swipes no longer change Mushaf pages; use the page selector instead.
+function quranSwipeStart(event){}
+function quranSwipeCancel(){const reader=document.getElementById('quranReaderContent');if(reader)reader.classList.remove('quran-swiping');}
+function quranSwipeEnd(event){quranSwipeCancel();}
 async function openSurahInMushaf(){
  const selector=document.getElementById('quranSurahSelect');
  const number=Math.max(1,Math.min(114,Number(selector&&selector.value)||1));
