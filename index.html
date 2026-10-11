@@ -1591,6 +1591,62 @@ function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not f
   border:0!important;
 }
 
+
+/* Classic Islamic tazhib band: repeating green vines, gold leaves, tiny red accents. */
+#quranReaderContent>.quran-page-paper>.quran-lines{
+  border:1px solid #315b38!important;
+  outline:1px solid #c5a45b!important;
+  outline-offset:3px!important;
+  box-shadow:0 0 0 5px #f7edda,0 0 0 6px #315b38,0 0 0 8px #c5a45b!important;
+  background:#fffdf7!important;
+  position:absolute!important;
+}
+/* Slim ornamental vine bands sit just inside the gold-edged frame. */
+#quranReaderContent>.quran-page-paper>.quran-lines:before,
+#quranReaderContent>.quran-page-paper>.quran-lines:after{
+  content:"❧  ✦  ❧  ✿  ❧  ✦  ❧  ✿  ❧";
+  position:absolute;
+  left:2px;
+  right:2px;
+  height:9px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-align:center;
+  font-family:Georgia,serif;
+  font-size:9px;
+  line-height:9px;
+  letter-spacing:1px;
+  color:#386b43;
+  background:linear-gradient(90deg,transparent,#f6ecd5 12%,#f6ecd5 88%,transparent);
+  text-shadow:1px 0 #c7a24f;
+  pointer-events:none;
+  z-index:3;
+}
+#quranReaderContent>.quran-page-paper>.quran-lines:before{top:1px}
+#quranReaderContent>.quran-page-paper>.quran-lines:after{bottom:1px}
+/* Gold-and-green vertical vine details, with restrained red flower centers. */
+#quranReaderContent>.quran-page-paper>.quran-lines{
+  background-image:
+    radial-gradient(circle,#a64035 0 1px,transparent 1.5px),
+    radial-gradient(circle,#c5a45b 0 1px,transparent 1.5px),
+    linear-gradient(90deg,#315b38 0 1px,#c5a45b 1px 2px,transparent 2px calc(100% - 2px),#c5a45b calc(100% - 2px) calc(100% - 1px),#315b38 calc(100% - 1px));
+  background-size:22px 18px,22px 18px,100% 100%;
+  background-position:5px 4px,16px 13px,center;
+  background-repeat:repeat,repeat,no-repeat;
+}
+/* Keep one short blank line before each new Surah title. */
+#quranReaderContent .quran-page-paper .quran-lines>.quran-line-empty:has(+ .quran-surah-row){
+  display:flex!important;
+  visibility:visible!important;
+  height:.55em!important;
+  min-height:.55em!important;
+  max-height:.55em!important;
+  flex:0 0 .55em!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+}
+
 </style>
  <div class="invoice-paper" style="width:min(100%,297mm);min-height:210mm;margin:0 auto 36px;background:#fff;padding:clamp(18px,5vw,20mm);border:1px solid #ddd;border-radius:0;box-shadow:0 8px 30px #0001;box-sizing:border-box">
  <div style="display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;border-bottom:3px solid #c9a227;padding-bottom:20px"><div><div style="font-size:24px;font-weight:800">Al-Ahruf International Academy</div><div style="color:#687386">Nurturing faith, enhancing learning</div></div><div><b>Invoice</b><br>${esc(p.inv||'')}</div></div>
