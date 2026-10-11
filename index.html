@@ -268,3 +268,1230 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 .quran-basmala-line{display:block!important;width:100%!important;box-sizing:border-box;text-align:center!important;font-size:1.05em!important;line-height:1.2!important;margin:0 auto!important;}
 .quran-page-number{bottom:1.8%!important;}
 
+/* Final Mushaf page-fit adjustment: consistent paper proportions and safe inner margins. */
+.quran-reading{padding:clamp(8px,1.5vw,18px)!important;overflow:hidden}
+.quran-page-paper{
+  display:block!important;
+  position:relative!important;
+  width:min(100%,720px)!important;
+  max-width:720px!important;
+  min-width:0!important;
+  height:auto!important;
+  min-height:0!important;
+  aspect-ratio:720 / 1024!important;
+  box-sizing:border-box!important;
+  margin:0 auto!important;
+  padding:0!important;
+  border:6px double #a68a45!important;
+  border-radius:2px!important;
+  overflow:hidden!important;
+}
+.quran-page-paper .quran-surah-title-panel{
+  display:table!important;
+  position:relative!important;
+  width:max-content!important;
+  max-width:88%!important;
+  box-sizing:border-box!important;
+  margin:2.8% auto 0.4%!important;
+  padding:2px 12px!important;
+  text-align:center!important;
+  line-height:1.2!important;
+}
+.quran-page-paper .quran-basmala-panel{
+  display:block!important;
+  position:relative!important;
+  width:88%!important;
+  max-width:88%!important;
+  box-sizing:border-box!important;
+  margin:0 auto!important;
+  padding:0!important;
+  text-align:center!important;
+  line-height:1.2!important;
+}
+.quran-page-paper .quran-lines{
+  position:absolute!important;
+  top:13%!important;
+  bottom:8%!important;
+  left:5.5%!important;
+  right:5.5%!important;
+  display:grid!important;
+  grid-template-rows:repeat(15,minmax(0,1fr))!important;
+  gap:0!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+.quran-page-paper .quran-line{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+  white-space:normal!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  word-spacing:0!important;
+  letter-spacing:0!important;
+  text-align:right!important;
+  text-align-last:right!important;
+  direction:rtl!important;
+  font-size:clamp(8px,1.8vw,16px)!important;
+  line-height:1.2!important;
+  padding:0!important;
+}
+.quran-page-paper .quran-line>span:not(.quran-ayah-mark):not(.quran-surah-heading):not(.quran-basmala-line){
+  display:inline!important;
+  position:static!important;
+  width:auto!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+  letter-spacing:0!important;
+  word-spacing:0!important;
+}
+.quran-page-paper .quran-ayah-mark{margin:0 .06em!important}
+.quran-page-paper .quran-page-number{bottom:1.5%!important}
+@media(max-width:600px){
+  .quran-reading{padding:4px!important}
+  .quran-page-paper{width:100%!important;max-width:100%!important;border-width:4px!important}
+  .quran-page-paper .quran-lines{top:13%!important;bottom:8%!important;left:4.5%!important;right:4.5%!important}
+  .quran-page-paper .quran-line{font-size:clamp(7px,2.1vw,12px)!important;line-height:1.15!important}
+  .quran-page-paper .quran-surah-title-panel{font-size:clamp(10px,2.6vw,15px)!important;padding:1px 8px!important}
+  .quran-page-paper .quran-basmala-panel{font-size:clamp(9px,2.3vw,14px)!important}
+}
+
+</style>
+</head>
+<body>
+<div class="bar"><img src="data:image/jpeg;base64,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" alt="Al-Ahruf logo"><div><b>Al-Ahruf International Academy <span class="arabic-name" lang="ar" dir="rtl">أكاديمية الأحرف</span></b><small>Nurturing faith, enhancing learning</small></div><div class="sp"></div><span id="who" class="mute" style="color:#fff"></span><button class="chip" onclick="theme()">Theme</button><button class="chip logout-btn" id="out" onclick="logout()" style="display:none">Log out</button></div>
+<div class="wrap" id="app"></div>
+<dialog id="dlg"></dialog><div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>/* Resource errors must not replace the login screen. */</script>
+<script>
+/* Built-in fallback for GitHub Pages: the publishable key is safe for browser use. */
+if(!window.AHRUF_SUPABASE){
+  window.AHRUF_SUPABASE={
+    url:"https://bxwrdutoauonbfdbrhsu.supabase.co",
+    key:"sb_publishable_wNR2PB3BxbDsRFFp_oaEUA_-K2aP9SP"
+  };
+}
+</script>
+<script>
+/* Startup safety net: keep the page usable and expose a readable error if the main app fails. */
+(function(){
+  function showBootError(reason){
+    var app=document.getElementById('app');
+    if(!app || app.children.length) return;
+    app.innerHTML='<div style="max-width:680px;margin:40px auto;padding:24px;border:1px solid #d8dee9;border-radius:16px;background:#fff;color:#182033;font-family:Arial,sans-serif"><h2 style="margin-top:0">Al-Ahruf Academy could not start</h2><p>The page opened, but its main interface did not finish loading.</p><p style="color:#586174;font-size:13px;overflow-wrap:anywhere">Diagnostic: '+String(reason||'Startup timed out').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+'</p><button onclick="location.reload()" style="padding:10px 16px;border:0;border-radius:8px;background:#173b67;color:white;cursor:pointer">Reload academy</button></div>';
+  }
+  window.addEventListener('error',function(e){setTimeout(function(){showBootError(e.message||'JavaScript error')},0)});
+  window.addEventListener('unhandledrejection',function(e){setTimeout(function(){showBootError(e.reason&&e.reason.message||'Startup request failed')},0)});
+  setTimeout(function(){showBootError('The app did not render within 4 seconds')},4000);
+})();
+</script>
+<script>
+const AHRUF_CFG=window.AHRUF_SUPABASE||{};
+const SUPABASE_READY=!!(window.supabase&&typeof window.supabase.createClient==='function');
+let sb=null;
+let ONLINE=false;
+let SUPABASE_ERROR='';
+try{
+  if(SUPABASE_READY&&AHRUF_CFG.url&&AHRUF_CFG.key&&AHRUF_CFG.url.indexOf('YOUR_')<0&&AHRUF_CFG.key.indexOf('YOUR_')<0){
+    sb=window.supabase.createClient(AHRUF_CFG.url,AHRUF_CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    ONLINE=!!sb;
+  }
+}catch(e){
+  console.error('Supabase client could not start:',e);
+  SUPABASE_ERROR=e?.message||String(e);
+  sb=null;
+  ONLINE=false;
+}
+let onlineBusy=false;
+const API_BASE=ONLINE?AHRUF_CFG.url.replace(/\/$/,'')+'/functions/v1/academy-api':'';
+async function onlineApi(action,payload={}){
+  if(!ONLINE||!sb) throw new Error('Online database is not configured yet.');
+
+  const body={action,...payload};
+
+  async function currentSession(forceRefresh=false){
+    let {data:{session},error:sessionError}=await sb.auth.getSession();
+    if(sessionError) console.warn('Could not read academy session:',sessionError.message);
+    const expiresAt=Number(session?.expires_at||0);
+    const shouldRefresh=forceRefresh||!session?.access_token||(expiresAt>0&&expiresAt*1000<=Date.now()+60000);
+    if(shouldRefresh&&session?.refresh_token){
+      const refreshed=await sb.auth.refreshSession({refresh_token:session.refresh_token});
+      if(refreshed?.data?.session?.access_token){
+        session=refreshed.data.session;
+      }else{
+        console.warn('Academy session refresh failed:',refreshed?.error?.message||'No refreshed session returned.');
+      }
+    }
+    return session||null;
+  }
+
+  async function request(accessToken){
+    const headers={'Content-Type':'application/json','apikey':AHRUF_CFG.key};
+    if(action!=='login')headers.Authorization='Bearer '+accessToken;
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),15000);
+    try{
+      const res=await fetch(API_BASE,{method:'POST',headers,body:JSON.stringify(body),signal:controller.signal});
+      const data=await res.json().catch(()=>({}));
+      return {res,data};
+    }catch(e){
+      if(e?.name==='AbortError')throw new Error('The academy server did not respond. Please try again.');
+      throw e;
+    }finally{
+      clearTimeout(timeout);
+    }
+  }
+
+  let session=null;
+  if(action!=='login'){
+    session=await currentSession(false);
+    if(!session?.access_token){
+      throw new Error('Your login session has expired. Please log out and sign in again.');
+    }
+  }
+
+  let result=await request(session?.access_token||'');
+  let {res,data}=result;
+
+  // A token can look present in browser storage but already be invalid on the server.
+  // Refresh it and retry once when the API reports an authentication failure.
+  if(action!=='login'&&(data?.error==='Not authenticated.'||res.status===401||res.status===403)){
+    session=await currentSession(true);
+    if(!session?.access_token){
+      throw new Error('Your login session has expired. Please log out and sign in again.');
+    }
+    result=await request(session.access_token);
+    res=result.res;
+    data=result.data;
+  }
+
+  if(!res.ok||data?.error){
+    if(action!=='login'&&data?.error==='Not authenticated.'){
+      throw new Error('Your login session is no longer valid. Please log out and sign in again.');
+    }
+    throw new Error(data?.error||('API request failed: '+res.status));
+  }
+
+  // Install the server-issued session after a successful login.
+  if(action==='login'&&data.session?.access_token&&data.session?.refresh_token){
+    const {error}=await sb.auth.setSession({
+      access_token:data.session.access_token,
+      refresh_token:data.session.refresh_token
+    });
+    if(error)throw error;
+  }
+  return data;
+}
+async function loadOnlineState(){
+  if(!ONLINE||!sb)return false;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session)return false;
+    const data=await onlineApi('get_state');
+    if(data?.user)user={...user,...data.user};
+    if(data?.user?.username)user.id=data.user.username;
+    if(data?.user?.role)user.role=data.user.role;
+    if(data?.user?.name)user.name=data.user.name;
+    if(data?.state)S=cleanState(data.state);
+    return true;
+  }catch(e){console.warn('Al-Ahruf online session:',e);return false}
+}
+const $=s=>document.querySelector(s);
+const LANG_KEY='ahruf_language';
+const LANGS={en:'English',fr:'Français',ar:'العربية'};
+const I18N={
+ en:{},
+ fr:{
+  'Al-Ahruf International Academy':'Académie Internationale Al-Ahruf','Nurturing faith, enhancing learning':'Cultiver la foi, renforcer l’apprentissage',
+  'Theme':'Thème','Log out':'Déconnexion','Overview':'Vue d’ensemble','Students':'Étudiants','Teachers':'Enseignants','Attendance':'Présence',
+  'Payments':'Paiements','Messages':'Messages','Notifications':'Notifications','Live class':'Cours en direct','Add student':'Ajouter un étudiant',
+  'My students':'Mes étudiants','Administrator':'Administrateur','Teacher':'Enseignant','Student':'Étudiant','Welcome,':'Bienvenue,',
+  'Dashboard':'Tableau de bord','My progress':'Ma progression','All surahs':'Les 114 sourates','Join your class':'Rejoindre votre cours',
+  'Private communication inside Al-Ahruf Academy.':'Communication privée au sein de l’Académie Al-Ahruf.',
+  'New message':'Nouveau message','No messages yet.':'Aucun message pour le moment.','Reply':'Répondre','Sent':'Envoyé','Received':'Reçu',
+  'From:':'De :','To:':'À :','Mark read':'Marquer comme lu','Messages, payment reminders and academy alerts.':'Messages, rappels de paiement et alertes de l’académie.',
+  'No notifications.':'Aucune notification.','Search students':'Rechercher des étudiants','Manage all academy students.':'Gérer tous les étudiants de l’académie.',
+  'Read-only access to students assigned to you.':'Accès en lecture seule aux étudiants qui vous sont attribués.',
+  'Permission denied.':'Accès refusé.','Only the administrator can edit students.':'Seul l’administrateur peut modifier les étudiants.',
+  'Only the administrator can edit payments.':'Seul l’administrateur peut modifier les paiements.','Only the administrator can create invoices.':'Seul l’administrateur peut créer des factures.',
+  'Attendance saved':'Présence enregistrée','Students':'Étudiants','Level':'Niveau','Progress':'Progression','Payment':'Paiement',
+  'Teacher Management':'Gestion des enseignants','Create teacher accounts and assign students to them.':'Créer des comptes enseignants et leur attribuer des étudiants.',
+  'Add teacher':'Ajouter un enseignant','Edit teacher':'Modifier l’enseignant','Delete':'Supprimer','Edit':'Modifier','Cancel':'Annuler','Save':'Enregistrer',
+  'Full name':'Nom complet','Username':'Nom d’utilisateur','Password':'Mot de passe','Email':'E-mail','Phone':'Téléphone',
+  'Beginner':'Débutant','Intermediate':'Intermédiaire','Advanced':'Avancé','Unassigned':'Non attribué',
+  'Payment reminders and academy alerts.':'Rappels de paiement et alertes de l’académie','New invoice':'Nouvelle facture','Amount (USD)':'Montant (USD)',
+  'Due date':'Date d’échéance','Status':'Statut','Mark paid':'Marquer comme payé','pending':'en attente','paid':'payé','overdue':'en retard',
+  'Start a live class':'Démarrer un cours en direct','Class title, e.g. Tajwid, Level 2':'Titre du cours, ex. Tajwid, Niveau 2',
+  'Start class':'Démarrer le cours','No active classes. Start one above.':'Aucun cours actif. Démarrez-en un ci-dessus.',
+  'Open as host':'Ouvrir comme hôte','Copy invite':'Copier l’invitation','End':'Terminer','WhatsApp':'WhatsApp',
+  'As-salamu alaykum,':'As-salamu alaykum,','Surahs memorized':'Sourates mémorisées','Of the Qur’an':'Du Coran','Class ranking':'Classement',
+  'Your progress':'Votre progression','Your memorized surahs will appear here.':'Vos sourates mémorisées apparaîtront ici.',
+  'All 114 Surahs':'Les 114 sourates','of 114 memorized':'sur 114 mémorisées','✓ Memorized':'✓ Mémorisée',
+  'Present':'Présent','Late':'En retard','Absent':'Absent','Memorized':'Mémorisé','Partial':'Partiel','Not memorized':'Non mémorisé',
+  'General question':'Question générale','Complaint / concern':'Plainte / préoccupation','Lesson question':'Question sur la leçon',
+  'Class / schedule':'Cours / emploi du temps','Technical problem':'Problème technique','Suggestion':'Suggestion',
+  'Subject':'Objet','Message':'Message','Write your message...':'Écrivez votre message...','Send message':'Envoyer le message',
+  'Wrong username or password':'Nom d’utilisateur ou mot de passe incorrect','Signed in securely':'Connexion sécurisée',
+  'Saved online':'Enregistré en ligne','Online save failed':'Échec de l’enregistrement en ligne','Continue':'Continuer',
+  'Paste the code or invite link from your teacher.':'Collez le code ou le lien d’invitation de votre enseignant.',
+  'Enter classroom':'Entrer dans la classe','Payment':'Paiement','Collected':'Encaissé','Unpaid invoices':'Factures impayées',
+  'Average Qur\'an progress':'Progression moyenne du Coran','Top memorizers':'Meilleurs mémorisateurs',
+  'Add your first student to see rankings.':'Ajoutez votre premier étudiant pour voir le classement.',
+
+  'Making Qur\'an learning accessible to everyone,':'Rendre l’apprentissage du Coran accessible à tous,',
+  'everywhere':'partout','Qur\'an reading, Tajwid, Hifz, revision and Fiqh, live online in English, Arabic and French.':'Lecture du Coran, tajwid, mémorisation, révision et fiqh en direct, en anglais, arabe et français.',
+  'Sign in':'Se connecter','Username or student ID':'Nom d’utilisateur ou identifiant étudiant','Enter your username or student ID':'Saisissez votre nom d’utilisateur ou identifiant étudiant',
+  'Emergency line:':'Ligne d’urgence :','● Secure online mode enabled':'● Mode en ligne sécurisé activé',
+  'MyClass':'Ma classe','My Timetable':'Mon emploi du temps','My Teacher':'Mon enseignant','Classmates':'Camarades de classe',
+  'Revision':'Révision','Open class':'Ouvrir le cours','Copy link':'Copier le lien','Class links saved by your academy or teacher. New links appear automatically when they match your level and assigned teacher.':'Liens de cours enregistrés par l’académie ou votre enseignant. Les nouveaux liens apparaissent automatiquement selon votre niveau et votre enseignant.',
+  'Age':'Âge','Sex':'Sexe','Name':'Nom','ID':'Identifiant','Date':'Date','Time':'Heure','Actions':'Actions','Details':'Détails','Close':'Fermer',
+  'Add':'Ajouter','Update':'Mettre à jour','Remove':'Retirer','Confirm':'Confirmer','Back':'Retour','Next':'Suivant','Previous':'Précédent',
+  'No students found.':'Aucun étudiant trouvé.','No teachers found.':'Aucun enseignant trouvé.','No classes scheduled.':'Aucun cours programmé.',
+  'Select student':'Sélectionner un étudiant','Select teacher':'Sélectionner un enseignant','Select level':'Sélectionner un niveau',
+  'Male':'Homme','Female':'Femme','Other':'Autre','Date of birth':'Date de naissance','Notes':'Notes','Description':'Description',
+  'Timetable':'Emploi du temps','My timetable':'Mon emploi du temps','Course':'Cours','Courses':'Cours','Schedule':'Planning','Today':'Aujourd’hui',
+  'Monday':'Lundi','Tuesday':'Mardi','Wednesday':'Mercredi','Thursday':'Jeudi','Friday':'Vendredi','Saturday':'Samedi','Sunday':'Dimanche',
+  'Morning':'Matin','Afternoon':'Après-midi','Evening':'Soir','Download':'Télécharger','Print':'Imprimer','Save image':'Enregistrer l’image',
+  'Invoice':'Facture','Invoices':'Factures','Create invoice':'Créer une facture','Student ID':'Identifiant étudiant','Total':'Total','Paid':'Payé','Unpaid':'Impayé',
+  'Attendance':'Présence','Record attendance':'Enregistrer la présence','Save attendance':'Enregistrer les présences','Present':'Présent','Absent':'Absent','Late':'En retard',
+  'Surah':'Sourate','Surahs':'Sourates','Memorization':'Mémorisation','Revision':'Révision','Fiqh':'Fiqh','Tajwid':'Tajwid','Hifz':'Hifz',
+  'No data available.':'Aucune donnée disponible.','Loading...':'Chargement…','Please wait...':'Veuillez patienter…','Error':'Erreur','Success':'Réussite',
+  'Are you sure?':'Êtes-vous sûr ?','This action cannot be undone.':'Cette action est irréversible.','Copy':'Copier','Copied':'Copié',
+  'Open':'Ouvrir','Refresh':'Actualiser','Reload academy':'Recharger l’académie','The page opened, but its main interface did not finish loading.':'La page s’est ouverte, mais son interface principale n’a pas fini de charger.',
+  'Your Memorization Ranking':'Votre classement de mémorisation','Keep memorizing to move higher in the ranking.':'Continuez à mémoriser pour monter dans le classement.',
+  'Behind you':'Derrière vous','Ahead of you':'Devant vous','surahs':'sourates','Student progress':'Progression de l’étudiant',
+  'Monthly outcomes':'Résultats mensuels','Active courses':'Cours actifs','Performance':'Performance','Class code':'Code du cours',
+  'Allow camera and microphone when your browser asks.':'Autorisez la caméra et le microphone lorsque votre navigateur le demande.',
+  'No account needed.':'Aucun compte nécessaire.','Password':'Mot de passe','Theme':'Thème','Language':'Langue',
+ },
+ ar:{
+  'Al-Ahruf International Academy':'أكاديمية الأحرف الدولية','Nurturing faith, enhancing learning':'نرعى الإيمان ونطوّر التعلّم',
+  'Theme':'المظهر','Log out':'تسجيل الخروج','Overview':'نظرة عامة','Students':'الطلاب','Teachers':'المعلمون','Attendance':'الحضور',
+  'Payments':'المدفوعات','Messages':'الرسائل','Notifications':'الإشعارات','Live class':'الدرس المباشر','Add student':'إضافة طالب',
+  'My students':'طلابي','Administrator':'المدير','Teacher':'المعلم','Student':'الطالب','Welcome,':'مرحباً،',
+  'My progress':'تقدمي','All surahs':'السور الـ114','Join your class':'الانضمام إلى الدرس',
+  'Private communication inside Al-Ahruf Academy.':'تواصل خاص داخل أكاديمية الأحرف.',
+  'New message':'رسالة جديدة','No messages yet.':'لا توجد رسائل بعد.','Reply':'رد','Sent':'مرسلة','Received':'مستلمة',
+  'From:':'من:','To:':'إلى:','Mark read':'تحديد كمقروء','Messages, payment reminders and academy alerts.':'الرسائل وتذكيرات الدفع وتنبيهات الأكاديمية.',
+  'No notifications.':'لا توجد إشعارات.','Search students':'البحث عن الطلاب','Manage all academy students.':'إدارة جميع طلاب الأكاديمية.',
+  'Read-only access to students assigned to you.':'صلاحية عرض فقط للطلاب المعيّنين لك.','Permission denied.':'غير مسموح بالوصول.',
+  'Only the administrator can edit students.':'المدير فقط يمكنه تعديل الطلاب.','Only the administrator can edit payments.':'المدير فقط يمكنه تعديل المدفوعات.',
+  'Only the administrator can create invoices.':'المدير فقط يمكنه إنشاء الفواتير.','Attendance saved':'تم حفظ الحضور',
+  'Level':'المستوى','Progress':'التقدم','Payment':'الدفع','Teacher Management':'إدارة المعلمين',
+  'Create teacher accounts and assign students to them.':'إنشاء حسابات المعلمين وتعيين الطلاب لهم.',
+  'Add teacher':'إضافة معلم','Edit teacher':'تعديل المعلم','Delete':'حذف','Edit':'تعديل','Cancel':'إلغاء','Save':'حفظ',
+  'Full name':'الاسم الكامل','Username':'اسم المستخدم','Password':'كلمة المرور','Email':'البريد الإلكتروني','Phone':'الهاتف',
+  'Beginner':'مبتدئ','Intermediate':'متوسط','Advanced':'متقدم','Unassigned':'غير معيّن',
+  'New invoice':'فاتورة جديدة','Amount (USD)':'المبلغ (دولار)','Due date':'تاريخ الاستحقاق','Status':'الحالة',
+  'Mark paid':'تحديد كمدفوع','pending':'قيد الانتظار','paid':'مدفوع','overdue':'متأخر',
+  'Start a live class':'بدء درس مباشر','Class title, e.g. Tajwid, Level 2':'عنوان الدرس، مثال: التجويد، المستوى 2',
+  'Start class':'بدء الدرس','No active classes. Start one above.':'لا توجد دروس نشطة. ابدأ واحداً أعلاه.',
+  'Open as host':'فتح كمضيف','Copy invite':'نسخ الدعوة','End':'إنهاء',
+  'Your Memorization Ranking':'ترتيبك في الحفظ','Keep memorizing to move higher in the ranking.':'واصل الحفظ لتحسين ترتيبك.',
+  'As-salamu alaykum,':'السلام عليكم،','Surahs memorized':'السور المحفوظة','Of the Qur’an':'من القرآن','Class ranking':'ترتيب الصف',
+  'Your progress':'تقدمك','Your memorized surahs will appear here.':'ستظهر السور التي حفظتها هنا.',
+  'All 114 Surahs':'جميع السور الـ114','of 114 memorized':'من أصل 114 محفوظة','✓ Memorized':'✓ محفوظة',
+  'Present':'حاضر','Late':'متأخر','Absent':'غائب','Memorized':'محفوظ','Partial':'جزئي','Not memorized':'غير محفوظ',
+  'General question':'سؤال عام','Complaint / concern':'شكوى / استفسار','Lesson question':'سؤال عن الدرس',
+  'Class / schedule':'الدرس / الجدول','Technical problem':'مشكلة تقنية','Suggestion':'اقتراح',
+  'Subject':'الموضوع','Message':'الرسالة','Write your message...':'اكتب رسالتك...','Send message':'إرسال الرسالة',
+  'Wrong username or password':'اسم المستخدم أو كلمة المرور غير صحيحة','Signed in securely':'تم تسجيل الدخول بأمان',
+  'Saved online':'تم الحفظ عبر الإنترنت','Online save failed':'فشل الحفظ عبر الإنترنت','Continue':'متابعة',
+  'Paste the code or invite link from your teacher.':'ألصق رمز الدرس أو رابط الدعوة من المعلم.',
+  'Enter classroom':'دخول الفصل','Collected':'المحصّل','Unpaid invoices':'الفواتير غير المدفوعة',
+  'Average Qur\'an progress':'متوسط التقدم في القرآن','Top memorizers':'أفضل الحفّاظ',
+  'Add your first student to see rankings.':'أضف أول طالب لرؤية الترتيب.',
+
+  'Making Qur\'an learning accessible to everyone,':'جعل تعلم القرآن متاحاً للجميع،',
+  'everywhere':'في كل مكان','Qur\'an reading, Tajwid, Hifz, revision and Fiqh, live online in English, Arabic and French.':'قراءة القرآن والتجويد والحفظ والمراجعة والفقه عبر الإنترنت بالإنجليزية والعربية والفرنسية.',
+  'Sign in':'تسجيل الدخول','Username or student ID':'اسم المستخدم أو رقم الطالب','Enter your username or student ID':'أدخل اسم المستخدم أو رقم الطالب',
+  'Emergency line:':'رقم الطوارئ:','● Secure online mode enabled':'● الوضع الآمن عبر الإنترنت مفعّل',
+  'MyClass':'صفي','My Timetable':'جدولي الدراسي','My Teacher':'معلمي','Classmates':'زملاء الصف',
+  'Revision':'المراجعة','Open class':'فتح الدرس','Copy link':'نسخ الرابط','Class links saved by your academy or teacher. New links appear automatically when they match your level and assigned teacher.':'روابط الدروس المحفوظة من الأكاديمية أو المعلم. تظهر الروابط الجديدة تلقائياً حسب مستواك ومعلمك.',
+  'Age':'العمر','Sex':'الجنس','Name':'الاسم','ID':'المعرّف','Date':'التاريخ','Time':'الوقت','Actions':'الإجراءات','Details':'التفاصيل','Close':'إغلاق',
+  'Add':'إضافة','Update':'تحديث','Remove':'إزالة','Confirm':'تأكيد','Back':'رجوع','Next':'التالي','Previous':'السابق',
+  'No students found.':'لم يتم العثور على طلاب.','No teachers found.':'لم يتم العثور على معلمين.','No classes scheduled.':'لا توجد دروس مجدولة.',
+  'Select student':'اختر طالباً','Select teacher':'اختر معلماً','Select level':'اختر المستوى',
+  'Male':'ذكر','Female':'أنثى','Other':'آخر','Date of birth':'تاريخ الميلاد','Notes':'ملاحظات','Description':'الوصف',
+  'Timetable':'الجدول الدراسي','My timetable':'جدولي الدراسي','Course':'درس','Courses':'الدروس','Schedule':'الجدول','Today':'اليوم',
+  'Monday':'الاثنين','Tuesday':'الثلاثاء','Wednesday':'الأربعاء','Thursday':'الخميس','Friday':'الجمعة','Saturday':'السبت','Sunday':'الأحد',
+  'Morning':'الصباح','Afternoon':'بعد الظهر','Evening':'المساء','Download':'تنزيل','Print':'طباعة','Save image':'حفظ الصورة',
+  'Invoice':'فاتورة','Invoices':'الفواتير','Create invoice':'إنشاء فاتورة','Student ID':'رقم الطالب','Total':'الإجمالي','Paid':'مدفوع','Unpaid':'غير مدفوع',
+  'Record attendance':'تسجيل الحضور','Save attendance':'حفظ الحضور','Surah':'سورة','Surahs':'السور','Memorization':'الحفظ','Fiqh':'الفقه','Tajwid':'التجويد','Hifz':'الحفظ',
+  'No data available.':'لا توجد بيانات.','Loading...':'جارٍ التحميل…','Please wait...':'يرجى الانتظار…','Error':'خطأ','Success':'تم بنجاح',
+  'Are you sure?':'هل أنت متأكد؟','This action cannot be undone.':'لا يمكن التراجع عن هذا الإجراء.','Copy':'نسخ','Copied':'تم النسخ',
+  'Open':'فتح','Refresh':'تحديث','Reload academy':'إعادة تحميل الأكاديمية','The page opened, but its main interface did not finish loading.':'تم فتح الصفحة، لكن الواجهة الرئيسية لم يكتمل تحميلها.',
+  'Behind you':'خلفك','Ahead of you':'أمامك','surahs':'سور','Student progress':'تقدم الطالب',
+  'Monthly outcomes':'النتائج الشهرية','Active courses':'الدروس النشطة','Performance':'الأداء','Class code':'رمز الدرس',
+  'Allow camera and microphone when your browser asks.':'اسمح باستخدام الكاميرا والميكروفون عندما يطلب المتصفح ذلك.',
+  'No account needed.':'لا حاجة إلى حساب.','Language':'اللغة',
+ }
+};
+
+ Object.assign(I18N.fr,{'Admin':'Administrateur','Hours':'Heures','Hour':'Heure','Timezone':'Fuseau horaire','Time zone':'Fuseau horaire','Senegal time':'Heure du Sénégal','Timetable Management':'Gestion de l’emploi du temps','My Teaching Timetable':'Mon emploi du temps d’enseignement','Add course':'Ajouter un cours','Add timetable entry':'Ajouter un créneau','Edit timetable entry':'Modifier le créneau','Course / Subject':'Cours / matière','Day':'Jour','From':'De','To':'À','UPCOMING CLASS · SENEGAL TIME (GMT/UTC+0)':'PROCHAIN COURS · HEURE DU SÉNÉGAL (GMT/UTC+0)','Calculating time remaining…':'Calcul du temps restant…','Quran class':'Cours de Coran','Recipient':'Destinataire','Attach a file (PDF, book, music, video, or picture)':'Joindre un fichier (PDF, livre, musique, vidéo ou image)','Maximum file size: 10 MB.':'Taille maximale du fichier : 10 Mo.','Private messages, class discussions, files and voice notes.':'Messages privés, discussions de cours, fichiers et notes vocales.','Edit message':'Modifier le message','Message not found.':'Message introuvable.','A message or attachment is required.':'Un message ou une pièce jointe est obligatoire.','You can edit only your own messages.':'Vous pouvez modifier uniquement vos propres messages.','You can delete only your own messages.':'Vous pouvez supprimer uniquement vos propres messages.','End time must be after start time.':'L’heure de fin doit être postérieure à l’heure de début.','Show password':'Afficher le mot de passe','Hide password':'Masquer le mot de passe','Save changes':'Enregistrer les modifications','No results found.':'Aucun résultat trouvé.','Required':'Obligatoire','Your login session is no longer valid. Please log out and sign in again.':'Votre session a expiré. Déconnectez-vous puis reconnectez-vous.','Your login session has expired. Please sign in again.':'Votre session a expiré. Veuillez vous reconnecter.','Not authenticated.':'Authentification requise.','Network error. Please try again.':'Erreur réseau. Veuillez réessayer.','Submit':'Envoyer','Overdue':'En retard','All class times use Senegal time (GMT/UTC+0).':'Tous les horaires de cours utilisent l’heure du Sénégal (GMT/UTC+0).','Days are columns and hours are rows.':'Les jours sont en colonnes et les heures en lignes.','Days are columns and hours are rows. All class times use Senegal time (GMT/UTC+0).':'Les jours sont en colonnes et les heures en lignes. Tous les horaires utilisent l’heure du Sénégal (GMT/UTC+0).','US Eastern':'États-Unis — heure de l’Est','US Central':'États-Unis — heure centrale','US Mountain':'États-Unis — heure des Rocheuses','US Pacific':'États-Unis — heure du Pacifique','Senegal (GMT/UTC+0)':'Sénégal (GMT/UTC+0)','Select a time zone':'Sélectionner un fuseau horaire'});
+ Object.assign(I18N.ar,{'Admin':'المدير','Hours':'الساعات','Hour':'الساعة','Timezone':'المنطقة الزمنية','Time zone':'المنطقة الزمنية','Senegal time':'توقيت السنغال','Timetable Management':'إدارة الجدول الدراسي','My Teaching Timetable':'جدول تدريسي','Add course':'إضافة درس','Add timetable entry':'إضافة موعد إلى الجدول','Edit timetable entry':'تعديل موعد الجدول','Course / Subject':'الدرس / المادة','Day':'اليوم','From':'من','To':'إلى','UPCOMING CLASS · SENEGAL TIME (GMT/UTC+0)':'الدرس القادم · توقيت السنغال (GMT/UTC+0)','Calculating time remaining…':'جارٍ حساب الوقت المتبقي…','Quran class':'درس القرآن','Recipient':'المستلم','Attach a file (PDF, book, music, video, or picture)':'إرفاق ملف (PDF أو كتاب أو موسيقى أو فيديو أو صورة)','Maximum file size: 10 MB.':'الحد الأقصى لحجم الملف: 10 ميغابايت.','Private messages, class discussions, files and voice notes.':'رسائل خاصة ومناقشات الدروس والملفات والتسجيلات الصوتية.','Edit message':'تعديل الرسالة','Message not found.':'لم يتم العثور على الرسالة.','A message or attachment is required.':'الرسالة أو المرفق مطلوب.','You can edit only your own messages.':'يمكنك تعديل رسائلك فقط.','You can delete only your own messages.':'يمكنك حذف رسائلك فقط.','End time must be after start time.':'يجب أن يكون وقت الانتهاء بعد وقت البدء.','Show password':'إظهار كلمة المرور','Hide password':'إخفاء كلمة المرور','Save changes':'حفظ التغييرات','No results found.':'لم يتم العثور على نتائج.','Required':'مطلوب','Your login session is no longer valid. Please log out and sign in again.':'انتهت صلاحية جلستك. يرجى تسجيل الخروج ثم تسجيل الدخول مجدداً.','Your login session has expired. Please sign in again.':'انتهت صلاحية جلستك. يرجى تسجيل الدخول مجدداً.','Not authenticated.':'يلزم تسجيل الدخول.','Network error. Please try again.':'حدث خطأ في الشبكة. يرجى المحاولة مجدداً.','Submit':'إرسال','Overdue':'متأخر','All class times use Senegal time (GMT/UTC+0).':'تُعرض جميع أوقات الدروس بتوقيت السنغال (GMT/UTC+0).','Days are columns and hours are rows.':'الأيام في الأعمدة والساعات في الصفوف.','Days are columns and hours are rows. All class times use Senegal time (GMT/UTC+0).':'الأيام في الأعمدة والساعات في الصفوف. جميع أوقات الدروس بتوقيت السنغال (GMT/UTC+0).','US Eastern':'الولايات المتحدة — التوقيت الشرقي','US Central':'الولايات المتحدة — التوقيت المركزي','US Mountain':'الولايات المتحدة — توقيت الجبال','US Pacific':'الولايات المتحدة — توقيت المحيط الهادئ','Senegal (GMT/UTC+0)':'السنغال (GMT/UTC+0)','Select a time zone':'اختر المنطقة الزمنية'});
+
+
+Object.assign(I18N.fr,{'Account ID':'Identifiant du compte','Copy ID':'Copier l’identifiant','ID copied':'Identifiant copié'});
+Object.assign(I18N.ar,{'Account ID':'معرّف الحساب','Copy ID':'نسخ المعرّف','ID copied':'تم نسخ المعرّف'});
+function copyAccountId(value){if(!value)return toast(t('ID unavailable'));(navigator.clipboard?navigator.clipboard.writeText(value):Promise.reject()).then(()=>toast(t('ID copied')),()=>modal(t('Account ID'),'<input value="'+esc(value)+'" readonly onfocus="this.select()">',()=>{},t('Close')))}
+
+
+Object.assign(I18N.fr,{
+ 'Ahead of you':'Devant vous','Behind you':'Derrière vous','surahs':'sourates','at':'à',
+ 'You are tied with':'Vous êtes à égalité avec','You need':'Vous devez mémoriser',
+ 'more surah to catch up with':'sourate de plus pour rattraper','more surahs to catch up with':'sourates de plus pour rattraper',
+ 'You are':'Vous avez','surah ahead of':'sourate d’avance sur','surahs ahead of':'sourates d’avance sur',
+ 'You are #1 — the current top memorizer!':'Vous êtes n° 1 — le meilleur mémorisateur actuel !',
+ 'Your ranking will appear as soon as students are added.':'Votre classement apparaîtra dès que des étudiants seront ajoutés.',
+ 'No student is currently behind you.':'Aucun étudiant n’est actuellement derrière vous.'
+});
+Object.assign(I18N.ar,{
+ 'Ahead of you':'أمامك','Behind you':'خلفك','surahs':'سورة','at':'بعدد',
+ 'You are tied with':'أنت متعادل مع','You need':'تحتاج إلى حفظ',
+ 'more surah to catch up with':'سورة إضافية للحاق بـ','more surahs to catch up with':'سورة إضافية للحاق بـ',
+ 'You are':'أنت متقدم على','surah ahead of':'سورة مقارنةً بـ','surahs ahead of':'سورة مقارنةً بـ',
+ 'You are #1 — the current top memorizer!':'أنت في المركز الأول — الأكثر حفظًا حاليًا!',
+ 'Your ranking will appear as soon as students are added.':'سيظهر ترتيبك عند إضافة الطلاب.',
+ 'No student is currently behind you.':'لا يوجد طالب خلفك حاليًا.'
+});
+
+
+Object.assign(I18N.en,{
+ 'Quran reader':'Quran reader','Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.':'Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.',
+ 'Read by surah':'Read by surah','Mushaf page view':'Mushaf page view','Choose a surah':'Choose a surah','Open surah':'Open surah',
+ 'Previous page':'Previous page','Next page':'Next page','Page':'Page','Ayahs':'ayahs','Ayah':'Ayah','Loading complete surah…':'Loading complete surah…',
+ 'Loading Mushaf page…':'Loading Mushaf page…','Loading Quran text…':'Loading Quran text…','Try again':'Try again',
+ 'Quran text could not be loaded. Please check your internet connection and try again.':'Quran text could not be loaded. Please check your internet connection and try again.',
+ 'Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.':'Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.',
+ 'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.':'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.',
+ 'Choose a surah or Mushaf page to begin reading.':'Choose a surah or Mushaf page to begin reading.','Meccan':'Meccan','Medinan':'Medinan'
+});
+Object.assign(I18N.fr,{
+ 'Quran reader':'Lecteur du Coran','Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.':'Lisez le texte arabe complet de chaque sourate ou parcourez les 604 pages du Moushaf.',
+ 'Read by surah':'Lire par sourate','Mushaf page view':'Vue du Moushaf','Choose a surah':'Choisir une sourate','Open surah':'Ouvrir la sourate',
+ 'Previous page':'Page précédente','Next page':'Page suivante','Page':'Page','Ayahs':'versets','Ayah':'Verset','Loading complete surah…':'Chargement de la sourate complète…',
+ 'Loading Mushaf page…':'Chargement de la page du Moushaf…','Loading Quran text…':'Chargement du texte coranique…','Try again':'Réessayer',
+ 'Quran text could not be loaded. Please check your internet connection and try again.':'Le texte du Coran n’a pas pu être chargé. Vérifiez votre connexion Internet et réessayez.',
+ 'Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.':'Texte arabe uthmani fourni par AlQuran Cloud. Le texte source est affiché sans modification.',
+ 'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.':'Pour la récitation et la mémorisation, comparez avec un Moushaf imprimé fiable et votre enseignant.',
+ 'Choose a surah or Mushaf page to begin reading.':'Choisissez une sourate ou une page du Moushaf pour commencer.','Meccan':'Mecquoise','Medinan':'Médinoise',
+ 'All 114 Surahs':'Les 114 sourates','Memorized':'Mémorisée','surahs memorized':'sourates mémorisées'
+});
+Object.assign(I18N.ar,{
+ 'Quran reader':'قارئ القرآن','Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.':'اقرأ النص العربي الكامل لأي سورة أو تصفح صفحات المصحف الـ٦٠٤.',
+ 'Read by surah':'القراءة حسب السورة','Mushaf page view':'عرض صفحات المصحف','Choose a surah':'اختر سورة','Open surah':'افتح السورة',
+ 'Previous page':'الصفحة السابقة','Next page':'الصفحة التالية','Page':'الصفحة','Ayahs':'آيات','Ayah':'آية','Loading complete surah…':'جارٍ تحميل السورة كاملة…',
+ 'Loading Mushaf page…':'جارٍ تحميل صفحة المصحف…','Loading Quran text…':'جارٍ تحميل نص القرآن…','Try again':'إعادة المحاولة',
+ 'Quran text could not be loaded. Please check your internet connection and try again.':'تعذر تحميل نص القرآن. تحقق من اتصال الإنترنت وحاول مجددًا.',
+ 'Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.':'النص العربي بالرسم العثماني مقدم من AlQuran Cloud ويُعرض دون تعديل.',
+ 'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.':'للتلاوة والحفظ، راجع مصحفًا مطبوعًا موثوقًا ومعلمك.',
+ 'Choose a surah or Mushaf page to begin reading.':'اختر سورة أو صفحة من المصحف لبدء القراءة.','Meccan':'مكية','Medinan':'مدنية',
+ 'All 114 Surahs':'السور الـ١١٤','Memorized':'تم الحفظ','surahs memorized':'سورة محفوظة'
+});
+
+Object.assign(I18N.en,{'Mushaf page':'Mushaf page','Madinah Mushaf page view':'Madinah Mushaf page view'});
+Object.assign(I18N.fr,{'Mushaf page':'Page du Moushaf','Madinah Mushaf page view':'Vue des pages du Moushaf de Médine'});
+Object.assign(I18N.ar,{'Mushaf page':'صفحة المصحف','Madinah Mushaf page view':'عرض صفحات مصحف المدينة'});
+
+Object.assign(I18N.en,{
+ 'Loading 15-line Mushaf page with Tajweed…':'Loading 15-line Mushaf page with Tajweed…',
+ 'Standard Madinah Mushaf · 15 lines · Tajweed colors':'Standard Madinah Mushaf · 15 lines · Tajweed colors',
+ 'Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.':'Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.',
+ 'The exact 15-line Tajweed page could not be loaded from the verified source. No reflowed text is shown, to avoid changing the Mushaf layout.':'The exact 15-line Tajweed page could not be loaded from the verified source. No reflowed text is shown, to avoid changing the Mushaf layout.',
+ 'Line':'Line','Ikhfa':'Ikhfa','Idgham / Ghunnah':'Idgham / Ghunnah','Iqlab':'Iqlab','Qalqalah':'Qalqalah','Madd':'Madd'
+});
+Object.assign(I18N.fr,{
+ 'Loading 15-line Mushaf page with Tajweed…':'Chargement de la page du Moushaf à 15 lignes avec tajwid…',
+ 'Standard Madinah Mushaf · 15 lines · Tajweed colors':'Moushaf standard de Médine · 15 lignes · couleurs du tajwid',
+ 'Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.':'Le texte uthmani coloré selon le tajwid et les positions des lignes proviennent de l’API Quran.com.',
+ 'The exact 15-line Tajweed page could not be loaded from the verified source. No reflowed text is shown, to avoid changing the Mushaf layout.':'La page exacte à 15 lignes avec tajwid n’a pas pu être chargée depuis la source vérifiée. Le texte n’est pas recomposé afin de préserver la mise en page du Moushaf.',
+ 'Line':'Ligne','Ikhfa':'Ikhfa','Idgham / Ghunnah':'Idgham / ghunna','Iqlab':'Iqlab','Qalqalah':'Qalqala','Madd':'Madd'
+});
+Object.assign(I18N.ar,{
+ 'Loading 15-line Mushaf page with Tajweed…':'جارٍ تحميل صفحة المصحف ذات الأسطر الخمسة عشر مع ألوان التجويد…',
+ 'Standard Madinah Mushaf · 15 lines · Tajweed colors':'مصحف المدينة القياسي · ١٥ سطرًا · ألوان التجويد',
+ 'Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.':'يوفر مصدر Quran.com النص العثماني الملون بأحكام التجويد ومواضع الأسطر المطبوعة.',
+ 'The exact 15-line Tajweed page could not be loaded from the verified source. No reflowed text is shown, to avoid changing the Mushaf layout.':'تعذر تحميل الصفحة الأصلية ذات الأسطر الخمسة عشر وألوان التجويد من المصدر الموثوق. لن يُعاد توزيع النص حفاظًا على تخطيط المصحف.',
+ 'Line':'السطر','Ikhfa':'الإخفاء','Idgham / Ghunnah':'الإدغام / الغنة','Iqlab':'الإقلاب','Qalqalah':'القلقلة','Madd':'المد'
+});
+let currentLang='en';try{const savedLang=window.localStorage&&window.localStorage.getItem(LANG_KEY);if(savedLang&&LANGS[savedLang])currentLang=savedLang}catch(e){console.warn('Language preference storage unavailable:',e)}
+function t(key){return (I18N[currentLang]&&I18N[currentLang][key])||key}
+function setLanguage(lang){
+ if(!LANGS[lang])return;
+ currentLang=lang;try{window.localStorage&&window.localStorage.setItem(LANG_KEY,lang)}catch(e){}
+ document.documentElement.lang=lang;document.body.classList.toggle('rtl',lang==='ar');
+ render();
+}
+function applyI18n(){
+ document.documentElement.lang=currentLang;
+ document.body.classList.toggle('rtl',currentLang==='ar');
+ const root=document.body;if(!root)return;
+ const dict=I18N[currentLang]||{};
+ const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+ nodes.forEach(n=>{
+   const raw=n.nodeValue, key=raw.trim();
+   if(key&&dict[key])n.nodeValue=raw.replace(key,dict[key]);
+ });
+ root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(el=>{['placeholder','title','aria-label'].forEach(attr=>{const k=el.getAttribute(attr);if(k&&dict[k])el.setAttribute(attr,dict[k])})});
+ root.querySelectorAll('input[type="button"],input[type="submit"],button').forEach(el=>{
+   const k=el.textContent.trim();if(dict[k])el.textContent=dict[k];
+ });
+}
+Object.assign(I18N.fr,{'Your ranking':'Votre classement','Of the Quran':'Du Coran','Your Memorization Ranking':'Votre classement de mémorisation','Keep memorizing to move higher in the ranking.':'Continuez à mémoriser pour monter dans le classement.','Your progress':'Votre progression','My invoices':'Mes factures','Invoices issued to you are available here. Only your own invoices are shown.':'Les factures qui vous sont destinées sont disponibles ici. Vous ne voyez que vos propres factures.','No invoices have been issued to you yet.':'Aucune facture ne vous a encore été délivrée.','View invoice':'Voir la facture','Your memorized surahs will appear here.':'Vos sourates mémorisées apparaîtront ici.','Copy ID':'Copier l’identifiant','Mushaf page view':'Vue page du Mushaf','Choose a surah':'Choisir une sourate','Next page':'Page suivante','Previous page':'Page précédente','Page':'Page','MyClass':'Ma classe','My Timetable':'Mon emploi du temps','All surahs':'Les 114 sourates','My Teacher':'Mon enseignant','Classmates':'Camarades de classe'});
+Object.assign(I18N.ar,{'Your ranking':'ترتيبك','Of the Quran':'من القرآن','Your Memorization Ranking':'ترتيبك في الحفظ','Keep memorizing to move higher in the ranking.':'واصل الحفظ لتحسين ترتيبك.','Your progress':'تقدمك','My invoices':'فواتيري','Invoices issued to you are available here. Only your own invoices are shown.':'الفواتير الصادرة لك متاحة هنا. يمكنك رؤية فواتيرك فقط.','No invoices have been issued to you yet.':'لم تصدر لك أي فواتير بعد.','View invoice':'عرض الفاتورة','Your memorized surahs will appear here.':'ستظهر السور التي حفظتها هنا.','Copy ID':'نسخ المعرّف','Mushaf page view':'عرض صفحات المصحف','Choose a surah':'اختر سورة','Next page':'الصفحة التالية','Previous page':'الصفحة السابقة','Page':'الصفحة','MyClass':'صفي','My Timetable':'جدولي الدراسي','All surahs':'جميع السور','My Teacher':'معلمي','Classmates':'زملاء الصف','Nurturing faith, enhancing learning':'نرعى الإيمان ونطوّر التعلّم','Al-Ahruf International Academy':'أكاديمية الأحرف الدولية'});
+function languageUI(){
+ const el=document.createElement('div');el.className='lang-switch';
+ el.innerHTML='<span aria-hidden="true">🌐</span><select aria-label="Language" onchange="setLanguage(this.value)"><option value="en">English</option><option value="fr">Français</option><option value="ar">العربية</option></select>';
+ el.querySelector('select').value=currentLang;
+ return el;
+}
+
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SUR=["Al-Fatiha","Al-Baqarah","Aal-Imran","An-Nisa","Al-Maidah","Al-Anam","Al-Araf","Al-Anfal","At-Tawbah","Yunus","Hud","Yusuf","Ar-Rad","Ibrahim","Al-Hijr","An-Nahl","Al-Isra","Al-Kahf","Maryam","Ta-Ha","Al-Anbiya","Al-Hajj","Al-Muminun","An-Nur","Al-Furqan","Ash-Shuara","An-Naml","Al-Qasas","Al-Ankabut","Ar-Rum","Luqman","As-Sajdah","Al-Ahzab","Saba","Fatir","Ya-Sin","As-Saffat","Sad","Az-Zumar","Ghafir","Fussilat","Ash-Shura","Az-Zukhruf","Ad-Dukhan","Al-Jathiyah","Al-Ahqaf","Muhammad","Al-Fath","Al-Hujurat","Qaf","Adh-Dhariyat","At-Tur","An-Najm","Al-Qamar","Ar-Rahman","Al-Waqiah","Al-Hadid","Al-Mujadila","Al-Hashr","Al-Mumtahanah","As-Saff","Al-Jumuah","Al-Munafiqun","At-Taghabun","At-Talaq","At-Tahrim","Al-Mulk","Al-Qalam","Al-Haqqah","Al-Maarij","Nuh","Al-Jinn","Al-Muzzammil","Al-Muddaththir","Al-Qiyamah","Al-Insan","Al-Mursalat","An-Naba","An-Naziat","Abasa","At-Takwir","Al-Infitar","Al-Mutaffifin","Al-Inshiqaq","Al-Buruj","At-Tariq","Al-Ala","Al-Ghashiyah","Al-Fajr","Al-Balad","Ash-Shams","Al-Layl","Ad-Duha","Ash-Sharh","At-Tin","Al-Alaq","Al-Qadr","Al-Bayyinah","Az-Zalzalah","Al-Adiyat","Al-Qariah","At-Takathur","Al-Asr","Al-Humazah","Al-Fil","Quraysh","Al-Maun","Al-Kawthar","Al-Kafirun","An-Nasr","Al-Masad","Al-Ikhlas","Al-Falaq","An-Nas"];
+const SUR_META=[{"number":1,"english":"Al-Fatiha","arabic":"الْفَاتِحَةِ"},{"number":2,"english":"Al-Baqarah","arabic":"الْبَقَرَةِ"},{"number":3,"english":"Aal-Imran","arabic":"آلِ عِمْرَانَ"},{"number":4,"english":"An-Nisa","arabic":"النِّسَاءِ"},{"number":5,"english":"Al-Maidah","arabic":"الْمَائِدَةِ"},{"number":6,"english":"Al-Anam","arabic":"الْأَنْعَامِ"},{"number":7,"english":"Al-Araf","arabic":"الْأَعْرَافِ"},{"number":8,"english":"Al-Anfal","arabic":"الْأَنْفَالِ"},{"number":9,"english":"At-Tawbah","arabic":"التَّوْبَةِ"},{"number":10,"english":"Yunus","arabic":"يُونُسَ"},{"number":11,"english":"Hud","arabic":"هُودٍ"},{"number":12,"english":"Yusuf","arabic":"يُوسُفَ"},{"number":13,"english":"Ar-Rad","arabic":"الرَّعْدِ"},{"number":14,"english":"Ibrahim","arabic":"إِبْرَاهِيمَ"},{"number":15,"english":"Al-Hijr","arabic":"الْحِجْرِ"},{"number":16,"english":"An-Nahl","arabic":"النَّحْلِ"},{"number":17,"english":"Al-Isra","arabic":"الْإِسْرَاءِ"},{"number":18,"english":"Al-Kahf","arabic":"الْكَهْفِ"},{"number":19,"english":"Maryam","arabic":"مَرْيَمَ"},{"number":20,"english":"Ta-Ha","arabic":"طه"},{"number":21,"english":"Al-Anbiya","arabic":"الْأَنْبِيَاءِ"},{"number":22,"english":"Al-Hajj","arabic":"الْحَجِّ"},{"number":23,"english":"Al-Muminun","arabic":"الْمُؤْمِنُونَ"},{"number":24,"english":"An-Nur","arabic":"النُّورِ"},{"number":25,"english":"Al-Furqan","arabic":"الْفُرْقَانِ"},{"number":26,"english":"Ash-Shuara","arabic":"الشُّعَرَاءِ"},{"number":27,"english":"An-Naml","arabic":"النَّمْلِ"},{"number":28,"english":"Al-Qasas","arabic":"الْقَصَصِ"},{"number":29,"english":"Al-Ankabut","arabic":"الْعَنْكَبُوتِ"},{"number":30,"english":"Ar-Rum","arabic":"الرُّومِ"},{"number":31,"english":"Luqman","arabic":"لُقْمَانَ"},{"number":32,"english":"As-Sajdah","arabic":"السَّجْدَةِ"},{"number":33,"english":"Al-Ahzab","arabic":"الْأَحْزَابِ"},{"number":34,"english":"Saba","arabic":"سَبَإٍ"},{"number":35,"english":"Fatir","arabic":"فَاطِرٍ"},{"number":36,"english":"Ya-Sin","arabic":"يس"},{"number":37,"english":"As-Saffat","arabic":"الصَّافَّاتِ"},{"number":38,"english":"Sad","arabic":"ص"},{"number":39,"english":"Az-Zumar","arabic":"الزُّمَرِ"},{"number":40,"english":"Ghafir","arabic":"غَافِرٍ"},{"number":41,"english":"Fussilat","arabic":"فُصِّلَتْ"},{"number":42,"english":"Ash-Shura","arabic":"الشُّورَى"},{"number":43,"english":"Az-Zukhruf","arabic":"الزُّخْرُفِ"},{"number":44,"english":"Ad-Dukhan","arabic":"الدُّخَانِ"},{"number":45,"english":"Al-Jathiyah","arabic":"الْجَاثِيَةِ"},{"number":46,"english":"Al-Ahqaf","arabic":"الْأَحْقَافِ"},{"number":47,"english":"Muhammad","arabic":"مُحَمَّدٍ"},{"number":48,"english":"Al-Fath","arabic":"الْفَتْحِ"},{"number":49,"english":"Al-Hujurat","arabic":"الْحُجُرَاتِ"},{"number":50,"english":"Qaf","arabic":"ق"},{"number":51,"english":"Adh-Dhariyat","arabic":"الذَّارِيَاتِ"},{"number":52,"english":"At-Tur","arabic":"الطُّورِ"},{"number":53,"english":"An-Najm","arabic":"النَّجْمِ"},{"number":54,"english":"Al-Qamar","arabic":"الْقَمَرِ"},{"number":55,"english":"Ar-Rahman","arabic":"الرَّحْمَنِ"},{"number":56,"english":"Al-Waqiah","arabic":"الْوَاقِعَةِ"},{"number":57,"english":"Al-Hadid","arabic":"الْحَدِيدِ"},{"number":58,"english":"Al-Mujadila","arabic":"الْمُجَادِلَةِ"},{"number":59,"english":"Al-Hashr","arabic":"الْحَشْرِ"},{"number":60,"english":"Al-Mumtahanah","arabic":"الْمُمْتَحَنَةِ"},{"number":61,"english":"As-Saff","arabic":"الصَّفِّ"},{"number":62,"english":"Al-Jumuah","arabic":"الْجُمُعَةِ"},{"number":63,"english":"Al-Munafiqun","arabic":"الْمُنَافِقُونَ"},{"number":64,"english":"At-Taghabun","arabic":"التَّغَابُنِ"},{"number":65,"english":"At-Talaq","arabic":"الطَّلَاقِ"},{"number":66,"english":"At-Tahrim","arabic":"التَّحْرِيمِ"},{"number":67,"english":"Al-Mulk","arabic":"الْمُلْكِ"},{"number":68,"english":"Al-Qalam","arabic":"الْقَلَمِ"},{"number":69,"english":"Al-Haqqah","arabic":"الْحَاقَّةِ"},{"number":70,"english":"Al-Maarij","arabic":"الْمَعَارِجِ"},{"number":71,"english":"Nuh","arabic":"نُوحٍ"},{"number":72,"english":"Al-Jinn","arabic":"الْجِنِّ"},{"number":73,"english":"Al-Muzzammil","arabic":"الْمُزَّمِّلِ"},{"number":74,"english":"Al-Muddaththir","arabic":"الْمُدَّثِّرِ"},{"number":75,"english":"Al-Qiyamah","arabic":"الْقِيَامَةِ"},{"number":76,"english":"Al-Insan","arabic":"الْإِنْسَانِ"},{"number":77,"english":"Al-Mursalat","arabic":"الْمُرْسَلَاتِ"},{"number":78,"english":"An-Naba","arabic":"النَّبَإِ"},{"number":79,"english":"An-Naziat","arabic":"النَّازِعَاتِ"},{"number":80,"english":"Abasa","arabic":"عَبَسَ"},{"number":81,"english":"At-Takwir","arabic":"التَّكْوِيرِ"},{"number":82,"english":"Al-Infitar","arabic":"الْإِنْفِطَارِ"},{"number":83,"english":"Al-Mutaffifin","arabic":"الْمُطَفِّفِينَ"},{"number":84,"english":"Al-Inshiqaq","arabic":"الْإِنْشِقَاقِ"},{"number":85,"english":"Al-Buruj","arabic":"الْبُرُوجِ"},{"number":86,"english":"At-Tariq","arabic":"الطَّارِقِ"},{"number":87,"english":"Al-Ala","arabic":"الْأَعْلَى"},{"number":88,"english":"Al-Ghashiyah","arabic":"الْغَاشِيَةِ"},{"number":89,"english":"Al-Fajr","arabic":"الْفَجْرِ"},{"number":90,"english":"Al-Balad","arabic":"الْبَلَدِ"},{"number":91,"english":"Ash-Shams","arabic":"الشَّمْسِ"},{"number":92,"english":"Al-Layl","arabic":"اللَّيْلِ"},{"number":93,"english":"Ad-Duha","arabic":"الضُّحَى"},{"number":94,"english":"Ash-Sharh","arabic":"الشَّرْحِ"},{"number":95,"english":"At-Tin","arabic":"التِّينِ"},{"number":96,"english":"Al-Alaq","arabic":"الْعَلَقِ"},{"number":97,"english":"Al-Qadr","arabic":"الْقَدْرِ"},{"number":98,"english":"Al-Bayyinah","arabic":"الْبَيِّنَةِ"},{"number":99,"english":"Az-Zalzalah","arabic":"الزَّلْزَلَةِ"},{"number":100,"english":"Al-Adiyat","arabic":"الْعَادِيَاتِ"},{"number":101,"english":"Al-Qariah","arabic":"الْقَارِعَةِ"},{"number":102,"english":"At-Takathur","arabic":"التَّكَاثُرِ"},{"number":103,"english":"Al-Asr","arabic":"الْعَصْرِ"},{"number":104,"english":"Al-Humazah","arabic":"الْهُمَزَةِ"},{"number":105,"english":"Al-Fil","arabic":"الْفِيلِ"},{"number":106,"english":"Quraysh","arabic":"قُرَيْشٍ"},{"number":107,"english":"Al-Maun","arabic":"الْمَاعُونِ"},{"number":108,"english":"Al-Kawthar","arabic":"الْكَوْثَرِ"},{"number":109,"english":"Al-Kafirun","arabic":"الْكَافِرُونَ"},{"number":110,"english":"An-Nasr","arabic":"النَّصْرِ"},{"number":111,"english":"Al-Masad","arabic":"الْمَسَدِ"},{"number":112,"english":"Al-Ikhlas","arabic":"الْإِخْلَاصِ"},{"number":113,"english":"Al-Falaq","arabic":"الْفَلَقِ"},{"number":114,"english":"An-Nas","arabic":"النَّاسِ"}];
+const surahLabel=(name,i)=>{const m=SUR_META[i??SUR.indexOf(name)];return m?'<span class="surah-en">'+esc(m.english)+'</span><span class="surah-dash"> — </span><span class="surah-ar" dir="rtl">'+esc(m.arabic)+'</span>':esc(name)};
+const KEY='ahruf_v2';
+const demo=()=>({students:[
+{id:'ST001',name:'Ahmed Mansour',phone:'221770012345',email:'',pw:'pass123',level:'Intermediate',pay:'paid',sur:['Al-Fatiha','An-Nas','Al-Ikhlas','Al-Falaq','Al-Kawthar'],teacher:''},
+{id:'ST002',name:'Fatima Diop',phone:'221770234567',email:'',pw:'pass123',level:'Beginner',pay:'paid',sur:['Al-Fatiha','Al-Falaq','An-Nas'],teacher:''},
+{id:'ST003',name:'Yusuf Sow',phone:'221770345678',email:'',pw:'pass123',level:'Advanced',pay:'pending',sur:['Al-Fatiha','Al-Baqarah','Aal-Imran','An-Nisa'],teacher:''}],
+teachers:[],messages:[],notifications:[],
+pay:[{inv:'INV-001',sid:'ST001',amt:50,due:'2026-10-05',st:'paid'},{inv:'INV-002',sid:'ST003',amt:75,due:'2026-10-15',st:'pending'}],att:{},classes:[]});
+let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!S)S=demo();
+function cleanState(x){const y=JSON.parse(JSON.stringify(x||{}));y.students=Array.isArray(y.students)?y.students:[];y.teachers=Array.isArray(y.teachers)?y.teachers:[];y.messages=Array.isArray(y.messages)?y.messages:[];y.notifications=Array.isArray(y.notifications)?y.notifications:[];y.messagePeers=Array.isArray(y.messagePeers)?y.messagePeers:[];y.pay=Array.isArray(y.pay)?y.pay:[];y.classes=Array.isArray(y.classes)?y.classes:[];y.timetable=Array.isArray(y.timetable)?y.timetable:[];y.att=y.att&&typeof y.att==='object'?y.att:{};(y.students||[]).forEach(s=>delete s.pw);return y}
+S=cleanState(S);
+let saveTimer=null;
+function save(){
+ try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+ if(ONLINE&&user){
+   clearTimeout(saveTimer);
+   saveTimer=setTimeout(async()=>{
+     try{await onlineApi('save_state',{state:cleanState(S)});toast('Saved online')}
+     catch(e){console.error(e);toast('Online save failed')}
+   },350);
+ }
+}
+
+const STAFF={ahruf:{pw:'ahruf25',name:'Cheikh Tidiane Sall',role:'admin'},teacher1:{pw:'teacher123',name:'Ustadh Ibrahim',role:'teacher'}};
+let user=null,tab='overview',lt='in',joinInfo=null;
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2800)};
+function theme(){const r=document.documentElement;const dark=r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('ahruf_theme',r.dataset.theme)}catch(e){}}
+function modal(title,body,ok,txt='Save'){const d=$('#dlg');d.innerHTML=`<h2>${title}</h2><form id="mf">${body}<div class="row end"><button type="button" class="btn ghost" onclick="dlg.close()">Cancel</button><button class="btn">${txt}</button></div></form>`;$('#mf').onsubmit=async e=>{e.preventDefault();try{if(await ok($('#mf').elements)!==false)d.close()}catch(err){console.error(err);toast(err.message||'Something went wrong')}};d.showModal()}
+const base=()=>location.href.split('#')[0];
+const room=c=>'AlAhruf'+c.replace(/[^A-Za-z0-9]/g,'');
+const joinUrl=(c,n)=>'https://meet.jit.si/'+room(c)+'#userInfo.displayName='+encodeURIComponent(JSON.stringify(n||'Guest'));
+function newCode(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>a[b%a.length]).join('')}
+function parseCode(v){const m=String(v).match(/class=([A-Za-z0-9]+)/);return (m?m[1]:v).trim().toUpperCase()}
+function openCurtains(){
+ // Always reveal the admin Overview after sign-in, rather than a previously selected dashboard section.
+ if(user?.role==='admin'&&tab!=='overview'){tab='overview';render()}
+ const old=document.getElementById('ahruf-curtain-intro');
+ if(old)old.remove();
+ const overlay=document.createElement('div');
+ overlay.id='ahruf-curtain-intro';
+ overlay.setAttribute('aria-hidden','true');
+ overlay.innerHTML='<div class="ahruf-curtain left"></div><div class="ahruf-curtain right"></div>';
+ document.body.appendChild(overlay);
+ window.setTimeout(()=>overlay.remove(),1750);
+}
+async function login(role,u,p){
+ u=u.trim();
+ if(ONLINE){
+   if(onlineBusy)return;
+   onlineBusy=true;
+   try{
+     const d=await onlineApi('login',{role,username:u,password:p});
+     if(d.user?.role && d.user.role!==role){
+       await sb.auth.signOut();
+       throw new Error('Account role does not match the selected login.');
+     }
+     user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
+     toast('Signed in securely');render();openCurtains();
+   }catch(e){console.error('Al-Ahruf login failed:',e);const msg=String(e?.message||'Login failed.').replace(/[\r\n\t]+/g,' ').trim();toast(msg.length>0&&msg.length<180?msg:'Login failed. Check the browser console for details.')}
+   finally{onlineBusy=false}
+   return;
+ }
+ if(role==='student'){
+   const s=S.students.find(x=>(x.id.toLowerCase()===u.toLowerCase()||x.name.toLowerCase()===u.toLowerCase())&&x.pw===p);
+   if(s)user={role:'student',name:s.name,id:s.id};
+ }else{
+   const a=STAFF[u.toLowerCase()];
+   if(a&&a.pw===p&&(role===a.role))user={role:a.role,name:a.name};
+ }
+ if(!user)return toast('Wrong username or password');tab=user.role==='student'?'home':'overview';render();openCurtains()
+}
+async function logout(){if(ONLINE&&sb){try{await sb.auth.signOut()}catch(e){}}user=null;joinInfo=null;render()}
+const lvl=s=>Math.round(s.sur.length/114*1000)/10;
+
+function applyArabicIndicDigits(root=document.body){
+ if(currentLang!=='ar')return;
+ const digits={'0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩'};
+ const convert=value=>String(value).replace(/[0-9]/g,d=>digits[d]);
+ const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ let node;
+ while((node=walker.nextNode())){
+  const parent=node.parentElement;
+  if(!parent||parent.closest('script,style,noscript,textarea,[contenteditable="true"]'))continue;
+  if(/[0-9]/.test(node.nodeValue))node.nodeValue=convert(node.nodeValue);
+ }
+ root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(el=>{
+  ['placeholder','title','aria-label'].forEach(attr=>{
+   const value=el.getAttribute(attr);
+   if(value&&/[0-9]/.test(value))el.setAttribute(attr,convert(value));
+  });
+ });
+}
+function render(){
+ const who=$('#who'),out=$('#out'),app=$('#app'),themeBtn=$('button[onclick="theme()"]');
+ if(themeBtn)themeBtn.textContent=currentLang==='fr'?'Thème':currentLang==='ar'?'المظهر':'Theme';
+ if(who)who.textContent=user?user.name:'';
+ if(out)out.style.display=user?'':'none';
+ if(!app)return;
+ app.innerHTML=!user?viewLogin():user.role==='student'?viewStudent():viewStaff();
+ document.body.querySelectorAll('.lang-switch').forEach(x=>x.remove());
+ try{document.body.appendChild(languageUI());applyI18n();applyArabicIndicDigits(document.body)}catch(e){console.warn('Language UI skipped:',e)}
+}
+
+function viewLogin(){
+ const pre='';lt='in';
+ return `<div class="hero"><div class="brand"><img src="data:image/jpeg;base64,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" alt=""><h1>Making Qur'an learning accessible to everyone, <em>everywhere</em></h1><p>Qur'an reading, Tajwid, Hifz, revision and Fiqh, live online in English, Arabic and French.</p></div>
+ <div class="card"><div class="tabs"><button class="on" type="button">Sign in</button></div>
+ <div class="tabs" id="rt"><button class="on" data-r="student" type="button">Student</button><button data-r="teacher" type="button">Teacher</button><button data-r="admin" type="button">Admin</button></div>
+ <form onsubmit="event.preventDefault();login(window._r||'student',this.u.value,this.p.value)"><label>Username or student ID</label><input name="u" required autocomplete="username" placeholder="Enter your username or student ID"><label>Password</label><div style="display:flex;gap:8px;align-items:center"><input name="p" type="password" required autocomplete="current-password" style="flex:1;min-width:0"><button type="button" class="btn ghost sm" onclick="toggleLoginPassword(this)" aria-label="Show password" title="Show password" aria-pressed="false" style="width:38px;height:38px;min-width:38px;padding:8px;display:inline-flex;align-items:center;justify-content:center" ><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div><div style="margin-top:16px"><button class="btn" style="width:100%">Sign in</button></div></form>
+ <p class="mute" style="margin-top:16px">Emergency line: <b>+221 774 482 293</b></p><p class="badge ${ONLINE?"paid":"pending"}" style="margin-top:10px">${ONLINE?"● Secure online mode enabled":"Offline demo mode — connect Supabase to share accounts across devices."}</p></div></div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('#rt button');if(!b)return;window._r=b.dataset.r;document.querySelectorAll('#rt button').forEach(x=>x.classList.toggle('on',x===b))});
+function toggleLoginPassword(button){
+ const field=button?.parentElement?.querySelector('input[name="p"]');
+ if(!field)return;
+ const reveal=field.type==='password';
+ field.type=reveal?'text':'password';
+ button.innerHTML=reveal
+  ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"></path><path d="M10.6 10.6a2 2 0 002.8 2.8"></path><path d="M9.9 5.2A11.2 11.2 0 0112 5c6.4 0 10 7 10 7a15.8 15.8 0 01-3.1 3.9"></path><path d="M6.6 6.6C3.7 8.5 2 12 2 12s3.6 7 10 7a10.8 10.8 0 004.1-.8"></path></svg>'
+  : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+ button.setAttribute('aria-label',reveal?'Hide password':'Show password');
+ button.setAttribute('title',reveal?'Hide password':'Show password');
+ button.setAttribute('aria-pressed',String(reveal));
+}
+function showResetHelp(){modal('Reset your admin password',`<p class="mute">For security, the academy cannot display your current password.</p><p>Open Supabase Dashboard → Authentication → Users, select the <b>ahruf</b> admin account, then choose the password reset/change option.</p><div class="card" style="margin-top:12px"><b>Admin username</b><div class="code" style="font-size:1.3rem">ahruf</div></div>`,()=>{},'Close')}
+function doJoin(f){const c=parseCode(f.c.value);if(c.length<4)return toast('Check the class code');joinInfo={n:f.n.value.trim(),c};render();$('#app').scrollIntoView()}
+
+function nav(items){return `<div class="nav">${items.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('')}</div>`}
+function unreadCount(){return 0}
+function myTeacher(){
+ if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
+ const student=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(user.username||user.id||'').toLowerCase())||((S.students||[]).length===1?(S.students||[])[0]:null);
+ const assigned=student?.teacher;
+ const teacher=(S.teachers||[]).find(t=>String(t.username||'').toLowerCase()===String(assigned||'').toLowerCase());
+ if(!assigned||!teacher)return '<div class="card"><h3>My Teacher</h3><p class="mute">Your teacher has not been assigned yet. Please contact the academy administrator.</p></div>';
+ return '<div class="card"><h3>My Teacher</h3><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 0">'+teacherAvatar(teacher,64)+'<div><h3 style="margin:0 0 6px">'+esc(teacher.name||'Teacher')+'</h3><div class="mute">Your assigned Quran teacher</div>'+(teacher.email?'<div>'+esc(teacher.email)+'</div>':'')+(teacher.phone?'<div>'+esc(teacher.phone)+'</div>':'')+'</div></div><p class="mute">Send a private message to ask a question or discuss your lessons.</p><button class="btn" onclick="composeMessage(\''+esc(teacher.username)+'\')">Message My Teacher</button></div>';
+}
+function currentStudent(){
+ const sid=String(user.username||user.studentId||user.student_id||user.id||'').trim().toLowerCase();
+ const students=Array.isArray(S.students)?S.students:[];
+ return students.find(x=>[x.id,x.studentId,x.student_id].some(v=>String(v||'').trim().toLowerCase()===sid))||(user.role==='student'&&students.length===1?students[0]:null);
+}
+function classmates(){
+ if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
+ const sid=String(user.username||user.studentId||user.student_id||user.id||'').trim().toLowerCase();
+ const students=Array.isArray(S.students)?S.students:[];
+ const me=currentStudent();
+ const peers=Array.isArray(S.messagePeers)?S.messagePeers:[];
+ const teacherKey=value=>{
+  const raw=String(value||'').trim().toLowerCase();
+  if(!raw)return '';
+  const teacher=(S.teachers||[]).find(t=>String(t.username||'').trim().toLowerCase()===raw||String(t.name||'').trim().toLowerCase()===raw);
+  return String(teacher?.username||raw).trim().toLowerCase();
+ };
+ const fallback=me&&me.teacher?students.filter(x=>
+  String(x.id||'').trim().toLowerCase()!==String(me.id||'').trim().toLowerCase()&&
+  teacherKey(x.teacher)===teacherKey(me.teacher)
+ ): [];
+ const list=(peers.length?peers:fallback).filter(p=>String(p.id||'').trim().toLowerCase()!==sid);
+ if(!me&&!peers.length)return '<div class="card"><h3>Classmates</h3><p class="mute">Your class list is loading or your teacher has not been assigned yet. Please refresh or contact the administrator.</p></div>';
+ const rows=list.map(p=>`<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);gap:12px"><div><b>${esc(p.name||'Student')}</b><div class="mute">${esc(p.sex||'Classmate')}</div></div><button class="btn sm" onclick="composeMessage('${esc(p.id)}')">Message</button></div>`).join('');
+ return `<div class="row between" style="margin-bottom:12px"><div><h3>Classmates</h3><span class="mute">Students assigned to the same teacher as you.</span></div></div><div class="card">${rows||'<p class="mute">No classmates have been assigned to your teacher yet.'+(me&&me.teacher?'':' Your teacher assignment may need to be checked by the administrator.')+'</p>'}</div>`;
+}
+async function sendClassGroupChat(f){
+ if(user.role!=='student')return toast('Only students can use the classmates group chat.');
+ const student=currentStudent(),teacher=String(student?.teacher||'').trim(),message=String(f.message.value||'').trim();
+ if(!teacher)return toast('Your teacher has not been assigned yet. Please contact the administrator.');
+ if(!message)return false;
+ try{
+  if(ONLINE){
+   const result=await onlineApi('send_message',{to:'group:'+teacher,subject:'',category:'general',message});
+   if(result.state){S.messages=result.state.messages||S.messages;S.notifications=result.state.notifications||S.notifications}
+  }else{
+   S.messages.push({id:String(Date.now()),from:user.username||user.id,fromName:user.name,fromRole:'student',to:'group:'+teacher,toName:'Class group',toRole:'group',subject:'',category:'general',body:message,status:'open',createdAt:new Date().toISOString(),readBy:[user.id]});save()
+  }
+  render()
+ }catch(e){toast(e.message||'Could not send your message. Please try again.')}
+ return false
+}
+function classGroupChat(){
+ if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
+ const student=currentStudent(),teacher=String(student?.teacher||'').trim();
+ if(!teacher)return '<div class="card"><h3>Classmates Group Chat</h3><p class="mute">Your teacher has not been assigned yet. Please contact the academy administrator to join your classmates group.</p></div>';
+ const sameClass=(S.students||[]).filter(x=>String(x.teacher||'').trim().toLowerCase()===teacher.toLowerCase());
+ const memberIds=new Set(sameClass.map(x=>String(x.id||'').toLowerCase()));
+ const me=String(user.username||user.id||'').toLowerCase();
+ const groupMessages=(S.messages||[]).filter(m=>String(m.to||'').toLowerCase()===('group:'+teacher).toLowerCase()&&(memberIds.has(String(m.from||'').toLowerCase())||String(m.from||'').toLowerCase()===me)).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+ const roster=sameClass.map(s=>s.name).filter(Boolean);
+ return '<div class="row between" style="margin-bottom:12px;gap:10px"><div><h3>Classmates Group Chat</h3><span class="mute">Discuss lessons, revision, and questions with students assigned to your teacher.</span></div><span class="badge">'+roster.length+' members</span></div>'+
+ '<div class="card" style="margin-bottom:12px"><b>Group members</b><p class="mute" style="margin:6px 0 0">'+(roster.length?roster.map(esc).join(' · '):'Your classmates will appear here.')+'</p></div>'+
+ '<div class="card" style="margin-bottom:12px"><div style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto">'+(groupMessages.map(m=>'<div style="align-self:'+(String(m.from||'').toLowerCase()===me?'flex-end':'stretch')+';max-width:92%;padding:10px 12px;border-radius:12px;background:var(--soft);border:1px solid var(--line)"><b>'+esc(m.fromName||m.from||'Classmate')+'</b><div style="white-space:pre-wrap;margin:5px 0">'+esc(m.body||'')+'</div><div class="mute">'+esc(new Date(m.createdAt||Date.now()).toLocaleString())+'</div></div>').join('')||'<p class="mute">No messages yet. Start the discussion and say hello to your classmates!</p>')+'</div></div>'+
+ '<div class="card"><form onsubmit="event.preventDefault();sendClassGroupChat(this)"><label for="classGroupMessage">Write a message</label><textarea id="classGroupMessage" name="message" rows="3" maxlength="3000" required placeholder="Ask a question or share what you are studying…"></textarea><div class="row end"><button class="btn" type="submit">Send message</button></div></form><p class="mute">Please be respectful and keep the discussion helpful for learning.</p></div>'
+}
+function messageRecipients(){const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();if(user.role==='admin')return [...(S.students||[]).map(s=>({u:s.id,n:s.name,r:'student'})),...(S.teachers||[]).map(t=>({u:t.username,n:t.name,r:'teacher'}))];if(user.role==='teacher')return [{u:'ahruf',n:'Academy Administrator',r:'admin'},...(S.students||[]).filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))];const s=currentStudent();const peerList=Array.isArray(S.messagePeers)?S.messagePeers:[];const peers=(peerList.length?peerList:(S.students||[]).filter(x=>String(x.id||'').toLowerCase()!==String(s?.id||'').toLowerCase()&&s?.teacher&&String(x.teacher||'').trim().toLowerCase()===String(s.teacher).trim().toLowerCase())).map(x=>({u:x.id,n:x.name,r:'student'}));return [...peers,...(s&&s.teacher?[{u:s.teacher,n:teacherName(s.teacher),r:'teacher'}]:[])];}
+let recordedAudioAttachment=null,activeMessageRecorder=null,activeMessageChunks=[];
+async function startMessageRecording(){
+ if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){toast('Audio recording is not supported by this browser. You can attach an audio file instead.');return}
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});activeMessageChunks=[];
+  activeMessageRecorder=new MediaRecorder(stream);
+  activeMessageRecorder.ondataavailable=e=>{if(e.data&&e.data.size)activeMessageChunks.push(e.data)};
+  activeMessageRecorder.onstop=()=>{
+   const recorder=activeMessageRecorder,blob=new Blob(activeMessageChunks,{type:recorder?.mimeType||'audio/webm'});stream.getTracks().forEach(t=>t.stop());
+   if(blob.size>10*1024*1024){recordedAudioAttachment=null;toast('Recording is larger than 10 MB. Please record a shorter message.');return}
+   const reader=new FileReader();reader.onload=()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};const status=document.getElementById('recordingStatus');if(status)status.textContent='Voice message ready to send.'};reader.readAsDataURL(blob)
+  };
+  activeMessageRecorder.start();const status=document.getElementById('recordingStatus');if(status)status.textContent='Recording… press Stop recording when finished.';
+  const start=document.getElementById('recordAudioBtn'),stop=document.getElementById('stopAudioBtn');if(start)start.disabled=true;if(stop)stop.disabled=false
+ }catch(e){toast('Microphone permission was not granted. You can attach an audio file instead.')}
+}
+function stopMessageRecording(){if(activeMessageRecorder&&activeMessageRecorder.state!=='inactive'){activeMessageRecorder.stop();const start=document.getElementById('recordAudioBtn'),stop=document.getElementById('stopAudioBtn');if(start)start.disabled=false;if(stop)stop.disabled=true}}
+async function sendPlatformMessage(f){
+ const fileInput=f.attachment,file=fileInput?.files?.[0];
+ const d={to:f.to.value,subject:'',category:'general',message:f.message.value.trim()};
+ if(f.group?.checked)d.to='group:'+String(currentStudent()?.teacher||'');
+ if(!d.to||(!d.message&&!file&&!recordedAudioAttachment))return false;
+ if(!file&&recordedAudioAttachment)d.attachment=recordedAudioAttachment;
+ if(file){
+  if(file.size>10*1024*1024){toast('Please choose a file smaller than 10 MB.');return false}
+  const reader=new FileReader();
+  d.attachment=await new Promise((resolve,reject)=>{reader.onload=()=>resolve({name:file.name,type:file.type||'application/octet-stream',size:file.size,data:reader.result});reader.onerror=()=>reject(new Error('Could not read the selected file.'));reader.readAsDataURL(file)});
+ }
+ if(ONLINE){const result=await onlineApi('send_message',d);if(result.state){S.messages=result.state.messages||S.messages;S.notifications=result.state.notifications||S.notifications}}
+ else{
+  const rec=messageRecipients().find(x=>x.u===d.to)||{n:d.to.startsWith('group:')?'Class group':d.to,r:'user'};
+  const item={id:String(Date.now()),from:user.id,fromName:user.name,fromRole:user.role,to:d.to,toName:rec.n,toRole:rec.r,subject:'',category:'general',body:d.message,attachment:d.attachment||null,status:'open',createdAt:new Date().toISOString(),readBy:[user.id]};
+  S.messages.push(item);save()
+ }
+ recordedAudioAttachment=null;activeMessageRecorder=null;activeMessageChunks=[];toast('Message sent');render()
+}
+function composeMessage(to){
+ recordedAudioAttachment=null;activeMessageRecorder=null;activeMessageChunks=[];
+ const opts=messageRecipients().map(x=>'<option value="'+esc(x.u)+'" '+(x.u===to?'selected':'')+'>'+esc(x.n)+' — '+esc(x.r)+'</option>').join('');
+ const student=(S.students||[]).find(x=>String(x.id)===String(user.id));
+ const groupOption=user.role==='student'&&student?.teacher?'<label class="row"><input type="checkbox" name="group" style="width:auto" '+(to==='group:'+String(student.teacher)?'checked':'')+'> Send to my class group</label>':'';
+ modal('New message','<label>Recipient</label><select name="to">'+opts+'</select>'+groupOption+'<label>Message</label><textarea name="message" rows="5" placeholder="Write a message..."></textarea><label>Attach a file (PDF, book, music, video, or picture)</label><input type="file" name="attachment" accept=".pdf,.epub,.txt,.doc,.docx,.mp3,.wav,.m4a,.mp4,.mov,.webm,.jpg,.jpeg,.png,.gif,.webp" style="padding:10px"><p class="mute">Maximum file size: 10 MB.</p>',sendPlatformMessage,'Send message')
+}
+function replyMessage(to){composeMessage(to)}
+function messages(){
+ const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase(),myStudent=currentStudent();
+ const list=[...(S.messages||[])].filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me||(user.role==='student'&&myStudent?.teacher&&String(m.to||'').toLowerCase()==='group:'+String(myStudent.teacher).toLowerCase()&&(S.students||[]).some(x=>String(x.id||'').toLowerCase()===String(m.from||'').toLowerCase()&&String(x.teacher||'').toLowerCase()===String(myStudent.teacher).toLowerCase()))).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+ return '<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Private messages, class discussions, files and voice notes.</span></div><button class="btn" onclick="composeMessage()">New message</button></div><div class="card">'+(list.map(m=>'<div class="card" style="margin-bottom:10px;border-color:var(--line)"><div class="mute">'+esc(m.fromName||m.from)+' → '+esc(String(m.to||'').startsWith('group:')?'Class group':(m.toName||m.to))+' · '+new Date(m.createdAt||Date.now()).toLocaleString()+(m.editedAt?' · edited':'')+'</div>'+(m.body?'<p style="white-space:pre-wrap;margin:8px 0">'+esc(m.body)+'</p>':'')+(m.attachment?(String(m.attachment.type||'').startsWith('audio/')?'<p>🎙 '+esc(m.attachment.name||'Voice message')+'</p><audio controls preload="none" style="width:100%;max-width:420px" src="'+esc(m.attachment.data||m.attachment.url||'')+'"></audio>':'<p><a href="'+esc(m.attachment.data||m.attachment.url||'#')+'" download="'+esc(m.attachment.name||'attachment')+'" target="_blank" rel="noopener">📎 '+esc(m.attachment.name||'Attached file')+'</a></p>'):'')+((user.role==='admin'||String(m.from||'').toLowerCase()===me)?'<div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost sm" onclick="editPlatformMessage(\''+esc(m.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button></div>':'')+'</div>').join('')||'<p class="mute">No messages yet.</p>')+'</div>'
+}
+async function editPlatformMessage(id){
+ const m=(S.messages||[]).find(x=>String(x.id)===String(id));if(!m)return toast('Message not found.');
+ if(user.role!=='admin'&&String(m.from||'').toLowerCase()!==String(user.username||user.id||'').toLowerCase())return toast('You can edit only your own messages.');
+ modal('Edit message','<label>Message</label><textarea name="message" rows="5">'+esc(m.body||'')+'</textarea><p class="mute">Attached files and voice recordings are kept as they are.</p>',async f=>{
+  const body=f.message.value.trim();if(!body&&!m.attachment)return toast('A message or attachment is required.');
+  if(ONLINE){const r=await onlineApi('edit_message',{id:m.id,message:body});if(r.state)S.messages=r.state.messages||S.messages}
+  else{m.body=body;m.editedAt=new Date().toISOString();save()}
+  toast('Message updated');render()
+ },'Save changes')
+}
+async function deletePlatformMessage(id){
+ const m=(S.messages||[]).find(x=>String(x.id)===String(id));if(!m)return toast('Message not found.');
+ if(user.role!=='admin'&&String(m.from||'').toLowerCase()!==String(user.username||user.id||'').toLowerCase())return toast('You can delete only your own messages.');
+ if(!confirm('Delete this message? This cannot be undone.'))return;
+ if(ONLINE){const r=await onlineApi('delete_message',{id:m.id});if(r.state)S.messages=r.state.messages||S.messages}
+ else{S.messages=S.messages.filter(x=>String(x.id)!==String(id));save()}
+ toast('Message deleted');render()
+}
+async function markNotice(id){if(ONLINE){try{const r=await onlineApi('mark_notification_read',{id});if(r.state){S.messages=r.state.messages||S.messages;S.notifications=r.state.notifications||S.notifications}}catch(e){toast(e.message)}}else{const n=(S.notifications||[]).find(x=>x.id===id);if(n)n.read=true;save()}render()}
+function notifications(){const list=[...(S.notifications||[])].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));return '<div class="row between" style="margin-bottom:12px"><div><h3>Notifications</h3><span class="mute">Messages, payment reminders and academy alerts.</span></div></div><div class="card">'+(list.map(n=>'<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);opacity:'+(n.read?'.6':'1')+'"><div><b>'+esc(n.title)+'</b><div class="mute">'+esc(n.body)+'</div></div>'+(n.read?'':'<button class="btn ghost sm" onclick="markNotice(\''+esc(n.id)+'\')">Mark read</button>')+'</div>').join('')||'<p class="mute">No notifications.</p>')+'</div>'}function nextScheduledClass(entries){
+ const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],now=new Date();let best=null;
+ (entries||[]).forEach(item=>{
+  const day=dayNames.indexOf(String(item.day||''));if(day<0||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(item.start||'')))return;
+  const [hh,mm]=item.start.split(':').map(Number),date=new Date(now);date.setHours(hh,mm,0,0);
+  let add=(day-now.getDay()+7)%7;date.setDate(date.getDate()+add);if(date<=now)date.setDate(date.getDate()+7);
+  if(!best||date<best.date)best={item,date};
+ });
+ return best;
+}
+function updateNextClassCountdown(){
+ const el=document.getElementById('nextClassCountdown');if(!el)return;
+ const target=Number(el.dataset.timestamp),left=target-Date.now();
+ if(left<=0){el.textContent='Starting now';return}
+ let mins=Math.floor(left/60000),days=Math.floor(mins/1440);mins%=1440;const hours=Math.floor(mins/60);mins%=60;
+ const parts=[];if(days)parts.push(days+' day(s)');if(hours)parts.push(hours+' hour(s)');if(mins||!parts.length)parts.push(mins+' minute(s)');
+ el.textContent='Next class in '+parts.join(', ');
+}
+function timetable(){
+ const list=Array.isArray(S.timetable)?S.timetable:[],days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],isAdmin=user.role==='admin',isTeacher=user.role==='teacher',canManage=isAdmin||isTeacher;
+ const teacherKey=String(user.username||user.id||'').toLowerCase();
+ const owns=x=>String(x.teacher||'').toLowerCase()===teacherKey||String(x.teacher||'')===String(user.id||'');
+ let visible=list;
+ if(user.role==='student')visible=list.filter(x=>(x.students||[]).map(String).includes(String(user.id)));
+ if(isTeacher)visible=list.filter(owns);
+ visible=visible.slice().sort((a,b)=>days.indexOf(a.day)-days.indexOf(b.day)||String(a.start).localeCompare(String(b.start)));
+ const next=user.role==='student'?nextScheduledClass(visible):null;
+ if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
+ if(next)window._nextClassTimer=setInterval(updateNextClassCountdown,1000);
+ const countdown=next?'<div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold)"><div class="mute">UPCOMING CLASS · SENEGAL TIME (GMT/UTC+0)</div><h3 style="margin:6px 0">'+esc(next.item.course||'Quran class')+'</h3><div id="nextClassCountdown" data-timestamp="'+next.date.getTime()+'" style="font-size:1.1rem;font-weight:700">Calculating time remaining…</div><div class="mute" style="margin-top:5px">'+esc(next.item.day)+' · '+esc(next.item.start)+' · '+esc(teacherName(next.item.teacher))+'</div></div>':'';
+ // Schedules are stored and displayed only in Senegal time (Africa/Dakar, UTC+0).
+ const converted=visible.map(x=>({...x,displayDay:x.day,displayStart:x.start,displayEnd:x.end,senegalDay:x.day,senegalStart:x.start,senegalEnd:x.end}));
+ const displayDays=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+ const hourRows=Array.from({length:18},(_,i)=>i+5);
+ const cellMap={};converted.forEach(x=>{const h=Number(String(x.displayStart||'').split(':')[0]);if(!Number.isFinite(h))return;const key=x.displayDay+'|'+h;(cellMap[key]||(cellMap[key]=[])).push(x)});
+ const palette=[['#e0f2fe','#075985','#0284c7'],['#dcfce7','#166534','#16a34a'],['#fef3c7','#92400e','#d97706'],['#f3e8ff','#6b21a8','#9333ea'],['#fce7f3','#9d174d','#db2777'],['#ccfbf1','#115e59','#0d9488'],['#ffedd5','#9a3412','#ea580c']];
+ const hourLabel=h=>String(h).padStart(2,'0')+':00';
+ const gridRows=hourRows.map(h=>'<tr><th style="position:sticky;left:0;z-index:2;background:var(--soft);min-width:90px;padding:10px;white-space:nowrap;border:1px solid #94a3b8">'+hourLabel(h)+'</th>'+displayDays.map(day=>{const items=cellMap[day+'|'+h]||[];return '<td style="min-width:145px;height:58px;vertical-align:top;padding:5px;background:var(--card);border:1px solid #94a3b8;outline-offset:-3px">'+items.map(x=>{const i=converted.indexOf(x),p=palette[i%palette.length];return '<div tabindex="0" role="button" aria-label="Select '+esc(x.course||'Quran class')+'" onclick="selectTimetableEntry(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();selectTimetableEntry(this)}" style="background:'+p[0]+';color:'+p[1]+';border:2px solid '+p[2]+';border-radius:2px;padding:8px;margin-bottom:5px;font-size:.78rem;cursor:pointer;transition:box-shadow .15s,border-color .15s"><b>'+esc(x.course||'Quran class')+'</b><div>'+esc(x.displayStart)+'–'+esc(x.displayEnd)+'</div><div>'+esc(teacherName(x.teacher))+'</div><div>'+esc((x.students||[]).map(id=>(S.students||[]).find(s=>String(s.id)===String(id))?.name||id).join(', ')||'—')+'</div>'+(canManage&&(isAdmin||owns(x))?'<div class="row" style="margin-top:5px"><button class="btn ghost sm" onclick="editTimetable(\''+esc(x.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deleteTimetable(\''+esc(x.id)+'\',this)">Delete</button></div>':'')+'</div>'}).join('')+'</td>'}).join('')+'</tr>').join('');
+ const empty=user.role==='student'?'No timetable entries have been assigned to you yet.':isTeacher?'No classes have been assigned to your teacher account yet.':'No timetable entries have been assigned yet.';
+ const table=visible.length?'<div class="card" style="overflow:auto;padding:0"><table style="width:100%;min-width:1120px;border-collapse:collapse;border-spacing:0;border:1px solid #64748b"><thead><tr><th style="position:sticky;left:0;z-index:3;background:var(--soft);padding:12px;border:1px solid #94a3b8">Hours</th>'+displayDays.map(d=>'<th style="text-align:center;padding:12px;background:var(--soft);min-width:145px;border:1px solid #94a3b8">'+d+'</th>').join('')+'</tr></thead><tbody>'+gridRows+'</tbody></table></div>':'<div class="card"><p class="mute">'+empty+'</p></div>';
+ return countdown+'<div class="row between" style="margin-bottom:12px;gap:12px"><div><h3>'+(isAdmin?'Timetable Management':isTeacher?'My Teaching Timetable':'My Timetable')+'</h3><span class="mute">Days are columns and hours are rows. All class times use Senegal time (GMT/UTC+0).</span></div><div class="row">'+(canManage?'<button class="btn" onclick="editTimetable()">Add course</button>':'')+'</div></div>'+table;
+}
+function selectTimetableEntry(el){document.querySelectorAll('.timetable-entry-selected').forEach(x=>{x.classList.remove('timetable-entry-selected');x.style.boxShadow='';x.style.outline='';x.style.borderWidth='2px'});el.classList.add('timetable-entry-selected');el.style.boxShadow='0 0 0 3px var(--gold)';el.style.outline='2px solid var(--gold)';el.style.borderWidth='3px';}
+function editTimetable(id){
+ const isAdmin=user.role==='admin',isTeacher=user.role==='teacher',canManage=isAdmin||isTeacher;
+ if(!canManage){toast('You cannot edit the timetable.');return}
+ const owns=x=>String(x.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()||String(x.teacher||'')===String(user.id||'');
+ const x=(S.timetable||[]).find(a=>String(a.id)===String(id))||{id:'',course:'',teacher:isTeacher?(user.username||user.id||''):'',day:'Monday',start:'17:00',end:'18:00',students:[]};
+ if(x.id&&isTeacher&&!owns(x)){toast('You can only edit your own assigned classes.');return}
+ const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+ const opts=days.map(v=>'<option value="'+v+'" '+(v===x.day?'selected':'')+'>'+v+'</option>').join('');
+ const eligibleStudents=(S.students||[]).filter(s=>isAdmin||!s.teacher||String(s.teacher).toLowerCase()===String(user.username||'').toLowerCase()||String(s.teacher)===String(user.id||''));
+ const studentOpts=eligibleStudents.map(s=>'<option value="'+esc(s.id)+'" '+((x.students||[]).map(String).includes(String(s.id))?'selected':'')+'>'+esc(s.name)+' — '+esc(s.id)+'</option>').join('');
+ const teacherField=isAdmin?'<label>Teacher</label><select name="teacher">'+teacherOptions(x.teacher)+'</select>':'<label>Teacher</label><input value="'+esc(teacherName(x.teacher||user.username||user.id))+'" disabled><input type="hidden" name="teacher" value="'+esc(x.teacher||user.username||user.id||'')+'">';
+ modal(x.id?'Edit timetable entry':'Add timetable entry','<label>Course / Subject</label><input name="course" required value="'+esc(x.course)+'" placeholder="e.g. Qur’an reading"><div class="row"><div style="flex:1;min-width:130px"><label>Day</label><select name="day">'+opts+'</select></div><div style="flex:1;min-width:130px"><label>From</label><input name="start" type="time" required value="'+esc(x.start)+'"></div><div style="flex:1;min-width:130px"><label>To</label><input name="end" type="time" required value="'+esc(x.end)+'"></div></div>'+teacherField+'<label>Students (Ctrl/Cmd + click to select multiple)</label><select name="students" multiple size="6">'+studentOpts+'</select>',async f=>{
+  const students=[...f.students.selectedOptions].map(o=>o.value),item={id:x.id||'TT-'+Date.now(),course:f.course.value.trim(),teacher:f.teacher.value,day:f.day.value,start:f.start.value,end:f.end.value,students};
+  if(item.start>=item.end){toast('End time must be after start time.');return false}
+  if(x.id){const i=S.timetable.findIndex(a=>String(a.id)===String(x.id));if(i>=0)S.timetable[i]=item}else S.timetable.push(item);
+  save();toast(x.id?'Timetable updated':'Course added to timetable');render()
+ },x.id?'Save changes':'Add course')
+}
+function deleteTimetable(id,b){const isAdmin=user.role==='admin',isTeacher=user.role==='teacher';const x=(S.timetable||[]).find(a=>String(a.id)===String(id));if(!x||(!isAdmin&&!(isTeacher&&(String(x.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()||String(x.teacher||'')===String(user.id||'')))))return;if(!b.dataset.s){b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red');return}S.timetable=(S.timetable||[]).filter(x=>String(x.id)!==String(id));save();toast('Timetable entry removed');render()}
+function viewStaff(){
+ const admin=user.role==='admin';
+ const items=admin
+  ? [['overview','Overview'],['students','Students'],['teachers','Teachers'],['myclass','MyClass'],['surahs','All surahs'],['timetable','Timetable'],['attendance','Attendance'],['payments','Payments'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['class','Live class']]
+  : [['students','My students'],['myclass','MyClass'],['class','Live class'],['timetable','My timetable'],['attendance','Attendance'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]];
+ const allowed=items.map(x=>x[0]);
+ if(!allowed.includes(tab))tab=admin?'overview':'students';
+ const pages={overview,students,teachers,attendance,payments,messages,notifications,timetable,klass,myclass,surahs:adminSurahs};
+ return `<div class="row between"><h2>Welcome, ${esc(user.name)}</h2><span class="badge">${admin?'Administrator':'Teacher'}</span></div><div class="card" style="margin:10px 0 16px"><div class="row between" style="align-items:center"><div><span class="mute">${t('Account ID')}</span><div style="font-weight:800;margin-top:4px">${esc(user.username||user.id||'—')}</div></div><button class="btn ghost sm" type="button" onclick="copyAccountId('${esc(user.username||user.id||'')}')">${t('Copy ID')}</button></div></div>`+nav(items)+pages[tab==='class'?'klass':tab]()
+}
+function teacherName(v){const x=(S.teachers||[]).find(t=>String(t.username).toLowerCase()===String(v||'').toLowerCase());return x?.name||v||'Unassigned'}
+function teacherOptions(selected=''){return `<option value="">Unassigned</option>`+(S.teachers||[]).map(t=>`<option value="${esc(t.username)}" ${String(t.username).toLowerCase()===String(selected||'').toLowerCase()?'selected':''}>${esc(t.name)} — ${esc(t.username)}</option>`).join('')}
+function teacherAvatar(t,size=64){return t?.picture?'<img src="'+esc(t.picture)+'" alt="'+esc(t.name||'Teacher')+'" style="width:'+size+'px;height:'+size+'px;object-fit:cover;border-radius:50%;display:block">':'<div style="width:'+size+'px;height:'+size+'px;border-radius:50%;display:grid;place-items:center;background:var(--soft);font-size:'+Math.round(size*.42)+'px;flex-shrink:0">👨‍🏫</div>'}
+function readTeacherPicture(file){return new Promise((resolve,reject)=>{if(!file)return resolve('');if(!file.type||!file.type.startsWith('image/'))return reject(new Error('Please choose an image file.'));if(file.size>5*1024*1024)return reject(new Error('Please choose an image smaller than 5 MB.'));const reader=new FileReader();reader.onerror=()=>reject(new Error('Could not read the selected image.'));reader.onload=()=>{const img=new Image();img.onerror=()=>reject(new Error('Could not open the selected image.'));img.onload=()=>{const scale=Math.min(1,400/Math.max(img.width,img.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/jpeg',.78))};img.src=reader.result};reader.readAsDataURL(file)})}
+function teachers(){
+ if(user.role!=='admin')return '<div class="card"><b>Permission denied.</b></div>';
+ const list=S.teachers||[];
+ return `<div class="row between" style="margin-bottom:12px"><div><h3>Teacher Management</h3><span class="mute">Create teacher accounts and assign students to them.</span></div><button class="btn" onclick="editT()">Add teacher</button></div>
+ <div class="card tw"><table><thead><tr><th>Teacher</th><th>Username</th><th>Email</th><th>Phone</th><th>Students</th><th></th></tr></thead><tbody>${list.map(t=>`<tr><td><div style="display:flex;align-items:center;gap:10px">${teacherAvatar(t,38)}<b>${esc(t.name)}</b></div></td><td>${esc(t.username)}</td><td>${esc(t.email)}</td><td>${esc(t.phone||'')}</td><td>${S.students.filter(s=>String(s.teacher||'').toLowerCase()===String(t.username||'').toLowerCase()).length}</td><td class="row"><button class="btn ghost sm" onclick="editT('${esc(t.username)}')">Edit</button><button class="btn ghost sm" onclick="delT('${esc(t.username)}',this)">Delete</button></td></tr>`).join('')||'<tr><td colspan="6" class="mute">No teachers yet.</td></tr>'}</tbody></table></div>`}
+function editT(username){
+ const t=(S.teachers||[]).find(x=>String(x.username).toLowerCase()===String(username||'').toLowerCase())||{name:'',username:'',email:'',phone:'',picture:''};
+ modal(username?'Edit teacher':'Add teacher',`<label>Full name</label><input name="name" required value="${esc(t.name)}"><div class="row"><div style="flex:1"><label>Username</label><input name="username" required value="${esc(t.username)}" ${username?'readonly':''}></div><div style="flex:1"><label>Password ${username?'<span class="mute">(leave blank to keep current)</span>':''}</label><input name="password" type="password" ${username?'':'required'}></div></div><div class="row"><div style="flex:1"><label>Email</label><input name="email" type="email" required value="${esc(t.email||'')}"></div><div style="flex:1"><label>Phone</label><input name="phone" value="${esc(t.phone||'')}"></div></div><label>Teacher picture</label><input name="picture" type="file" accept="image/*" onchange="previewTeacherPicture(this)"><div class="mute" style="font-size:12px;margin-top:5px">Choose a new photo (up to 5 MB). The preview below shows the photo selected for saving.</div><div id="teacher-picture-preview" style="margin-top:10px">${t.picture?teacherAvatar(t,80):'<div class="mute">No picture selected.</div>'}</div>`,async f=>{
+ const pictureInput=f.namedItem('picture');
+ const pictureFile=pictureInput&&pictureInput.files&&pictureInput.files[0];
+ const newPicture=pictureFile?await readTeacherPicture(pictureFile):'';
+ const d={name:f.namedItem('name').value.trim(),username:f.namedItem('username').value.trim(),password:f.namedItem('password').value,email:f.namedItem('email').value.trim(),phone:f.namedItem('phone').value.trim(),picture:newPicture||t.picture||''};
+ if(ONLINE){const result=await onlineApi('upsert_teacher',{teacher:d});if(result.state)S=result.state;}
+ else{const i=(S.teachers||[]).findIndex(x=>String(x.username).toLowerCase()===String(username||'').toLowerCase());if(i<0)S.teachers.push({name:d.name,username:d.username,email:d.email,phone:d.phone,picture:d.picture,active:true});else S.teachers[i]={...S.teachers[i],name:d.name,email:d.email,phone:d.phone,picture:d.picture};S.students.forEach(s=>{if(String(s.teacher||'').toLowerCase()===String(username||'').toLowerCase())s.teacher=d.username});save();}
+ toast(ONLINE?'Teacher account saved online':'Teacher saved');render()
+ })}
+function previewTeacherPicture(input){
+ const file=input&&input.files&&input.files[0],box=document.getElementById('teacher-picture-preview');
+ if(!box||!file)return;
+ if(!file.type||!file.type.startsWith('image/')){input.value='';toast('Please choose an image file.');return}
+ if(file.size>5*1024*1024){input.value='';toast('Please choose an image smaller than 5 MB.');return}
+ const reader=new FileReader();
+ reader.onload=()=>{if(box)box.innerHTML='<img src="'+String(reader.result).replace(/"/g,'&quot;')+'" alt="Selected teacher picture preview" style="width:80px;height:80px;object-fit:cover;border-radius:50%;display:block">'};
+ reader.onerror=()=>toast('Could not read the selected image.');
+ reader.readAsDataURL(file)
+}
+async function delT(username,b){
+ if(user.role!=='admin')return;
+ if(!b.dataset.s){b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red');return}
+ if(ONLINE){try{const result=await onlineApi('delete_teacher',{username});if(result.state)S=result.state;toast('Teacher deleted');render()}catch(e){toast(e.message||'Delete failed')}}
+ else{S.teachers=(S.teachers||[]).filter(t=>String(t.username).toLowerCase()!==String(username).toLowerCase());S.students.forEach(s=>{if(String(s.teacher||'').toLowerCase()===String(username).toLowerCase())s.teacher=''});save();toast('Teacher deleted');render()}
+}
+
+function overview(){
+ const n=S.students.length,known=S.students.filter(s=>s.sex==='Male'||s.sex==='Female').length,males=S.students.filter(s=>s.sex==='Male').length,females=S.students.filter(s=>s.sex==='Female').length,maleRate=known?males/known*100:0,femaleRate=known?females/known*100:0,avg=n?S.students.reduce((a,s)=>a+lvl(s),0)/n:0,rev=S.pay.filter(p=>p.st==='paid').reduce((a,p)=>a+p.amt,0),due=S.pay.filter(p=>p.st!=='paid').length;
+ const top=[...S.students].sort((a,b)=>b.sur.length-a.sur.length);
+ return '<div class="stats"><div class="card"><b>'+n+'</b><span>Students</span></div><div class="card"><b>'+maleRate.toFixed(1)+'%</b><span>Male students</span></div><div class="card"><b>'+femaleRate.toFixed(1)+'%</b><span>Female students</span></div><div class="card"><b>'+avg.toFixed(1)+'%</b><span>Average Quran progress</span></div><div class="card"><b>$'+rev+'</b><span>Collected</span></div><div class="card"><b>'+due+'</b><span>Unpaid invoices</span></div></div>'
+ +'<div class="card"><h3>Quran Memorization Ranking</h3><p class="mute">Ranked automatically by the number of memorized surahs.</p><br>'
+ +top.map((s,i)=>'<div class="row between" style="margin-bottom:8px"><span><b>#'+(i+1)+'</b> '+esc(s.name)+'</span><span class="mute">'+s.sur.length+' surahs</span></div><div class="bar2"><i style="width:'+lvl(s)+'%"></i></div>').join('')
++(top.length?'':'<p class="mute">Add students to start the ranking.</p>')+'</div>';
+}
+function students(){
+ const teacher=user.role==='teacher';
+ const list=teacher?S.students.filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()):S.students;
+ const males=list.filter(s=>s.sex==='Male').length, females=list.filter(s=>s.sex==='Female').length;
+ const ages=list.filter(s=>Number(s.age)>0);
+ const avgAge=ages.length?ages.reduce((a,s)=>a+Number(s.age),0)/ages.length:0;
+ return `<div class="row between" style="margin-bottom:12px"><div><h3>${teacher?'My students':'Students'}</h3><span class="mute">${teacher?'Students assigned to you.':'Manage and monitor academy students.'}</span></div><div class="row" style="flex:1;justify-content:flex-end"><input id="q" placeholder="Search by name, ID, phone or teacher" oninput="rows()" style="max-width:340px">${teacher?'':'<button class="btn" onclick="editS()">Add student</button>'}</div></div>
+ <div class="stats" style="margin-bottom:14px"><div class="card"><b>${list.length}</b><span>${teacher?'Assigned students':'Total students'}</span></div><div class="card"><b>${males}</b><span>Male</span></div><div class="card"><b>${females}</b><span>Female</span></div><div class="card"><b>${avgAge?avgAge.toFixed(1):'—'}</b><span>Average age</span></div></div>
+ <div class="card tw"><table><thead><tr><th>ID</th><th>Student</th><th>Age</th><th>Sex</th><th>Level</th><th>Quran progress</th>${teacher?'':'<th>Payment</th><th>Teacher</th><th></th>'}</tr></thead><tbody id="tb"></tbody></table></div>`+(setTimeout(rows),'')}
+function rows(){const q=($('#q')?.value||'').toLowerCase(),tb=$('#tb');if(!tb)return;
+ const teacher=user.role==='teacher';
+ const source=teacher?S.students.filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()):S.students;
+ tb.innerHTML=source.filter(s=>(s.name+s.id+s.phone+s.email+s.teacher).toLowerCase().includes(q)).map(s=>teacher
+ ? `<tr><td>${esc(s.id)}</td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${s.sur.length}/114</span></td></tr>`
+ : `<tr><td>${esc(s.id)}</td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${s.sur.length}/114</span></td><td><span class="badge ${s.pay}">${s.pay}</span></td><td><span class="mute">${esc(teacherName(s.teacher))}</span></td><td class="row"><button class="btn ghost sm" onclick="editS('${s.id}')">Edit</button><button class="btn ghost sm" onclick="delS('${s.id}',this)">Delete</button></td></tr>`).join('')||`<tr><td colspan="${teacher?6:9}" class="mute">No students yet.</td></tr>`}
+async function delS(id,b){
+ if(b.dataset.s){
+   if(ONLINE){
+     try{const result=await onlineApi('delete_student',{studentId:id});if(result.state)S=result.state;toast('Student deleted online');render()}
+     catch(e){toast(e.message||'Delete failed')}
+   }else{S.students=S.students.filter(s=>s.id!==id);save();toast('Student deleted');render()}
+   return
+ }
+ b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red')
+}
+function generateStudentId(name,phone,existingId){
+ const keep=String(existingId||'').trim();
+ if(keep)return keep;
+ const letters=String(name||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^A-Za-z]/g,'').toUpperCase();
+ const digits=String(phone||'').replace(/\\D/g,'');
+ if(letters.length<2||digits.length<2)return '';
+ const base=letters[0]+letters[letters.length-1]+'ARF'+digits.slice(-2);
+ const used=new Set((S.students||[]).map(x=>String(x.id||'').toUpperCase()));
+ if(!used.has(base))return base;
+ let n=2;while(used.has(base+'-'+n))n++;return base+'-'+n;
+}
+function editS(id){if(user.role!=='admin'){toast('Only the administrator can edit students.');return}const s=S.students.find(x=>x.id===id)||{id:'',name:'',age:'',sex:'',phone:'',email:'',pw:'',level:'Beginner',pay:'pending',sur:[],teacher:''};
+ const opt=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('');
+ const generated=generateStudentId(s.name,s.phone,id||'');
+ modal(id?'Edit student':'Add student',`<label>Full name</label><input name="name" required value="${esc(s.name)}"><div class="row"><div style="flex:1"><label>Student ID</label><input name="id" readonly value="${esc(generated)}" placeholder="Generated automatically"><span class="mute"></span></div><div style="flex:1"><label>Password ${id?'<span class="mute">(leave blank to keep current)</span>':''}</label><input name="pw" ${id?'':'required'} type="password" value="${esc(s.pw||'')}"></div></div><div class="row"><div style="flex:1"><label>Age</label><input name="age" type="number" min="1" max="120" required value="${esc(s.age??'')}"></div><div style="flex:1"><label>Sex</label><select name="sex" required><option value="">Select sex</option><option value="Male" ${s.sex==='Male'?'selected':''}>Male</option><option value="Female" ${s.sex==='Female'?'selected':''}>Female</option></select></div></div><div class="row"><div style="flex:1"><label>Phone</label><input name="phone" required value="${esc(s.phone)}" oninput="this.form.id.value=generateStudentId(this.form.name.value,this.value,'${esc(id||'')}')"></div><div style="flex:1"><label>Email</label><input name="email" type="email" value="${esc(s.email)}"></div></div><div class="row"><div style="flex:1"><label>Level</label><select name="level">${opt(['Beginner','Intermediate','Advanced'],s.level)}</select></div><div style="flex:1"><label>Payment</label><select name="pay">${opt(['paid','pending','overdue'],s.pay)}</select></div></div><label>Teacher</label><select name="teacher">${teacherOptions(s.teacher)}</select><label>Memorized surahs — select any numbers</label><div class="surah-check-grid" style="display:grid;grid-template-columns:1fr;gap:6px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px;margin:6px 0 14px">${SUR.map((x,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px;border-radius:6px;background:var(--soft);font-weight:500;cursor:pointer"><input type="checkbox" name="surah" value="${esc(x)}" ${s.sur.includes(x)?'checked':''} style="width:auto;min-width:16px;margin:0">${i+1}. ${surahLabel(x,i)}</label>`).join('')}</div><p class="mute" style="font-size:12px">Tick each surah independently. You can choose any combination, even if the numbers are not consecutive.</p>`,async f=>{
+ const nid=f.id.value.trim();
+ if(!nid){toast('Enter a full name and a valid phone number to generate the Student ID.');return false}
+ if(S.students.some(x=>x.id===nid&&x.id!==id)){toast('That generated ID is already used');return false}
+ const age=Number(f.age.value);if(!Number.isInteger(age)||age<1||age>120){toast('Enter a valid age between 1 and 120.');return false}if(!['Male','Female'].includes(f.sex.value)){toast('Select Male or Female.');return false}const d={id:nid,name:f.name.value.trim(),age,sex:f.sex.value,pw:f.pw.value,phone:f.phone.value.trim(),email:f.email.value.trim(),teacher:f.teacher.value.trim(),level:f.level.value,pay:f.pay.value,sur:[...document.querySelectorAll('#mf input[name="surah"]:checked')].map(o=>o.value)};
+ if(ONLINE){
+  toast('Saving student...');
+  // Do not replace the browser's complete student list with a partial API response.
+  // Update only this student locally, then persist the complete list.
+  const savedIndex=S.students.findIndex(x=>x.id===nid);
+  if(savedIndex>=0){
+    S.students[savedIndex]={...S.students[savedIndex],...d};
+  }else{
+    S.students.push(d);
+  }
+  await onlineApi('upsert_student',{student:d,existingId:id||null});
+  await onlineApi('save_state',{state:S});
+}else{const i=S.students.findIndex(x=>x.id===id);i<0?S.students.push(d):S.students[i]=d;save();}
+ toast(ONLINE?'Student account created/updated online':'Student saved');render()})}
+
+function attendance(){if(user.role!=='admin'&&user.role!=='teacher')return '<div class="card"><b>Permission denied.</b></div>';const d=new Date().toISOString().slice(0,10);
+ return `<div class="card"><div class="row between"><h3>Attendance</h3><input type="date" id="ad" value="${d}" style="max-width:180px" onchange="render()"></div><br><div class="tw"><table><thead><tr><th>Student</th><th>Status</th><th>Memorization</th></tr></thead><tbody>${S.students.map(s=>{const r=(S.att[d]||{})[s.id]||{};return `<tr><td><b>${esc(s.name)}</b></td><td><select id="a-${s.id}"><option value="present" ${r.a==='present'?'selected':''}>Present</option><option value="late" ${r.a==='late'?'selected':''}>Late</option><option value="absent" ${r.a==='absent'?'selected':''}>Absent</option></select></td><td><select id="m-${s.id}"><option value="memorized">Memorized</option><option value="partial" ${r.m==='partial'?'selected':''}>Partial</option><option value="not" ${r.m==='not'?'selected':''}>Not memorized</option></select></td></tr>`}).join('')}</tbody></table></div><div class="row end"><button class="btn" onclick="saveAtt()">Save attendance</button></div></div>`}
+function saveAtt(){if(user.role!=='admin'&&user.role!=='teacher')return toast('You do not have permission to edit attendance.');const d=$('#ad').value;S.att[d]={};S.students.forEach(s=>S.att[d][s.id]={a:$('#a-'+s.id).value,m:$('#m-'+s.id).value});save();toast('Attendance saved')}
+function invoiceStudent(p){const sid=String(p?.sid||'').trim().toLowerCase();return (S.students||[]).find(s=>String(s?.id||'').trim().toLowerCase()===sid)||null}
+function closeInvoice(){const el=document.getElementById('invoiceOverlay');if(el)el.remove()}
+function viewInvoiceById(inv){const i=(S.pay||[]).findIndex(p=>String(p?.inv||'')===String(inv||''));if(i<0)return toast('Invoice not found');return viewInvoice(i)}
+function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not found');const s=invoiceStudent(p);if(!s)return toast('Student not found');if(user.role==='student'){const ids=[user.username,user.id,user.studentId,user.student_id].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);const ownStudent=(S.students||[]).find(st=>[st?.id,st?.username,st?.studentId,st?.student_id].some(v=>ids.includes(String(v||'').trim().toLowerCase())));if(!ownStudent||String(ownStudent.id||'').trim().toLowerCase()!==String(s.id||'').trim().toLowerCase())return toast('You can only access your own invoice.');}
+ closeInvoice();const app=$('#app');if(!app)return toast('Academy page is not ready');
+ app.insertAdjacentHTML('beforeend',`<div id="invoiceOverlay" style="position:fixed;inset:0;z-index:9999;overflow:auto;background:#f5f7fb;color:#172033;padding:16px;box-sizing:border-box;font-family:Arial,sans-serif">
+ <div class="row between" style="position:sticky;top:0;z-index:2;max-width:850px;margin:0 auto 14px;padding:10px 0;background:#f5f7fb;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost" onclick="closeInvoice()">← Back to dashboard</button><div class="row" style="gap:8px"><button type="button" class="btn gold" onclick="window.print()">Print / Save PDF</button><button type="button" class="btn ghost" onclick="closeInvoice()" aria-label="Close invoice">Close ✕</button></div></div>
+ <style>@page{size:A4 landscape;margin:0}@media print{body>*{visibility:hidden!important}#invoiceOverlay,#invoiceOverlay *{visibility:visible!important}#invoiceOverlay{position:absolute!important;inset:0!important;overflow:visible!important;background:#fff!important;padding:0!important}#invoiceOverlay .invoice-actions{display:none!important}.invoice-paper{width:297mm!important;min-height:210mm!important;padding:15mm!important;box-sizing:border-box!important;box-shadow:none!important;border:0!important;border-radius:0!important;margin:0 auto!important}}</style>
+ <div class="invoice-paper" style="width:min(100%,297mm);min-height:210mm;margin:0 auto 36px;background:#fff;padding:clamp(18px,5vw,20mm);border:1px solid #ddd;border-radius:0;box-shadow:0 8px 30px #0001;box-sizing:border-box">
+ <div style="display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;border-bottom:3px solid #c9a227;padding-bottom:20px"><div><div style="font-size:24px;font-weight:800">Al-Ahruf International Academy</div><div style="color:#687386">Nurturing faith, enhancing learning</div></div><div><b>Invoice</b><br>${esc(p.inv||'')}</div></div>
+ <div style="text-align:center;font-size:28px;font-weight:800;margin:30px 0">PAYMENT INVOICE</div>
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin:20px 0"><div style="border:1px solid #ddd;padding:16px;border-radius:8px"><b>Student</b><br>${esc(s.name||'')}<br><span style="color:#687386">ID: ${esc(s.id||'')}</span><br><span style="color:#687386">${esc(s.email||'')}</span></div><div style="border:1px solid #ddd;padding:16px;border-radius:8px"><b>Invoice details</b><br>Invoice date: ${esc(p.date||new Date().toISOString().slice(0,10))}<br>Due date: ${esc(p.due||'')}<br>Status: <b style="text-transform:capitalize">${esc(p.st||'pending')}</b></div></div>
+ <div style="border:1px solid #ddd;padding:16px;border-radius:8px"><b>Description</b><br>${esc(p.description||'Academy tuition')}</div>
+ <div style="font-size:22px;font-weight:800;text-align:right;margin-top:25px;padding-top:20px;border-top:2px solid #ddd">Amount: $${esc(p.amt??0)}</div><p style="color:#687386;margin-top:40px">Thank you for being part of Al-Ahruf International Academy.</p></div></div>`)}
+
+function payments(){if(user.role!=='admin')return '<div class="card"><b>Permission denied.</b></div>';const nm=id=>(S.students.find(s=>s.id===id)||{}).name||id;
+ return `<div class="card"><div class="row between"><h3>Payments & Invoices</h3><button class="btn gold" onclick="newInv()">New invoice</button></div><p class="mute">Each invoice belongs to the selected student. Open an invoice to review its details.</p><br><div class="tw"><table><thead><tr><th>Invoice</th><th>Student</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${S.pay.map((p,i)=>`<tr><td>${esc(p.inv)}</td><td>${esc(nm(p.sid))}</td><td>$${p.amt}</td><td>${esc(p.due)}</td><td><span class="badge ${p.st}">${p.st}</span></td><td><button class="btn ghost sm" onclick="viewInvoice(${i})">View invoice</button>${p.st!=='paid'?` <button class="btn ghost sm" onclick="markPaid(${i})">Mark paid</button>`:''}</td></tr>`).join('')}</tbody></table></div></div>`}
+function markPaid(i){if(user.role!=='admin')return toast('Only the administrator can edit payments.');const p=S.pay[i];p.st='paid';const s=S.students.find(x=>x.id===p.sid);if(s)s.pay='paid';save();toast('Marked as paid');render()}
+function newInv(){if(user.role!=='admin')return toast('Only the administrator can create invoices.');if(!S.students.length)return toast('Add a student first');const today=new Date().toISOString().slice(0,10),due=new Date(Date.now()+2592e6).toISOString().slice(0,10);
+ modal('New invoice',`<label>Student</label><select name="s">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><label>Amount (USD)</label><input name="a" type="number" min="1" step="0.01" value="50" required><label>Description / Month</label><input name="desc" placeholder="e.g. October 2026 tuition" required><label>Due date</label><input name="d" type="date" required value="${due}">`,f=>{const inv='INV-'+new Date().getFullYear()+String(Date.now()).slice(-6);S.pay.push({inv,sid:f.s.value,amt:+f.a.value,due:f.d.value,date:today,description:f.desc.value.trim(),st:'pending'});save();toast('Invoice created and saved for the selected student');render()},'Create')}
+function classLinkTarget(raw){
+ const value=String(raw||'').trim();
+ const match=value.match(/#class=([A-Za-z0-9_-]+)/i);
+ if(match){try{const parsed=new URL(value,location.href);if(parsed.hostname===location.hostname)return 'https://meet.jit.si/'+encodeURIComponent(match[1]);}catch{}}
+ try{const parsed=new URL(value);if(['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())){const parts=parsed.pathname.split('/').filter(Boolean);if(parts.length===1&&/^[A-Za-z0-9_-]+$/.test(parts[0]))return 'https://meet.jit.si/'+encodeURIComponent(parts[0]);}}catch{}
+ return value;
+}
+function myclass(){
+ S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
+ S.classLinks=S.classLinks.map(c=>({...c,url:classLinkTarget(c.url)}));
+ const admin=user.role==='admin',teacher=user.role==='teacher',student=user.role==='student';
+ const me=String(user.username||user.id||'').trim().toLowerCase();
+ const studentRec=student?((S.students||[]).find(x=>String(x.id||'').trim().toLowerCase()===me)||currentStudent()):null;
+ const assignedTeacher=String(studentRec?.teacher||'').trim().toLowerCase();
+ const myTeacher=String((S.teachers||[]).find(t=>String(t.username||'').trim().toLowerCase()===assignedTeacher||String(t.name||'').trim().toLowerCase()===assignedTeacher)?.username||assignedTeacher).trim().toLowerCase();
+ const rows=student?S.classLinks.filter(c=>(!c.level||String(c.level).toLowerCase()==='all'||String(c.level).toLowerCase()===String(studentRec?.level||'').toLowerCase())&&(!c.teacher||String(c.teacher).toLowerCase()===myTeacher)):S.classLinks.filter(c=>admin||String(c.owner||'').toLowerCase()===me);
+ return `<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">${student?'Class links saved by your academy or teacher. New links appear automatically when they match your level and assigned teacher.':'Save reusable class links here. Students will see matching links automatically, including students enrolled later.'}</span></div>${!student?'<button class="btn" onclick="editClassLink()">+ Add class link</button>':''}</div>
+ ${rows.map(c=>`<div class="card" style="margin-bottom:12px"><h3 style="margin-top:0">${esc(c.title)}</h3><div class="mute">${esc(c.level&&c.level!=='all'?'Level: '+c.level:'All levels')}${c.teacher?' · Teacher: '+esc(teacherName(c.teacher)):' · Available across teachers'}</div><p style="word-break:break-all">${esc(c.url)}</p><div class="row"><a class="btn gold" href="${esc(c.url)}" target="_blank" rel="noopener">Open class</a><button class="btn ghost" data-url="${esc(c.url)}" onclick="copy(this.dataset.url)">Copy link</button>${!student&&(admin||String(c.owner||'').toLowerCase()===me)?'<button class="btn ghost" data-id="'+esc(c.id)+'" onclick="editClassLink(this.dataset.id)">Edit</button><button class="btn ghost" data-id="'+esc(c.id)+'" onclick="deleteClassLink(this.dataset.id)">Delete</button>':''}</div></div>`).join('')||'<div class="card mute">'+(student?'No class links are assigned to your level or teacher yet. Please contact your teacher or administrator.':'No saved class links yet. Add a link once and eligible students will see it automatically.')+'</div>'}`
+}
+function editClassLink(id){
+ if(user.role!=='admin'&&user.role!=='teacher')return;
+ S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
+ const me=String(user.username||user.id||'').trim().toLowerCase();
+ const c=S.classLinks.find(x=>String(x.id)===String(id))||{title:'',url:'',level:'all',teacher:user.role==='teacher'?(user.username||''):'',owner:me};
+ if(id&&user.role!=='admin'&&String(c.owner||'').toLowerCase()!==me)return toast('You can only edit your own class links.');
+ const levelOptions=['all','Beginner','Intermediate','Advanced'].map(v=>'<option value="'+v+'" '+(String(c.level||'all')===v?'selected':'')+'>'+(v==='all'?'All levels':v)+'</option>').join('');
+ const teacherOptionsHtml='<option value="">All teachers</option>'+(S.teachers||[]).map(t=>'<option value="'+esc(t.username)+'" '+(String(c.teacher||'').toLowerCase()===String(t.username||'').toLowerCase()?'selected':'')+'>'+esc(t.name)+' — '+esc(t.username)+'</option>').join('');
+  const savedRoom=String(c.url||'').replace('https://meet.jit.si/','').replace('http://meet.jit.si/','').split('?')[0].split('#')[0].replace(/\/$/,'');
+ modal(id?'Edit class link':'Add class link',`<label>Class name</label><input name="title" required maxlength="100" value="${esc(c.title)}" placeholder="e.g. Tajwid — Level 1"><label>Jitsi room name or link</label><input name="url" type="text" required value="${esc(savedRoom)}" placeholder="e.g. AlAhrufTajwid or https://meet.jit.si/AlAhrufTajwid"><p class="mute">Enter a room name or paste a meet.jit.si link. Students will go directly to the Jitsi meeting.</p><div class="row"><div style="flex:1;min-width:180px"><label>Student level</label><select name="level">${levelOptions}</select></div>${user.role==='admin'?'<div style="flex:1;min-width:180px"><label>Assigned teacher</label><select name="teacher">'+teacherOptionsHtml+'</select></div>':'<input type="hidden" name="teacher" value="'+esc(c.teacher||user.username||'')+'">'}</div><p class="mute">Leave All levels to show this class to students at every level.</p>`,async f=>{
+ const raw=f.url.value.trim();let room='',url='';
+  if(raw.startsWith('http://')||raw.startsWith('https://')){
+   try{const parsed=new URL(raw);const parts=parsed.pathname.split('/').filter(Boolean);if(!['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())||parts.length!==1||! /^[A-Za-z0-9_-]+$/.test(parts[0]))return toast('Use a valid https://meet.jit.si/room link.'),false;room=parts[0]}
+  catch{return toast('Enter a Jitsi room name or a valid meet.jit.si link.'),false}
+ }else{
+   room=raw.trim().split(/\s+/).join('-');
+  if(!/^[A-Za-z0-9_-]+$/.test(room))return toast('Room names can contain only letters, numbers, hyphens, and underscores.'),false;
+ }
+ if(!room)return toast('Enter a Jitsi room name.'),false;
+ url='https://meet.jit.si/'+encodeURIComponent(room);
+ const item={id:c.id||('cl-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)),title:f.title.value.trim(),url,level:f.level.value||'all',teacher:user.role==='teacher'?(user.username||''):f.teacher.value,owner:c.owner||me,createdAt:c.createdAt||new Date().toISOString()};
+ if(!item.title)return false;
+ const index=S.classLinks.findIndex(x=>String(x.id)===String(id));
+ if(index>=0)S.classLinks[index]=item;else S.classLinks.unshift(item);
+ save();toast('Jitsi class link saved');render();
+ });
+}
+function deleteClassLink(id){
+ const c=(S.classLinks||[]).find(x=>String(x.id)===String(id));if(!c)return;
+ if(user.role!=='admin'&&String(c.owner||'').toLowerCase()!==String(user.username||user.id||'').toLowerCase())return toast('You can only delete your own class links.');
+ if(!confirm('Delete this saved class link?'))return;
+ S.classLinks=S.classLinks.filter(x=>String(x.id)!==String(id));save();toast('Class link deleted');render();
+}
+function klass(){
+ if(!['admin','teacher'].includes(user.role))return '<div class="card"><b>Permission denied.</b></div>';
+ S.classes=Array.isArray(S.classes)?S.classes:[];
+ return `<div class="card"><h3>Start a live class</h3><p class="mute">Teachers and the administrator can create class rooms. Students can only join active classes.</p><form class="row" onsubmit="event.preventDefault();startClass(this.t.value)"><input name="t" placeholder="Class title, e.g. Tajwid, Level 2" required style="flex:1;min-width:220px"><button class="btn">Start class</button></form></div><br>
+ <div class="grid2">${S.classes.map((c,i)=>{const inv=base()+'#class='+c.code;return `<div class="card" style="border-color:var(--gold)"><div><span class="live"></span><b>${esc(c.title)}</b></div><div class="code">${esc(c.code)}</div><p class="mute" style="word-break:break-all">${esc(inv)}</p><div class="row"><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(c.code,user.name))}">Open as host</a><button class="btn ghost" data-invite="${esc(inv)}" onclick="copy(this.dataset.invite)">Copy invite</button><a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('Join our live class "'+c.title+'" at Al-Ahruf Academy: '+inv)}">WhatsApp</a><button class="btn ghost" onclick="endClass(${i})">End</button></div></div>`}).join('')||'<div class="card mute">No active classes. Start one above.</div>'}</div>
+ <p class="mute">Open the room first as host, then share the invite. Students can join but cannot create or end classes.</p>`}
+function studentLiveClass(){
+ if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
+ S.classes=Array.isArray(S.classes)?S.classes:[];
+ return `<div class="card"><h3>Live class</h3><p class="mute">Join a class started by your teacher or the administrator. You cannot create, edit, or end classes.</p></div><br><div class="grid2">${S.classes.map(c=>{const inv=base()+'#class='+c.code;return `<div class="card" style="border-color:var(--gold)"><div><span class="live"></span><b>${esc(c.title)}</b></div><div class="mute" style="margin:8px 0">Class code: <strong>${esc(c.code)}</strong></div><div class="row"><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(c.code,user.name))}">Join live class</a><button class="btn ghost" data-invite="${esc(inv)}" onclick="copy(this.dataset.invite)">Copy invite</button></div></div>`}).join('')||'<div class="card mute">No live classes are active right now. Please check with your teacher.</div>'}</div>`;
+}
+function startClass(t){if(!['admin','teacher'].includes(user?.role)){toast('Only a teacher or administrator can create a live class.');return}const title=String(t||'').trim();if(!title){toast('Enter a class title.');return}S.classes=Array.isArray(S.classes)?S.classes:[];S.classes.unshift({title,code:newCode(),owner:String(user.username||user.id||'').toLowerCase()});save();toast('Class started');render()}
+function endClass(i){if(!['admin','teacher'].includes(user?.role)){toast('Only a teacher or administrator can end a live class.');return}if(!Array.isArray(S.classes)||!S.classes[i])return;S.classes.splice(i,1);save();render()}
+function copy(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Invite copied'),()=>modal('Copy invite link',`<input value="${esc(t)}" readonly onfocus="this.select()">`,()=>{}, 'Done'))}
+
+
+let quranRequestId=0;
+const quranSurahCache={};
+const quranPageCache={};
+function quranLoading(target,msg){const el=document.getElementById(target);if(el)el.innerHTML='<div class="quran-loading" role="status">'+esc(msg||t('Loading Quran text…'))+'</div>'}
+function quranFailure(target){const el=document.getElementById(target);if(el)el.innerHTML='<div class="quran-error">'+esc(t('Quran text could not be loaded. Please check your internet connection and try again.'))+'<br><button class="btn ghost" style="margin-top:10px" onclick="loadQuranSurah(1)">'+esc(t('Try again'))+'</button></div>'}
+function quranSurahOptions(){return SUR_META.map(x=>'<option value="'+x.number+'">'+x.number+'. '+esc(x.english)+' — '+esc(x.arabic)+'</option>').join('')}
+async function quranBasmalaText(){
+ if(quranSurahCache[1]&&quranSurahCache[1].ayahs&&quranSurahCache[1].ayahs[0])return quranSurahCache[1].ayahs[0].text;
+ const response=await fetch('https://api.alquran.cloud/v1/surah/1/quran-uthmani',{headers:{Accept:'application/json'}});
+ if(!response.ok)throw new Error('Could not load basmala from source');
+ const json=await response.json();
+ if(json.code!==200||!json.data||!json.data.ayahs||!json.data.ayahs[0])throw new Error('Invalid basmala source response');
+ quranSurahCache[1]=json.data;
+ return json.data.ayahs[0].text;
+}
+async function loadQuranSurah(number){
+ number=Math.max(1,Math.min(114,Number(number)||1));
+ const target='quranReaderContent',request=++quranRequestId;
+ const selector=document.getElementById('quranSurahSelect');if(selector)selector.value=String(number);
+ quranLoading(target,t('Loading complete surah…'));
+ try{
+  let data=quranSurahCache[number];
+  if(!data){const response=await fetch('https://api.alquran.cloud/v1/surah/'+number+'/quran-uthmani',{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(json.code!==200||!json.data||!Array.isArray(json.data.ayahs)||!json.data.ayahs.length)throw new Error('Invalid Quran response');data=json.data;quranSurahCache[number]=data}
+  if(request!==quranRequestId)return;
+  const meta=SUR_META[number-1]||{};
+  const basmala=number!==1&&number!==9?'<div class="quran-bismillah" lang="ar" dir="rtl">'+esc(await quranBasmalaText())+'</div>':'';
+  if(request!==quranRequestId)return;
+  const heading='<div class="quran-heading"><div class="quran-ar-title" lang="ar" dir="rtl">'+esc(data.name||meta.arabic||'')+'</div><h3 style="margin:8px 0 4px">'+esc(data.englishName||meta.english||SUR[number-1])+'</h3><div class="mute">'+number+' · '+Number(data.numberOfAyahs||data.ayahs.length)+' '+esc(t('Ayahs'))+' · '+esc(t(data.revelationType||''))+'</div></div>';
+  const ayahs=data.ayahs.map(a=>'<span class="quran-ayah" lang="ar" dir="rtl">'+esc(a.text)+' <span class="quran-ayah-mark" aria-label="'+esc(t('Ayah')+' '+a.numberInSurah)+'">'+String(a.numberInSurah)+'</span></span>').join(' ');
+  const content=document.getElementById(target);if(content){content.innerHTML=heading+basmala+'<div class="quran-ayahs" lang="ar" dir="rtl">'+ayahs+'</div><div class="quran-source">'+esc(t('Arabic Uthmani text supplied by AlQuran Cloud. The source text is displayed unchanged.'))+' <a href="https://alquran.cloud/api" target="_blank" rel="noopener">AlQuran Cloud API</a> · <a href="https://tanzil.net/docs/Uthmani" target="_blank" rel="noopener">Uthmani script reference</a></div>';applyArabicIndicDigits(content)}
+ }catch(e){console.warn('Quran surah load failed',e);if(request===quranRequestId)quranFailure(target)}
+}
+function safeTajweedHtml(raw){
+ const allowed=new Set(['ikhfa','ikhafa','ikhfa_shafawi','idgham_ghunnah','idgham_shafawi','idgham_wo_ghunnah','idgham_no_ghunnah','iqlab','qalqalah','qalaqah','ghunnah','madda_normal','madda_permissible','madda_obligatory','madda_necessary','madda_2','madda_246','madda_obligatory_monfasel','madda_obligatory_mottasel','ham_wasl','laam_shamsiyah','silent','slnt','custom-alef-maksora']);
+ const aliases={ikhafa:'ikhfa',qalaqah:'qalqalah',madda_obligatory_monfasel:'madda_obligatory',madda_obligatory_mottasel:'madda_obligatory'};
+ const stack=[];
+ const source=String(raw||'');
+ return source.replace(/<\/?(?:tajweed|rule)\b[^>]*>|[^<]+|</gi,token=>{
+  if(token.charAt(0)!=='<')return esc(token);
+  if(/^<\/(?:tajweed|rule)\b/i.test(token)){
+   const opened=stack.pop();
+   return opened?'</span>':'';
+  }
+  if(/^<(?:tajweed|rule)\b/i.test(token)){
+   const match=token.match(/\bclass\s*=\s*["']?([a-z_-]+)["']?/i);
+   const cls=match?match[1].toLowerCase():'';
+   const safeClass=aliases[cls]||cls;
+   const known=allowed.has(cls);
+   stack.push(true);
+   return '<span'+(known?' class="tj-'+safeClass+'"':'')+'>';
+  }
+  return '';
+ });
+}
+function tajweedLegendHtml(){
+ return '<div class="quran-legend"><span><b style="color:#17945b">●</b> '+esc(t('Ikhfa'))+'</span><span><b style="color:#1681b7">●</b> '+esc(t('Idgham / Ghunnah'))+'</span><span><b style="color:#8e44ad">●</b> '+esc(t('Iqlab'))+'</span><span><b style="color:#d04435">●</b> '+esc(t('Qalqalah'))+'</span><span><b style="color:#b07808">●</b> '+esc(t('Madd'))+'</span></div>';
+}
+async function loadQuranPage(page){
+ page=Math.max(1,Math.min(604,Number(page)||1));
+ const target='quranReaderContent',request=++quranRequestId;
+ const picker=document.getElementById('quranPageSelect');if(picker)picker.value=String(page);
+ quranLoading(target,t('Loading 15-line Mushaf page with Tajweed…'));
+ try{
+  let data=quranPageCache[page];
+  if(!data){
+   const url='https://api.quran.com/api/v4/verses/by_page/'+page+'?mushaf=11&words=true&word_fields=text_uthmani_tajweed,text_uthmani,line_number,page_number,verse_key,char_type_name&fields=verse_key,chapter_id,page_number';
+   const response=await fetch(url,{headers:{Accept:'application/json'}});
+   if(!response.ok)throw new Error('Tajweed Mushaf API returned HTTP '+response.status);
+   const json=await response.json();
+   if(!Array.isArray(json.verses)||!json.verses.length)throw new Error('No verses returned for Mushaf page');
+   data=json.verses;
+   const lineNumbers=data.flatMap(v=>(v.words||[]).map(w=>Number(w.line_number)).filter(n=>n>0));
+   if(!lineNumbers.length)throw new Error('The source did not provide printed line positions');
+   if(lineNumbers.some(n=>n>15))throw new Error('The source line positions do not match the 15-line Mushaf layout');
+   quranPageCache[page]=data;
+  }
+  if(request!==quranRequestId)return;
+  const lines=Array.from({length:15},()=>[]);
+  const starts=data.filter(v=>Number(String(v.verse_key||'').split(':')[1]||0)===1);
+  const needsBasmala=starts.some(v=>{const id=Number(v.chapter_id||String(v.verse_key||'').split(':')[0]||0);return id!==1&&id!==9});
+  const basmalaText=needsBasmala?await quranBasmalaText():'';
+  if(request!==quranRequestId)return;
+  data.forEach(v=>{
+   const words=Array.isArray(v.words)?v.words:[];
+   const verseNumber=Number(String(v.verse_key||'').split(':')[1]||0);
+   const chapterId=Number(v.chapter_id||String(v.verse_key||'').split(':')[0]||0);
+   const firstWord=words.find(w=>Number(w.line_number)>0);
+   if(!firstWord)throw new Error('A verse is missing printed line positions');
+   if(words.some(w=>!Number(w.line_number)||Number(w.line_number)<1||Number(w.line_number)>15))throw new Error('A word is missing valid 15-line Mushaf positioning');
+   const firstLine=Math.max(1,Math.min(15,Number(firstWord.line_number)));
+   /* Surah titles and basmala are rendered separately from Quran text lines.
+      Adding them to the API's printed line arrays can collide with the previous surah's final ayat. */
+   const textWords=words.filter(w=>String(w.char_type_name||'').toLowerCase()!=='end'&&String(w.char_type_name||'').toLowerCase()!=='pause');
+   textWords.forEach((w,idx)=>{
+    const lineNo=Number(w.line_number);
+    if(!lineNo||lineNo<1||lineNo>15)return;
+    const text=safeTajweedHtml(w.text_uthmani_tajweed||w.text_uthmani||'');
+    if(!text)return;
+    lines[lineNo-1].push('<span>'+text+'</span>');
+    if(idx===textWords.length-1){
+     const ayahDigits=String(verseNumber).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)]);
+     lines[lineNo-1].push('<span class="quran-ayah-mark" aria-label="'+esc(t('Ayah')+' '+verseNumber)+'">'+ayahDigits+'</span>');
+    }
+   });
+  });
+  if(request!==quranRequestId)return;
+  const firstChapter=Number(String(data[0]?.verse_key||'').split(':')[0]||data[0]?.chapter_id||1);const lastVerse=data[data.length-1]||{};const lastChapter=Number(String(lastVerse.verse_key||'').split(':')[0]||lastVerse.chapter_id||firstChapter);const firstMeta=SUR_META.find(x=>Number(x.number)===firstChapter)||{};const lastMeta=SUR_META.find(x=>Number(x.number)===lastChapter)||firstMeta;
+  const pageHasNewSurah=lastChapter!==firstChapter;
+  const pageTitleMeta=pageHasNewSurah?lastMeta:firstMeta;
+  const pageTitle='<div class="quran-surah-title-panel" lang="ar" dir="rtl">'+esc(pageTitleMeta.arabic||pageTitleMeta.english||t('Mushaf page'))+'</div>';
+  const pageBasmala=pageHasNewSurah&&lastChapter!==9&&lastChapter!==1?'<div class="quran-basmala-panel" lang="ar" dir="rtl">'+safeTajweedHtml(basmalaText)+'</div>':'';
+  const heading='<div class="quran-heading"><div class="mute">'+esc(t('Mushaf page'))+' '+page+' / 604 · '+esc(t('15-line Tajweed Mushaf'))+'</div></div>';
+  const paper='<div class="quran-page-paper">'+(pageHasNewSurah?pageTitle+pageBasmala:'')+'<div class="quran-lines" lang="ar" dir="rtl">'+lines.map((line,i)=>'<div class="quran-line'+(line.length?'':' quran-line-empty')+'" aria-label="'+esc(t('Line')+' '+(i+1))+'">'+line.join(' ')+'</div>').join('')+'</div><div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';
+  const content=document.getElementById(target);
+  if(content){content.innerHTML=heading+paper+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';applyArabicIndicDigits(content)}
+ }catch(e){
+  console.warn('15-line Tajweed Mushaf page failed',e);
+  if(request===quranRequestId){
+   const content=document.getElementById(target);
+   if(content)content.innerHTML='<div class="quran-error">'+esc(t('The exact 15-line Tajweed page could not be loaded from the verified source. No reflowed text is shown, to avoid changing the Mushaf layout.'))+'<br><button class="btn ghost" style="margin-top:10px" onclick="loadQuranPage('+page+')">'+esc(t('Try again'))+'</button></div>';
+  }
+ }
+}
+let quranSwipeOrigin=null;
+function quranSwipeStart(event){
+ const controls=document.getElementById('quranPageControls');
+ if(!controls||controls.style.display==='none'||event.button>0)return;
+ quranSwipeOrigin={x:event.clientX,y:event.clientY};
+ const reader=document.getElementById('quranReaderContent');if(reader)reader.classList.add('quran-swiping');
+}
+function quranSwipeCancel(){quranSwipeOrigin=null;const reader=document.getElementById('quranReaderContent');if(reader)reader.classList.remove('quran-swiping');}
+function quranSwipeEnd(event){
+ if(!quranSwipeOrigin)return;
+ const dx=event.clientX-quranSwipeOrigin.x,dy=event.clientY-quranSwipeOrigin.y;
+ quranSwipeCancel();
+ if(Math.abs(dx)<65||Math.abs(dx)<Math.abs(dy)*1.25)return;
+ const picker=document.getElementById('quranPageSelect');
+ const page=Math.max(1,Math.min(604,Number(picker&&picker.value)||1));
+ if(dx<0&&page<604)loadQuranPage(page+1);
+ else if(dx>0&&page>1)loadQuranPage(page-1);
+}
+async function openSurahInMushaf(){
+ const selector=document.getElementById('quranSurahSelect');
+ const number=Math.max(1,Math.min(114,Number(selector&&selector.value)||1));
+ try{
+  let data=quranSurahCache[number];
+  if(!data||!Array.isArray(data.ayahs)||!data.ayahs.length||!data.ayahs[0].page){
+   const response=await fetch('https://api.alquran.cloud/v1/surah/'+number+'/quran-uthmani',{headers:{Accept:'application/json'}});
+   if(!response.ok)throw new Error('HTTP '+response.status);
+   const json=await response.json();
+   if(json.code!==200||!json.data||!Array.isArray(json.data.ayahs)||!json.data.ayahs.length)throw new Error('Invalid Quran response');
+   data=json.data;quranSurahCache[number]=data;
+  }
+  const page=Math.max(1,Math.min(604,Number(data.ayahs[0].page)||1));
+  const surahTools=document.getElementById('quranSurahControls'),pageTools=document.getElementById('quranPageControls'),pageSelect=document.getElementById('quranPageSelect');
+  if(surahTools)surahTools.style.display='none';
+  if(pageTools)pageTools.style.display='flex';
+  if(pageSelect)pageSelect.value=String(page);
+  loadQuranPage(page);
+ }catch(error){console.warn('Could not open selected surah in Mushaf view',error);quranFailure('quranReaderContent');}
+}
+function changeQuranMode(mode){
+ const surahTools=document.getElementById('quranSurahControls'),pageTools=document.getElementById('quranPageControls');
+ if(surahTools)surahTools.style.display=mode==='surah'?'grid':'none';
+ if(pageTools)pageTools.style.display=mode==='page'?'flex':'none';
+ if(mode==='page')loadQuranPage(Number(document.getElementById('quranPageSelect')?.value||1));
+ else loadQuranSurah(Number(document.getElementById('quranSurahSelect')?.value||1));
+}
+function adminSurahs(){
+  return `<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${t('Read the complete Arabic text of any surah, or browse the 604-page Mushaf view.')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><button class="btn gold" type="button" onclick="loadQuranPage(Math.min(604,Number(document.getElementById('quranPageSelect').value||1)+1))">${t('Next page')} →</button><label>${t('Page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><button class="btn ghost" type="button" onclick="loadQuranPage(Math.max(1,Number(document.getElementById('quranPageSelect').value||1)-1))">← ${t('Previous page')}</button></div><div id="quranReaderContent" class="quran-reading" onpointerdown="quranSwipeStart(event)" onpointerup="quranSwipeEnd(event)" onpointercancel="quranSwipeCancel()"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
+ }
+ function viewStudent(){const studentId=String(user.username||user.id||'').toLowerCase();const s=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===studentId)||{sur:[],name:user.name||'',id:user.username||user.id,pay:'pending'};s.sur=Array.isArray(s.sur)?s.sur:[];
+ const ranking=(Array.isArray(S.ranking)&&S.ranking.length?S.ranking:S.students.map(x=>({id:x.id,name:x.name,surahCount:(x.sur||[]).length}))).slice().sort((a,b)=>Number(b.surahCount||0)-Number(a.surahCount||0));
+ const rank=ranking.findIndex(x=>String(x.id).toLowerCase()===String(s.id).toLowerCase())+1;
+ const ahead=rank>1?ranking[rank-2]:null;
+ const behind=rank<ranking.length?ranking[rank]:null;
+ const rankText=rank>0?'#'+rank:'—';
+ const gapAhead=ahead?Math.max(0,Number(ahead.surahCount||0)-s.sur.length):0;
+ const gapBehind=behind?Math.max(0,s.sur.length-Number(behind.surahCount||0)):0;
+ const myInvoices=(S.pay||[]).map((p,i)=>({p,i})).filter(x=>String(x.p.sid||'').trim().toLowerCase()===String(s.id||'').trim().toLowerCase()).reverse();
+ return `<h2>${t('As-salamu alaykum,')} ${esc(s.name)}</h2><div class="card" style="margin:10px 0 16px;border-color:var(--gold)"><div class="row between" style="align-items:center"><div><span class="mute">${t('Student ID')}</span><div style="font-size:1.2rem;font-weight:800;letter-spacing:.04em;margin-top:4px">${esc(s.id||'—')}</div></div><button class="btn ghost sm" type="button" onclick="copyAccountId('${esc(s.id||'')}')">${t('Copy ID')}</button></div></div>`+nav([['home','My progress'],['myclass','MyClass'],['class','Live class'],['timetable','My Timetable'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]])+
+ (tab==='myclass'?myclass():tab==='class'?studentLiveClass():tab==='messages'?messages():tab==='myteacher'?myTeacher():tab==='classmates'?classmates():tab==='notifications'?notifications():tab==='timetable'?timetable():tab==='join'?`<div class="card"><h3>Join your class</h3><p class="mute">Paste the code or invite link from your teacher.</p><form onsubmit="event.preventDefault();doJoin2(this)"><input name="c" required placeholder="Class code or invite link"><br><br><button class="btn">Continue</button></form>${joinInfo?`<br><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(joinInfo.c,s.name))}">Enter classroom</a>`:''}</div>`
+ :tab==='surahs'?`<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${s.sur.length} of 114 ${t('surahs memorized')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><button class="btn gold" type="button" onclick="loadQuranPage(Math.min(604,Number(document.getElementById('quranPageSelect').value||1)+1))">${t('Next page')} →</button><label>${t('Page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><button class="btn ghost" type="button" onclick="loadQuranPage(Math.max(1,Number(document.getElementById('quranPageSelect').value||1)-1))">← ${t('Previous page')}</button></div><div id="quranReaderContent" class="quran-reading" onpointerdown="quranSwipeStart(event)" onpointerup="quranSwipeEnd(event)" onpointercancel="quranSwipeCancel()"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
+ :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>${t('Surahs memorized')}</span></div><div class="card"><b>${lvl(s)}%</b><span>${t('Of the Quran')}</span></div><div class="card"><b>${rankText}</b><span>${t('Your ranking')}</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">${t('Payment')}</span></div></div>
+<div class="card" style="border-color:var(--gold);margin-bottom:14px"><h3>${t('Your Memorization Ranking')}</h3><p class="mute">${t('Keep memorizing to move higher in the ranking.')}</p><br>
+${ahead?'<div class="row between"><span>⬆️ <b>'+t('Ahead of you')+'</b></span><span>'+esc(ahead.name)+' — '+Number(ahead.surahCount||0)+' '+t('surahs')+'</span></div><div class="mute" style="margin-top:4px">'+(gapAhead===0?t('You are tied with')+' '+esc(ahead.name)+' '+t('at')+' '+Number(ahead.surahCount||0)+' '+t('surahs')+'.':t('You need')+' '+gapAhead+(gapAhead===1?' '+t('more surah to catch up with'):' '+t('more surahs to catch up with'))+' '+esc(ahead.name)+'.')+'</div>':rank===1?'<div class="row"><span>🏆 <b>'+t('You are #1 — the current top memorizer!')+'</b></span></div>':'<div class="mute">'+t('Your ranking will appear as soon as students are added.')+'</div>'}
+${behind?'<div class="row between" style="margin-top:14px"><span>⬇️ <b>'+t('Behind you')+'</b></span><span>'+esc(behind.name)+' — '+Number(behind.surahCount||0)+' '+t('surahs')+'</span></div><div class="mute" style="margin-top:4px">'+(gapBehind===0?t('You are tied with')+' '+esc(behind.name)+' '+t('at')+' '+Number(behind.surahCount||0)+' '+t('surahs')+'.':t('You are')+' '+gapBehind+(gapBehind===1?' '+t('surah ahead of'):' '+t('surahs ahead of'))+' '+esc(behind.name)+'.')+'</div>':'<div class="mute" style="margin-top:14px">'+t('No student is currently behind you.')+'</div>'}
+</div><div class="card"><h3>${t('Your progress')}</h3><br><div class="bar2" style="height:14px"><i style="width:${lvl(s)}%"></i></div><br>${s.sur.map(x=>`<span class="tag">${x}</span>`).join('')||'<span class="mute">Your memorized surahs will appear here.</span>'}</div><br><div class="card"><h3>${t('My invoices')}</h3><p class="mute">${t('Invoices issued to you are available here. Only your own invoices are shown.')}</p><br>${myInvoices.length?myInvoices.map(x=>{const p=x.p;return `<div class="row between" style="padding:10px 0;border-bottom:1px solid var(--line)"><div><b>${esc(p.inv||'Invoice')}</b><br><span class="mute">${esc(p.description||'Academy tuition')} · Due ${esc(p.due||'')}</span><br><span class="badge ${esc(p.st||'pending')}">$${p.amt??0} · ${esc(p.st||'pending')}</span></div><button class="btn gold sm" onclick="viewInvoiceById('${esc(p.inv||'')}')">View invoice</button></div>`}).join(''):'<span class="mute">No invoices have been issued to you yet.</span>'}</div>`)}
+function doJoin2(f){joinInfo={n:user.name,c:parseCode(f.c.value)};render()}
+function safeLoginFallback(err){
+ const a=document.getElementById('app'); if(!a)return;
+ a.innerHTML=`<div class="hero"><div class="brand"><h1>Al-Ahruf Academy</h1><p>Nurturing faith, enhancing learning</p></div><div class="card"><h2>Welcome</h2><p class="mute">Please choose how you want to continue.</p><div class="row"><button class="btn" onclick="lt='in';render()">Log in</button><button class="btn ghost" onclick="lt='join';render()">Join a class</button></div></div></div>`;
+ console.error('Al-Ahruf render error:',err);
+}
+async function startApp(){
+ // Render the login screen immediately. Never make the whole interface wait for Supabase.
+ try{render()}catch(e){safeLoginFallback(e)}
+ if(ONLINE){
+   try{
+     const sessionPromise=loadOnlineState();
+     const timeout=new Promise(resolve=>setTimeout(()=>resolve(false),5000));
+     const restored=await Promise.race([sessionPromise,timeout]);
+     if(restored)render();
+   }catch(e){console.warn('Startup session load skipped:',e)}
+ }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startApp,{once:true});else startApp();
+</script>
+</body>
+</html>
