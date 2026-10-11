@@ -507,6 +507,10 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 
 /* Center Quran text within each printed Mushaf line instead of pushing it to the right. */
 .quran-page-paper .quran-line{justify-content:center!important;text-align:center!important;text-align-last:center!important}
+
+/* Center the entire Mushaf page inside the reader, not just its Arabic text. */
+#quranReaderContent{display:flex!important;flex-direction:column!important;align-items:center!important;text-align:center!important;width:100%;box-sizing:border-box}
+#quranReaderContent>.quran-page-paper{display:block!important;float:none!important;position:relative!important;left:auto!important;right:auto!important;width:100%!important;max-width:472px!important;margin-left:auto!important;margin-right:auto!important;align-self:center!important;box-sizing:border-box!important}
 </style>
 </head>
 <body>
