@@ -267,6 +267,100 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
 .quran-surah-heading{display:block!important;width:100%!important;box-sizing:border-box;text-align:center!important;font-size:1.05em!important;line-height:1.2!important;border:1px solid #c9ad6c;border-radius:3px;padding:0 3px!important;margin:0 auto!important;}
 .quran-basmala-line{display:block!important;width:100%!important;box-sizing:border-box;text-align:center!important;font-size:1.05em!important;line-height:1.2!important;margin:0 auto!important;}
 .quran-page-number{bottom:1.8%!important;}
+
+/* Final Mushaf page-fit adjustment: consistent paper proportions and safe inner margins. */
+.quran-reading{padding:clamp(8px,1.5vw,18px)!important;overflow:hidden}
+.quran-page-paper{
+  display:block!important;
+  position:relative!important;
+  width:min(100%,720px)!important;
+  max-width:720px!important;
+  min-width:0!important;
+  height:auto!important;
+  min-height:0!important;
+  aspect-ratio:720 / 1024!important;
+  box-sizing:border-box!important;
+  margin:0 auto!important;
+  padding:0!important;
+  border:6px double #a68a45!important;
+  border-radius:2px!important;
+  overflow:hidden!important;
+}
+.quran-page-paper .quran-surah-title-panel{
+  display:table!important;
+  position:relative!important;
+  width:max-content!important;
+  max-width:88%!important;
+  box-sizing:border-box!important;
+  margin:2.8% auto 0.4%!important;
+  padding:2px 12px!important;
+  text-align:center!important;
+  line-height:1.2!important;
+}
+.quran-page-paper .quran-basmala-panel{
+  display:block!important;
+  position:relative!important;
+  width:88%!important;
+  max-width:88%!important;
+  box-sizing:border-box!important;
+  margin:0 auto!important;
+  padding:0!important;
+  text-align:center!important;
+  line-height:1.2!important;
+}
+.quran-page-paper .quran-lines{
+  position:absolute!important;
+  top:13%!important;
+  bottom:8%!important;
+  left:5.5%!important;
+  right:5.5%!important;
+  display:grid!important;
+  grid-template-rows:repeat(15,minmax(0,1fr))!important;
+  gap:0!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+.quran-page-paper .quran-line{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+  white-space:normal!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  word-spacing:0!important;
+  letter-spacing:0!important;
+  text-align:right!important;
+  text-align-last:right!important;
+  direction:rtl!important;
+  font-size:clamp(8px,1.8vw,16px)!important;
+  line-height:1.2!important;
+  padding:0!important;
+}
+.quran-page-paper .quran-line>span:not(.quran-ayah-mark):not(.quran-surah-heading):not(.quran-basmala-line){
+  display:inline!important;
+  position:static!important;
+  width:auto!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+  letter-spacing:0!important;
+  word-spacing:0!important;
+}
+.quran-page-paper .quran-ayah-mark{margin:0 .06em!important}
+.quran-page-paper .quran-page-number{bottom:1.5%!important}
+@media(max-width:600px){
+  .quran-reading{padding:4px!important}
+  .quran-page-paper{width:100%!important;max-width:100%!important;border-width:4px!important}
+  .quran-page-paper .quran-lines{top:13%!important;bottom:8%!important;left:4.5%!important;right:4.5%!important}
+  .quran-page-paper .quran-line{font-size:clamp(7px,2.1vw,12px)!important;line-height:1.15!important}
+  .quran-page-paper .quran-surah-title-panel{font-size:clamp(10px,2.6vw,15px)!important;padding:1px 8px!important}
+  .quran-page-paper .quran-basmala-panel{font-size:clamp(9px,2.3vw,14px)!important}
+}
+
 </style>
 </head>
 <body>
