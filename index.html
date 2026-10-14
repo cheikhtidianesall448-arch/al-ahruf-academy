@@ -971,6 +971,30 @@ body:not(:has(.hero)) .stats span{font-size:.9rem}
   .quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row){font-size:clamp(8px,2.2vw,12px)!important;line-height:1.12!important}
 }
 
+
+/* Make the Surah title panel and Basmala more prominent without changing the Mushaf page frame. */
+#quranReaderContent .quran-page-paper .quran-lines>.quran-surah-row .quran-surah-title-panel{
+  font-size:clamp(13px,3vw,20px)!important;
+  line-height:1.2!important;
+  padding:4px 16px!important;
+  max-width:94%!important;
+}
+#quranReaderContent .quran-page-paper .quran-lines>.quran-basmala-row .quran-basmala-panel{
+  font-size:clamp(12px,2.7vw,18px)!important;
+  line-height:1.2!important;
+  padding:1px 0!important;
+  max-width:100%!important;
+}
+@media(max-width:600px){
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-surah-row .quran-surah-title-panel{
+    font-size:clamp(12px,3.5vw,17px)!important;
+    padding:3px 12px!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-basmala-row .quran-basmala-panel{
+    font-size:clamp(11px,3.1vw,16px)!important;
+  }
+}
+
 </style>
 
 <style>
