@@ -833,6 +833,36 @@ body:not(:has(.hero)) .stats span{font-size:.9rem}
 }
 /* Keep Quran Arabic script's dedicated sizing and line layout intact. */
 
+
+/* Mushaf proportions: enlarge the page slightly and let the inner text frame
+   occupy nearly all of the usable page width, with matching larger Arabic text. */
+#quranReaderContent>.quran-page-paper{
+  width:min(100%,560px)!important;
+  max-width:560px!important;
+}
+#quranReaderContent>.quran-page-paper>.quran-lines{
+  left:4%!important;
+  right:4%!important;
+  width:auto!important;
+  padding:4px 5px!important;
+  box-sizing:border-box!important;
+}
+#quranReaderContent .quran-page-paper .quran-lines>.quran-line{
+  font-size:clamp(12px,2.2vw,20px)!important;
+  line-height:1.16!important;
+}
+#quranReaderContent .quran-page-paper .quran-lines>.quran-line .quran-surah-heading{
+  font-size:1.12em!important;
+}
+#quranReaderContent .quran-page-paper .quran-lines>.quran-line .quran-basmala-line{
+  font-size:1.1em!important;
+}
+@media(max-width:600px){
+  #quranReaderContent>.quran-page-paper{width:100%!important;max-width:560px!important}
+  #quranReaderContent>.quran-page-paper>.quran-lines{left:3%!important;right:3%!important;padding:2px 3px!important}
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line{font-size:clamp(11px,3.2vw,16px)!important;line-height:1.14!important}
+}
+
 </style>
 </head>
 <body>
