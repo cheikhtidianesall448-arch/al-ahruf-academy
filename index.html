@@ -770,6 +770,28 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
   }
 }
 
+
+/* Improve readability: slightly larger interface text across the academy.
+   Preserve the Quran/Mushaf typography and existing layout behavior. */
+body:not(:has(.hero)){font-size:16.5px}
+body:not(:has(.hero)) .mute{font-size:.92rem}
+body:not(:has(.hero)) .nav button{font-size:.92rem;padding:10px 14px}
+body:not(:has(.hero)) th{font-size:.86rem}
+body:not(:has(.hero)) td{font-size:1rem}
+body:not(:has(.hero)) label{font-size:.9rem}
+body:not(:has(.hero)) input,
+body:not(:has(.hero)) select,
+body:not(:has(.hero)) textarea{font-size:1rem}
+body:not(:has(.hero)) .btn{font-size:.95rem}
+body:not(:has(.hero)) .btn.sm{font-size:.84rem}
+body:not(:has(.hero)) .stats span{font-size:.9rem}
+@media(max-width:700px){
+  body:not(:has(.hero)){font-size:16px}
+  body:not(:has(.hero)) .nav button{font-size:.84rem}
+  body:not(:has(.hero)) th,
+  body:not(:has(.hero)) td{font-size:.9rem}
+}
+
 </style>
 </head>
 <body>
