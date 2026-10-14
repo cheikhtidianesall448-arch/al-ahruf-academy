@@ -731,6 +731,45 @@ body:has(.hero) .hero>.card input[type="password"]::placeholder{color:#555!impor
   overflow:hidden!important;
 }
 
+
+/* Desktop dashboard width: use 96% of the available viewport.
+   Keep login pages and existing feature layouts unchanged. */
+@media (min-width: 901px) {
+  body:not(:has(.hero)) .wrap {
+    width: 96%;
+    max-width: none;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  body:not(:has(.hero)) .wrap > .card,
+  body:not(:has(.hero)) .wrap > .nav,
+  body:not(:has(.hero)) .wrap > .stats,
+  body:not(:has(.hero)) .wrap > .tw {
+    min-width: 0;
+  }
+}
+/* Tablet: use nearly all available width with balanced gutters. */
+@media (min-width: 701px) and (max-width: 900px) {
+  body:not(:has(.hero)) .wrap {
+    width: 98%;
+    max-width: none;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 18px 12px 32px;
+  }
+}
+/* Phone layouts retain comfortable, consistent side gutters. */
+@media (max-width: 700px) {
+  body:not(:has(.hero)) .wrap {
+    width: 100%;
+    max-width: none;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 </style>
 </head>
 <body>
