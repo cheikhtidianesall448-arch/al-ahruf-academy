@@ -863,6 +863,60 @@ body:not(:has(.hero)) .stats span{font-size:.9rem}
   #quranReaderContent .quran-page-paper .quran-lines>.quran-line{font-size:clamp(11px,3.2vw,16px)!important;line-height:1.14!important}
 }
 
+
+/* Mushaf correction requested: first extend the inner text frame (3 → 4),
+   then enlarge the whole page slightly (1 → 2). Keep Arabic text proportional. */
+#quranReaderContent>.quran-page-paper{
+  width:min(100%,600px)!important;
+  max-width:600px!important;
+  aspect-ratio:472/693!important;
+  height:auto!important;
+  min-height:0!important;
+  box-sizing:border-box!important;
+}
+#quranReaderContent>.quran-page-paper>.quran-lines{
+  position:absolute!important;
+  top:5%!important;
+  bottom:5%!important;
+  left:4%!important;
+  right:4%!important;
+  width:auto!important;
+  height:auto!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:repeat(15,minmax(0,1fr))!important;
+  align-content:stretch!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+}
+#quranReaderContent>.quran-page-paper>.quran-lines>.quran-line{
+  min-height:0!important;
+  height:100%!important;
+  max-height:none!important;
+  box-sizing:border-box!important;
+  font-size:clamp(12px,2.15vw,20px)!important;
+  line-height:1.08!important;
+}
+#quranReaderContent>.quran-page-paper>.quran-lines>.quran-surah-row,
+#quranReaderContent>.quran-page-paper>.quran-lines>.quran-basmala-row{
+  min-height:0!important;
+  height:100%!important;
+  max-height:none!important;
+}
+@media(max-width:600px){
+  #quranReaderContent>.quran-page-paper{
+    width:100%!important;
+    max-width:600px!important;
+  }
+  #quranReaderContent>.quran-page-paper>.quran-lines{
+    top:5%!important;bottom:5%!important;left:3%!important;right:3%!important;
+  }
+  #quranReaderContent>.quran-page-paper>.quran-lines>.quran-line{
+    font-size:clamp(10px,3vw,16px)!important;
+    line-height:1.05!important;
+  }
+}
+
 </style>
 </head>
 <body>
