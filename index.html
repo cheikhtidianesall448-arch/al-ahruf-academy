@@ -925,6 +925,52 @@ body:not(:has(.hero)) .stats span{font-size:.9rem}
 #quranReaderContent .quran-page-paper .quran-lines>.quran-line{grid-column:1!important;width:100%!important;min-width:0!important;min-height:0!important;height:auto!important;max-height:none!important;box-sizing:border-box!important;}
 #quranReaderContent .quran-page-paper .quran-lines>.quran-line-empty{visibility:visible!important;}
 #quranReaderContent .quran-page-paper .quran-lines>.quran-surah-row,#quranReaderContent .quran-page-paper .quran-lines>.quran-basmala-row{width:100%!important;grid-column:1!important;}
+
+/* FINAL FIX: remove the artificial L-shaped empty area across every Mushaf page.
+   Let the 15 printed Quran lines occupy the full inner frame; headings and basmala
+   take only their natural height and do not force every row into a separate grid track. */
+.quran-page-paper .quran-lines{
+  top:6%!important;
+  bottom:5%!important;
+  left:5%!important;
+  right:5%!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:space-between!important;
+  align-items:stretch!important;
+  grid-template-rows:none!important;
+  gap:0!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+.quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row){
+  flex:1 1 0!important;
+  min-height:0!important;
+  height:auto!important;
+  width:100%!important;
+  overflow:hidden!important;
+}
+.quran-page-paper .quran-lines>.quran-surah-row,
+.quran-page-paper .quran-lines>.quran-basmala-row{
+  flex:0 0 auto!important;
+  min-height:0!important;
+  height:auto!important;
+  width:100%!important;
+  overflow:visible!important;
+}
+.quran-page-paper .quran-lines>.quran-line-empty{
+  flex:1 1 0!important;
+  min-height:0!important;
+}
+.quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row){
+  font-size:clamp(10px,2.2vw,16px)!important;
+  line-height:1.15!important;
+}
+@media(max-width:600px){
+  .quran-page-paper .quran-lines{top:6%!important;bottom:5%!important;left:4%!important;right:4%!important}
+  .quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row){font-size:clamp(8px,2.2vw,12px)!important;line-height:1.12!important}
+}
+
 </style>
 </head>
 <body>
@@ -2294,7 +2340,7 @@ async function loadQuranPage(page,append=false){
   const paper='<div class="quran-page-paper">'+
    '<div class="quran-lines" lang="ar" dir="rtl">'+renderedRows.join('')+'</div>'+
    '<div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';  const content=document.getElementById(target);
-  if(content){const pageMarkup=heading+paper;if(append){content.insertAdjacentHTML('beforeend',pageMarkup);quranContinuousNextPage=page+1;}else{content.innerHTML=pageMarkup+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';quranContinuousNextPage=page+1;}const papers=content.querySelectorAll('.quran-page-paper');const turnPaper=papers[papers.length-1];const turnDirection=quranDisplayedMushafPage===null?null:(page>quranDisplayedMushafPage?'next':page<quranDisplayedMushafPage?'previous':null);quranDisplayedMushafPage=page;if(turnPaper&&turnDirection&&!append)turnPaper.classList.add('quran-turn-'+turnDirection);const lineGrid=turnPaper&&turnPaper.querySelector('.quran-lines');if(lineGrid){lineGrid.style.setProperty('display','grid','important');lineGrid.style.setProperty('grid-template-rows','repeat('+lineGrid.children.length+',minmax(0,1fr))','important');}applyArabicIndicDigits(turnPaper||content);quranApplyReaderSettings();quranContinuousLoading=false;if(page===604){quranContinuousNextPage=605;const status=document.createElement('p');status.className='quran-source';status.textContent=t('End of the 604-page Mushaf.');content.appendChild(status);}}
+  if(content){const pageMarkup=heading+paper;if(append){content.insertAdjacentHTML('beforeend',pageMarkup);quranContinuousNextPage=page+1;}else{content.innerHTML=pageMarkup+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';quranContinuousNextPage=page+1;}const papers=content.querySelectorAll('.quran-page-paper');const turnPaper=papers[papers.length-1];const turnDirection=quranDisplayedMushafPage===null?null:(page>quranDisplayedMushafPage?'next':page<quranDisplayedMushafPage?'previous':null);quranDisplayedMushafPage=page;if(turnPaper&&turnDirection&&!append)turnPaper.classList.add('quran-turn-'+turnDirection);const lineGrid=turnPaper&&turnPaper.querySelector('.quran-lines');if(lineGrid){lineGrid.style.removeProperty('display');lineGrid.style.removeProperty('grid-template-rows');}applyArabicIndicDigits(turnPaper||content);quranApplyReaderSettings();quranContinuousLoading=false;if(page===604){quranContinuousNextPage=605;const status=document.createElement('p');status.className='quran-source';status.textContent=t('End of the 604-page Mushaf.');content.appendChild(status);}}
  }catch(e){
   console.warn('15-line Tajweed Mushaf page failed',e);
   if(append)quranContinuousLoading=false;
