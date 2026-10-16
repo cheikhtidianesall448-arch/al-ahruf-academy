@@ -1582,7 +1582,7 @@ function theme(){const r=document.documentElement;const dark=r.dataset.theme==='
 function modal(title,body,ok,txt='Save'){const d=$('#dlg');d.innerHTML=`<h2>${title}</h2><form id="mf">${body}<div class="row end"><button type="button" class="btn ghost" onclick="dlg.close()">Cancel</button><button class="btn">${txt}</button></div></form>`;$('#mf').onsubmit=async e=>{e.preventDefault();try{if(await ok($('#mf').elements)!==false)d.close()}catch(err){console.error(err);toast(err.message||'Something went wrong')}};d.showModal()}
 const base=()=>location.href.split('#')[0];
 const room=c=>'AlAhruf'+c.replace(/[^A-Za-z0-9]/g,'');
-const joinUrl=(c,n)=>'https://meet.jit.si/'+room(c)+'#userInfo.displayName='+encodeURIComponent(JSON.stringify(n||'Guest'));
+const joinUrl=(c,n)=>{const item=(S.classes||[]).find(x=>String(x.code)===String(c));return item&&item.url?item.url:'https://meet.google.com/new'};
 function newCode(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>a[b%a.length]).join('')}
 function parseCode(v){const m=String(v).match(/class=([A-Za-z0-9]+)/);return (m?m[1]:v).trim().toUpperCase()}
 function openCurtains(){
@@ -2231,13 +2231,7 @@ function payments(){if(user.role!=='admin')return '<div class="card"><b>Permissi
 function markPaid(i){if(user.role!=='admin')return toast('Only the administrator can edit payments.');const p=S.pay[i];p.st='paid';const s=S.students.find(x=>x.id===p.sid);if(s)s.pay='paid';save();toast('Marked as paid');render()}
 function newInv(){if(user.role!=='admin')return toast('Only the administrator can create invoices.');if(!S.students.length)return toast('Add a student first');const today=new Date().toISOString().slice(0,10),due=new Date(Date.now()+2592e6).toISOString().slice(0,10);
  modal('New invoice',`<label>Student</label><select name="s">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><label>Amount (USD)</label><input name="a" type="number" min="1" step="0.01" value="50" required><label>Description / Month</label><input name="desc" placeholder="e.g. October 2026 tuition" required><label>Due date</label><input name="d" type="date" required value="${due}">`,f=>{const inv='INV-'+new Date().getFullYear()+String(Date.now()).slice(-6);S.pay.push({inv,sid:f.s.value,amt:+f.a.value,due:f.d.value,date:today,description:f.desc.value.trim(),st:'pending'});save();toast('Invoice created and saved for the selected student');render()},'Create')}
-function classLinkTarget(raw){
- const value=String(raw||'').trim();
- const match=value.match(/#class=([A-Za-z0-9_-]+)/i);
- if(match){try{const parsed=new URL(value,location.href);if(parsed.hostname===location.hostname)return 'https://meet.jit.si/'+encodeURIComponent(match[1]);}catch{}}
- try{const parsed=new URL(value);if(['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())){const parts=parsed.pathname.split('/').filter(Boolean);if(parts.length===1&&/^[A-Za-z0-9_-]+$/.test(parts[0]))return 'https://meet.jit.si/'+encodeURIComponent(parts[0]);}}catch{}
- return value;
-}
+function classLinkTarget(raw){return String(raw||'').trim();}
 function myclass(){
  S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
  S.classLinks=S.classLinks.map(c=>({...c,url:classLinkTarget(c.url)}));
@@ -2259,22 +2253,13 @@ function editClassLink(id){
  const levelOptions=['all','Beginner','Intermediate','Advanced'].map(v=>'<option value="'+v+'" '+(String(c.level||'all')===v?'selected':'')+'>'+(v==='all'?'All levels':v)+'</option>').join('');
  const teacherOptionsHtml='<option value="">All teachers</option>'+(S.teachers||[]).map(t=>'<option value="'+esc(t.username)+'" '+(String(c.teacher||'').toLowerCase()===String(t.username||'').toLowerCase()?'selected':'')+'>'+esc(t.name)+' — '+esc(t.username)+'</option>').join('');
   const savedRoom=String(c.url||'').replace('https://meet.jit.si/','').replace('http://meet.jit.si/','').split('?')[0].split('#')[0].replace(/\/$/,'');
- modal(id?'Edit class link':'Add class link',`<label>Class name</label><input name="title" required maxlength="100" value="${esc(c.title)}" placeholder="e.g. Tajwid — Level 1"><label>Jitsi room name or link</label><input name="url" type="text" required value="${esc(savedRoom)}" placeholder="e.g. AlAhrufTajwid or https://meet.jit.si/AlAhrufTajwid"><p class="mute">Enter a room name or paste a meet.jit.si link. Students will go directly to the Jitsi meeting.</p><div class="row"><div style="flex:1;min-width:180px"><label>Student level</label><select name="level">${levelOptions}</select></div>${user.role==='admin'?'<div style="flex:1;min-width:180px"><label>Assigned teacher</label><select name="teacher">'+teacherOptionsHtml+'</select></div>':'<input type="hidden" name="teacher" value="'+esc(c.teacher||user.username||'')+'">'}</div><p class="mute">Leave All levels to show this class to students at every level.</p>`,async f=>{
- const raw=f.url.value.trim();let room='',url='';
-  if(raw.startsWith('http://')||raw.startsWith('https://')){
-   try{const parsed=new URL(raw);const parts=parsed.pathname.split('/').filter(Boolean);if(!['meet.jit.si','www.meet.jit.si'].includes(parsed.hostname.toLowerCase())||parts.length!==1||! /^[A-Za-z0-9_-]+$/.test(parts[0]))return toast('Use a valid https://meet.jit.si/room link.'),false;room=parts[0]}
-  catch{return toast('Enter a Jitsi room name or a valid meet.jit.si link.'),false}
- }else{
-   room=raw.trim().split(/\s+/).join('-');
-  if(!/^[A-Za-z0-9_-]+$/.test(room))return toast('Room names can contain only letters, numbers, hyphens, and underscores.'),false;
- }
- if(!room)return toast('Enter a Jitsi room name.'),false;
- url='https://meet.jit.si/'+encodeURIComponent(room);
+ modal(id?'Edit class link':'Add class link',`<label>Class name</label><input name="title" required maxlength="100" value="${esc(c.title)}" placeholder="e.g. Tajwid — Level 1"><label>Google Meet link</label><input name="url" type="url" required value="${esc(c.url||"")}" placeholder="https://meet.google.com/abc-defg-hij"><p class="mute">Paste the Google Meet link for this class. Students will open the same meeting.</p><div class="row"><div style="flex:1;min-width:180px"><label>Student level</label><select name="level">${levelOptions}</select></div>${user.role==='admin'?'<div style="flex:1;min-width:180px"><label>Assigned teacher</label><select name="teacher">'+teacherOptionsHtml+'</select></div>':'<input type="hidden" name="teacher" value="'+esc(c.teacher||user.username||'')+'">'}</div><p class="mute">Leave All levels to show this class to students at every level.</p>`,async f=>{
+ const url=f.url.value.trim();if(!/^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(url))return toast('Paste a valid Google Meet link.'),false;
  const item={id:c.id||('cl-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)),title:f.title.value.trim(),url,level:f.level.value||'all',teacher:user.role==='teacher'?(user.username||''):f.teacher.value,owner:c.owner||me,createdAt:c.createdAt||new Date().toISOString()};
  if(!item.title)return false;
  const index=S.classLinks.findIndex(x=>String(x.id)===String(id));
  if(index>=0)S.classLinks[index]=item;else S.classLinks.unshift(item);
- save();toast('Jitsi class link saved');render();
+ save();toast('Google Meet class link saved');render();
  });
 }
 function deleteClassLink(id){
@@ -2286,15 +2271,15 @@ function deleteClassLink(id){
 function klass(){
  if(!['admin','teacher'].includes(user.role))return '<div class="card"><b>Permission denied.</b></div>';
  S.classes=Array.isArray(S.classes)?S.classes:[];
- return `<div class="card"><h3>Start a live class</h3><p class="mute">Teachers and the administrator can create class rooms. Students can only join active classes.</p><form class="row" onsubmit="event.preventDefault();startClass(this.t.value)"><input name="t" placeholder="Class title, e.g. Tajwid, Level 2" required style="flex:1;min-width:220px"><button class="btn">Start class</button></form></div><br>
- <div class="grid2">${S.classes.map((c,i)=>{const inv=base()+'#class='+c.code;return `<div class="card" style="border-color:var(--gold)"><div><span class="live"></span><b>${esc(c.title)}</b></div><div class="code">${esc(c.code)}</div><p class="mute" style="word-break:break-all">${esc(inv)}</p><div class="row"><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(c.code,user.name))}">Open as host</a><button class="btn ghost" data-invite="${esc(inv)}" onclick="copy(this.dataset.invite)">Copy invite</button><a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('Join our live class "'+c.title+'" at Al-Ahruf Academy: '+inv)}">WhatsApp</a><button class="btn ghost" onclick="endClass(${i})">End</button></div></div>`}).join('')||'<div class="card mute">No active classes. Start one above.</div>'}</div>
+ return `<div class="card"><h3>Start a live class</h3><p class="mute">Teachers and the administrator can create class rooms. Students can only join active classes.</p><form class="row" onsubmit="event.preventDefault();startClass(this.t.value,this.meet.value)"><input name="t" placeholder="Class title, e.g. Tajwid, Level 2" required style="flex:1;min-width:220px"><input name="meet" type="url" placeholder="Google Meet link (https://meet.google.com/...)" required style="flex:1;min-width:280px"><button class="btn">Save Google Meet class</button></form><p class="mute">Create the meeting in Google Meet first, then paste its link here so everyone joins the same room.</p></div><br>
+ <div class="grid2">${S.classes.map((c,i)=>{const inv=base()+'#class='+c.code;return `<div class="card" style="border-color:var(--gold)"><div><span class="live"></span><b>${esc(c.title)}</b></div><div class="code">${esc(c.code)}</div><p class="mute" style="word-break:break-all">${esc(inv)}</p><div class="row"><a class="btn gold" target="_blank" rel="noopener" href="${esc(c.url||"https://meet.google.com/new")}">Open Google Meet</a><button class="btn ghost" data-invite="${esc(inv)}" onclick="copy(this.dataset.invite)">Copy invite</button><a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('Join our live class "'+c.title+'" at Al-Ahruf Academy: '+inv)}">WhatsApp</a><button class="btn ghost" onclick="endClass(${i})">End</button></div></div>`}).join('')||'<div class="card mute">No active classes. Start one above.</div>'}</div>
  <p class="mute">Open the room first as host, then share the invite. Students can join but cannot create or end classes.</p>`}
 function studentLiveClass(){
  if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
  S.classes=Array.isArray(S.classes)?S.classes:[];
- return `<div class="card"><h3>Live class</h3><p class="mute">Join a class started by your teacher or the administrator. You cannot create, edit, or end classes.</p></div><br><div class="grid2">${S.classes.map(c=>{const inv=base()+'#class='+c.code;return `<div class="card" style="border-color:var(--gold)"><div><span class="live"></span><b>${esc(c.title)}</b></div><div class="mute" style="margin:8px 0">Class code: <strong>${esc(c.code)}</strong></div><div class="row"><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(c.code,user.name))}">Join live class</a><button class="btn ghost" data-invite="${esc(inv)}" onclick="copy(this.dataset.invite)">Copy invite</button></div></div>`}).join('')||'<div class="card mute">No live classes are active right now. Please check with your teacher.</div>'}</div>`;
+ return `<div class="card"><h3>Live class</h3><p class="mute">Join a class started by your teacher or the administrator. You cannot create, edit, or end classes.</p></div><br><div class="grid2">${S.classes.map(c=>{const inv=base()+'#class='+c.code;return `<div class="card" style="border-color:var(--gold)"><div><span class="live"></span><b>${esc(c.title)}</b></div><div class="mute" style="margin:8px 0">Class code: <strong>${esc(c.code)}</strong></div><div class="row"><a class="btn gold" target="_blank" rel="noopener" href="${esc(c.url||"https://meet.google.com/new")}">Join Google Meet</a><button class="btn ghost" data-invite="${esc(inv)}" onclick="copy(this.dataset.invite)">Copy invite</button></div></div>`}).join('')||'<div class="card mute">No live classes are active right now. Please check with your teacher.</div>'}</div>`;
 }
-function startClass(t){if(!['admin','teacher'].includes(user?.role)){toast('Only a teacher or administrator can create a live class.');return}const title=String(t||'').trim();if(!title){toast('Enter a class title.');return}S.classes=Array.isArray(S.classes)?S.classes:[];S.classes.unshift({title,code:newCode(),owner:String(user.username||user.id||'').toLowerCase()});save();toast('Class started');render()}
+function startClass(t,meetUrl){if(!['admin','teacher'].includes(user?.role))return toast('Only a teacher or administrator can create a live class.');const title=String(t||'').trim(),url=String(meetUrl||'').trim();if(!title)return toast('Enter a class title.');if(!/^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(url))return toast('Paste a valid Google Meet link.');S.classes=Array.isArray(S.classes)?S.classes:[];S.classes.unshift({title,code:newCode(),url,owner:String(user.username||user.id||'').toLowerCase()});save();toast('Google Meet class saved');render()}
 function endClass(i){if(!['admin','teacher'].includes(user?.role)){toast('Only a teacher or administrator can end a live class.');return}if(!Array.isArray(S.classes)||!S.classes[i])return;S.classes.splice(i,1);save();render()}
 function copy(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Invite copied'),()=>modal('Copy invite link',`<input value="${esc(t)}" readonly onfocus="this.select()">`,()=>{}, 'Done'))}
 
