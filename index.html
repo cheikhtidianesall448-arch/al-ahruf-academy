@@ -1987,19 +1987,29 @@ function overview(){
  +top.map((s,i)=>'<div class="row between" style="margin-bottom:8px"><span><b>#'+(i+1)+'</b> '+esc(s.name)+'</span><span class="mute">'+s.sur.length+' surahs</span></div><div class="bar2"><i style="width:'+lvl(s)+'%"></i></div>').join('')
  +(top.length?'':'<p class="mute">Add students to start the ranking.</p>')+'</div>';
 }
+function isAssignedToCurrentTeacher(student){
+ const me=String(user.username||user.id||'').trim().toLowerCase();
+ const assigned=String(student?.teacher||'').trim().toLowerCase();
+ if(!assigned)return false;
+ if(assigned===me||assigned===String(user.name||'').trim().toLowerCase())return true;
+ const teacher=(S.teachers||[]).find(x=>String(x?.username||'').trim().toLowerCase()===me);
+ return assigned===String(teacher?.name||'').trim().toLowerCase()||assigned===String(teacher?.username||'').trim().toLowerCase();
+}
 function students(){
  const teacher=user.role==='teacher';
- const list=teacher?S.students.filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()):S.students;
+ const list=teacher?S.students.filter(isAssignedToCurrentTeacher):S.students;
  const males=list.filter(s=>s.sex==='Male').length, females=list.filter(s=>s.sex==='Female').length;
  const ages=list.filter(s=>Number(s.age)>0);
  const avgAge=ages.length?ages.reduce((a,s)=>a+Number(s.age),0)/ages.length:0;
  return `<div class="row between" style="margin-bottom:12px"><div><h3>${teacher?'My students':'Students'}</h3><span class="mute">${teacher?'Students assigned to you.':'Manage and monitor academy students.'}</span></div><div class="row" style="flex:1;justify-content:flex-end"><input id="q" placeholder="Search by name, ID, phone or teacher" oninput="rows()" style="max-width:340px">${teacher?'':'<button class="btn" onclick="editS()">Add student</button>'}</div></div>
  <div class="stats" style="margin-bottom:14px"><div class="card"><b>${list.length}</b><span>${teacher?'Assigned students':'Total students'}</span></div><div class="card"><b>${males}</b><span>Male</span></div><div class="card"><b>${females}</b><span>Female</span></div><div class="card"><b>${avgAge?avgAge.toFixed(1):'—'}</b><span>Average age</span></div></div>
- <div class="card tw"><table><thead><tr><th>ID</th><th>Student</th><th>Age</th><th>Sex</th><th>Level</th><th>Quran progress</th>${teacher?'':'<th>Payment</th><th>Teacher</th><th></th>'}</tr></thead><tbody id="tb"></tbody></table></div>`+(setTimeout(rows),'')}
+ <div class="card tw"><table><thead><tr><th>ID</th><th>Student</th><th>Age</th><th>Sex</th><th>Level</th><th>Quran progress</th>${teacher?'<th>Actions</th>':'<th>Payment</th><th>Teacher</th><th>Actions</th>'}</tr></thead><tbody id="tb"></tbody></table></div>`+(setTimeout(rows),'')}
 function rows(){const q=($('#q')?.value||'').toLowerCase(),tb=$('#tb');if(!tb)return;
  const teacher=user.role==='teacher';
- const source=teacher?S.students.filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()):S.students;
+ const source=teacher?S.students.filter(isAssignedToCurrentTeacher):S.students;
  tb.innerHTML=source.filter(s=>(s.name+s.id+s.phone+s.email+s.teacher).toLowerCase().includes(q)).map(s=>teacher
+ ? `<tr><td>${esc(s.id)}</td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${(s.sur||[]).length}/114</span></td><td class="row"><button class="btn gold sm" onclick="editStudentSurahs('${esc(s.id)}')">Update surahs</button></td></tr>`
+ : `<tr><td>${esc(s.id)}</td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${(s.sur||[]).length}/114</span></td><td><span class="badge ${s.pay}">${s.pay}</span></td><td><span class="mute">${esc(teacherName(s.teacher))}</span></td><td class="row"><button class="btn gold sm" onclick="editStudentSurahs('${esc(s.id)}')">Update surahs</button><button class="btn ghost sm" onclick="editS('${esc(s.id)}')">Edit</button><button class="btn ghost sm" onclick="delS('${esc(s.id)}',this)">Delete</button></td></tr>`).join('')||`<tr><td colspan="${teacher?7:9}" class="mute">No students yet.</td></tr>`
  ? `<tr><td>${esc(s.id)}</td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${s.sur.length}/114</span></td></tr>`
  : `<tr><td>${esc(s.id)}</td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${s.sur.length}/114</span></td><td><span class="badge ${s.pay}">${s.pay}</span></td><td><span class="mute">${esc(teacherName(s.teacher))}</span></td><td class="row"><button class="btn ghost sm" onclick="editS('${s.id}')">Edit</button><button class="btn ghost sm" onclick="delS('${s.id}',this)">Delete</button></td></tr>`).join('')||`<tr><td colspan="${teacher?6:9}" class="mute">No students yet.</td></tr>`}
 async function delS(id,b){
@@ -2022,6 +2032,25 @@ function generateStudentId(name,phone,existingId){
  const used=new Set((S.students||[]).map(x=>String(x.id||'').toUpperCase()));
  if(!used.has(base))return base;
  let n=2;while(used.has(base+'-'+n))n++;return base+'-'+n;
+}
+function editStudentSurahs(id){
+ if(!['admin','teacher'].includes(user.role)){toast('You do not have permission to update memorization.');return}
+ const s=(S.students||[]).find(x=>String(x.id).toLowerCase()===String(id).toLowerCase());
+ if(!s){toast('Student not found in your student list.');return}
+ const selected=Array.isArray(s.sur)?s.sur:[];
+ modal('Update memorized surahs — '+esc(s.name),`<p class="mute">Select the surahs this student has memorized. Only memorization progress will be changed.</p><div class="surah-check-grid" style="display:grid;grid-template-columns:1fr;gap:6px;max-height:55vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px;margin:6px 0 14px">${SUR.map((name,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px;border-radius:6px;background:var(--soft);font-weight:500;cursor:pointer"><input type="checkbox" name="surah" value="${esc(name)}" ${selected.includes(name)?'checked':''} style="width:auto;min-width:16px;margin:0">${i+1}. ${surahLabel(name,i)}</label>`).join('')}</div><p class="mute">Selected: <strong id="selectedSurahCount">${selected.length}</strong> / 114</p>`,async f=>{
+  const surahs=[...document.querySelectorAll('#mf input[name="surah"]:checked')].map(el=>el.value);
+  if(ONLINE) await onlineApi('update_student_surahs',{studentId:s.id,surahs});
+  s.sur=surahs;
+  if(!ONLINE)save();
+  toast('Memorization progress saved for '+s.name+'.');
+  render();
+ });
+ const dlg=document.getElementById('dlg');
+ if(dlg)dlg.querySelectorAll('input[name="surah"]').forEach(el=>el.addEventListener('change',()=>{
+  const count=dlg.querySelectorAll('input[name="surah"]:checked').length;
+  const label=dlg.querySelector('#selectedSurahCount');if(label)label.textContent=count;
+ }));
 }
 function editS(id){if(user.role!=='admin'){toast('Only the administrator can edit students.');return}const s=S.students.find(x=>x.id===id)||{id:'',name:'',age:'',sex:'',phone:'',email:'',pw:'',level:'Beginner',pay:'pending',sur:[],teacher:''};
  const opt=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('');
