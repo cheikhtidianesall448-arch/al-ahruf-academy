@@ -112,7 +112,17 @@ function studentState(state: any, username: string) {
 function teacherState(state: any, username: string) {
   const s = cleanState(state);
   const teacher = lower(username);
-  const assigned = s.students.filter((student: any) => lower(student?.teacher) === teacher);
+  const teacherRecord = s.teachers.find((item: any) => lower(item?.username) === teacher);
+  const teacherName = lower(teacherRecord?.name);
+  const teacherKey = (value: unknown) => {
+    const raw = lower(value);
+    const match = s.teachers.find((item: any) => lower(item?.username) === raw || lower(item?.name) === raw);
+    return lower(match?.username) || raw;
+  };
+  const assigned = s.students.filter((student: any) => {
+    const assignedTeacher = teacherKey(student?.teacher);
+    return assignedTeacher === teacher || (!!teacherName && lower(student?.teacher) === teacherName);
+  });
   const assignedIds = new Set(assigned.map((student: any) => lower(student?.id)));
   s.students = assigned;
   // Teachers may see and edit attendance for their assigned students only.
@@ -899,6 +909,32 @@ async function upsertStudent(ctx: any, body: any) {
   return { ok: true, state: cleanState(state), studentId };
 }
 
+async function updateStudentSurahs(ctx: any, body: any) {
+  const profile = await requireStaff(ctx, ["admin", "teacher"]);
+  const studentId = text(body.studentId);
+  if (!studentId) throw new Error("Student ID is required.");
+  if (!Array.isArray(body.surahs)) throw new Error("Select the student's memorized surahs.");
+  const selected = [...new Set(body.surahs.filter((v: unknown) => typeof v === "string").map((v: string) => text(v)).filter(Boolean))];
+  if (selected.length > 114) throw new Error("A student cannot have more than 114 memorized surahs.");
+  const state = await getAcademyState(ctx);
+  const student = (state.students || []).find((item: any) => lower(item?.id) === lower(studentId));
+  if (!student) throw new Error("Student not found.");
+  if (normalizedRole(profile.role) === "teacher") {
+    const me = lower(profile.username);
+    const teacherRecord = (state.teachers || []).find((item: any) => lower(item?.username) === me);
+    const teacherName = lower(teacherRecord?.name);
+    const assignedValue = lower(student.teacher);
+    const assignedRecord = (state.teachers || []).find((item: any) => lower(item?.username) === assignedValue || lower(item?.name) === assignedValue);
+    const isAssigned = assignedValue === me || (!!teacherName && assignedValue === teacherName) || lower(assignedRecord?.username) === me;
+    if (!isAssigned) throw new Error("You can update memorization only for your assigned students.");
+  }
+  student.sur = selected;
+  const { error } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) throw error;
+  return { ok: true, studentId: student.id, surahs: selected, count: selected.length };
+}
+
 async function deleteStudent(ctx: any, body: any) {
   await requireStaff(ctx, ["admin"]);
 
@@ -1098,6 +1134,10 @@ export default {
 
         if (action === "upsert_student") {
           return json(await upsertStudent(ctx, body));
+        }
+
+        if (action === "update_student_surahs") {
+          return json(await updateStudentSurahs(ctx, body));
         }
 
         if (action === "upsert_teacher") {
