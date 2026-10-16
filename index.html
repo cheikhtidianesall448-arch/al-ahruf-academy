@@ -995,6 +995,52 @@ body:not(:has(.hero)) .stats span{font-size:.9rem}
   }
 }
 
+
+/* Improve login form visibility and readability on desktop and mobile. */
+body:has(.hero) .hero>.card h2,
+body:has(.hero) .hero>.card h3{
+  font-size:clamp(1.55rem,2.2vw,1.9rem)!important;
+  line-height:1.2!important;
+}
+body:has(.hero) .hero>.card label{
+  font-size:1rem!important;
+  line-height:1.4!important;
+  margin:15px 0 7px!important;
+  color:#40564f!important;
+}
+body:has(.hero) .hero>.card input{
+  font-size:1.05rem!important;
+  min-height:52px!important;
+  padding:15px 16px!important;
+}
+body:has(.hero) .hero>.card input::placeholder{
+  font-size:1rem!important;
+  color:#454f4b!important;
+  opacity:1!important;
+}
+body:has(.hero) .hero>.card .tabs button{
+  font-size:1rem!important;
+  padding:14px 10px!important;
+}
+body:has(.hero) .hero>.card form .btn{
+  font-size:1.05rem!important;
+  min-height:52px!important;
+  padding:15px!important;
+}
+body:has(.hero) .hero>.card .mute,
+body:has(.hero) .hero>.card p{
+  font-size:.98rem!important;
+  line-height:1.55!important;
+}
+@media(max-width:700px){
+  body:has(.hero) .hero>.card h2,
+  body:has(.hero) .hero>.card h3{font-size:1.55rem!important}
+  body:has(.hero) .hero>.card label{font-size:.98rem!important}
+  body:has(.hero) .hero>.card .tabs button{font-size:.95rem!important;padding:12px 6px!important}
+  body:has(.hero) .hero>.card input{font-size:1rem!important;min-height:50px!important}
+  body:has(.hero) .hero>.card form .btn{font-size:1rem!important;min-height:50px!important}
+}
+
 </style>
 
 <style>
