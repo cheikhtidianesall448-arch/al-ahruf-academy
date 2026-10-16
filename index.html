@@ -1151,6 +1151,27 @@ body:has(.hero) .hero>.card form .btn{
  body:has(.hero) .hero>.card form .btn{font-size:1.12rem!important;min-height:60px!important}
 }
 
+
+/* Improve readability across the administrator Overview dashboard. */
+#app .stats{gap:20px!important;margin-bottom:26px!important}
+#app .stats>.card{padding:28px!important;min-height:150px!important;justify-content:center!important;gap:12px!important}
+#app .stats>.card b{font-size:clamp(2rem,2.5vw,2.8rem)!important;line-height:1.15!important}
+#app .stats>.card span{font-size:1.15rem!important;line-height:1.45!important}
+#app #dashboardContent h2,#app #dashboardContent h3,
+#app .card h2,#app .card h3{font-size:clamp(1.5rem,2vw,2rem)!important;line-height:1.25!important}
+#app .card p,#app .card .mute{font-size:1.08rem!important;line-height:1.65!important}
+#app .card .row{row-gap:14px!important}
+#app .card .row span,#app .card .row b{font-size:1.08rem!important;line-height:1.5!important}
+#app .bar2{height:12px!important;margin:10px 0 20px!important}
+@media(max-width:700px){
+ #app .stats{gap:12px!important}
+ #app .stats>.card{padding:20px!important;min-height:120px!important}
+ #app .stats>.card b{font-size:1.8rem!important}
+ #app .stats>.card span{font-size:1rem!important}
+ #app .card h2,#app .card h3{font-size:1.45rem!important}
+ #app .card p,#app .card .mute{font-size:1rem!important}
+}
+
 </style>
 
 <style>
