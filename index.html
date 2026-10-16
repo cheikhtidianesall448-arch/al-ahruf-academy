@@ -1172,6 +1172,31 @@ body:has(.hero) .hero>.card form .btn{
  #app .card p,#app .card .mute{font-size:1rem!important}
 }
 
+
+/* Strong, dashboard-wide typography boost for Overview and its visible content. */
+#app .stats{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))!important;gap:22px!important;margin:0 0 30px!important}
+#app .stats>.card{padding:34px 30px!important;min-height:175px!important;gap:15px!important}
+#app .stats>.card b{font-size:clamp(2.7rem,3.5vw,3.6rem)!important;line-height:1.05!important;font-weight:800!important}
+#app .stats>.card span{font-size:1.4rem!important;line-height:1.4!important;font-weight:600!important}
+#app .card h2,#app .card h3{font-size:clamp(1.9rem,2.5vw,2.5rem)!important;line-height:1.2!important;margin-bottom:16px!important}
+#app .card p,#app .card .mute{font-size:1.3rem!important;line-height:1.7!important}
+#app .card .row span,#app .card .row b{font-size:1.35rem!important;line-height:1.55!important}
+#app .card .row .mute{font-size:1.2rem!important}
+#app .bar2{height:16px!important;margin:12px 0 24px!important;border-radius:12px!important}
+#app .card{line-height:1.6}
+#app .nav button{font-size:1.15rem!important;padding:15px 18px!important;min-height:54px!important}
+#app button,#app .btn{font-size:1.12rem!important}
+@media(max-width:700px){
+ #app .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+ #app .stats>.card{padding:22px 18px!important;min-height:135px!important}
+ #app .stats>.card b{font-size:2.2rem!important}
+ #app .stats>.card span{font-size:1.08rem!important}
+ #app .card h2,#app .card h3{font-size:1.75rem!important}
+ #app .card p,#app .card .mute{font-size:1.08rem!important}
+ #app .card .row span,#app .card .row b{font-size:1.08rem!important}
+ #app .nav button{font-size:1rem!important;padding:12px!important}
+}
+
 </style>
 
 <style>
