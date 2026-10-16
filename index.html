@@ -1041,6 +1041,82 @@ body:has(.hero) .hero>.card p{
   body:has(.hero) .hero>.card form .btn{font-size:1rem!important;min-height:50px!important}
 }
 
+
+/* Stronger login-page visibility: larger panel, headings, fields, and controls. */
+body:has(.hero) .hero{grid-template-columns:minmax(0,1fr) minmax(560px,1fr)!important}
+body:has(.hero) .hero>.card{
+  width:calc(100% - 80px)!important;
+  max-width:700px!important;
+  margin:40px!important;
+  padding:clamp(38px,4vw,60px)!important;
+  border-radius:30px!important;
+  box-shadow:0 26px 80px rgba(20,48,43,.18)!important;
+}
+body:has(.hero) .hero>.card h2,
+body:has(.hero) .hero>.card h3{
+  font-size:clamp(2.1rem,3vw,2.8rem)!important;
+  line-height:1.12!important;
+  margin-bottom:12px!important;
+}
+body:has(.hero) .hero>.card p,
+body:has(.hero) .hero>.card .mute{
+  font-size:1.15rem!important;
+  line-height:1.65!important;
+}
+body:has(.hero) .hero>.card label{
+  font-size:1.12rem!important;
+  line-height:1.4!important;
+  margin:20px 0 9px!important;
+  font-weight:700!important;
+}
+body:has(.hero) .hero>.card input{
+  font-size:1.2rem!important;
+  min-height:64px!important;
+  padding:18px 20px!important;
+  border-width:2px!important;
+  border-radius:14px!important;
+}
+body:has(.hero) .hero>.card input::placeholder{font-size:1.1rem!important;color:#3e4945!important;opacity:1!important}
+body:has(.hero) .hero>.card .tabs{gap:6px!important;margin-bottom:30px!important;padding:6px!important}
+body:has(.hero) .hero>.card .tabs button{
+  font-size:1.12rem!important;
+  padding:16px 10px!important;
+  min-height:56px!important;
+}
+body:has(.hero) .hero>.card form .btn{
+  font-size:1.2rem!important;
+  min-height:64px!important;
+  padding:18px!important;
+  margin-top:26px!important;
+  border-radius:14px!important;
+}
+@media(max-width:900px){
+  body:has(.hero) .hero{grid-template-columns:1fr!important}
+  body:has(.hero) .hero>.card{
+    width:100%!important;max-width:760px!important;
+    margin:0 auto!important;padding:36px 28px!important;
+    border-radius:0!important;box-shadow:none!important;
+  }
+  body:has(.hero) .hero>.card h2,
+  body:has(.hero) .hero>.card h3{font-size:2.2rem!important}
+  body:has(.hero) .hero>.card label{font-size:1.08rem!important}
+  body:has(.hero) .hero>.card input{font-size:1.1rem!important;min-height:60px!important}
+  body:has(.hero) .hero>.card .tabs button{font-size:1.02rem!important;min-height:52px!important}
+  body:has(.hero) .hero>.card form .btn{font-size:1.1rem!important;min-height:60px!important}
+}
+@media(max-width:520px){
+  body:has(.hero) .hero>.card{padding:30px 22px!important}
+  body:has(.hero) .hero>.card h2,
+  body:has(.hero) .hero>.card h3{font-size:2rem!important}
+  body:has(.hero) .hero>.card p,
+  body:has(.hero) .hero>.card .mute{font-size:1.02rem!important}
+  body:has(.hero) .hero>.card label{font-size:1rem!important;margin:17px 0 8px!important}
+  body:has(.hero) .hero>.card input{font-size:1.05rem!important;min-height:58px!important;padding:16px!important}
+  body:has(.hero) .hero>.card input::placeholder{font-size:1rem!important}
+  body:has(.hero) .hero>.card .tabs button{font-size:.96rem!important;padding:13px 5px!important;min-height:50px!important}
+  body:has(.hero) .hero>.card form .btn{font-size:1.08rem!important;min-height:58px!important}
+}
+
 </style>
 
 <style>
