@@ -1928,13 +1928,23 @@ function notifications(){const list=[...(S.notifications||[])].sort((a,b)=>Strin
  });
  return best;
 }
+function countdownParts(timestamp){
+  const left=Number(timestamp)-Date.now();
+  if(left<=0)return 'Starting now';
+  let mins=Math.floor(left/60000),days=Math.floor(mins/1440);mins%=1440;
+  const hours=Math.floor(mins/60);mins%=60;
+  const parts=[];if(days)parts.push(days+' day(s)');if(hours)parts.push(hours+' hour(s)');if(mins||!parts.length)parts.push(mins+' minute(s)');
+  return parts.join(', ');
+}
 function updateNextClassCountdown(){
- const el=document.getElementById('nextClassCountdown');if(!el)return;
- const target=Number(el.dataset.timestamp),left=target-Date.now();
- if(left<=0){el.textContent='Starting now';return}
- let mins=Math.floor(left/60000),days=Math.floor(mins/1440);mins%=1440;const hours=Math.floor(mins/60);mins%=60;
- const parts=[];if(days)parts.push(days+' day(s)');if(hours)parts.push(hours+' hour(s)');if(mins||!parts.length)parts.push(mins+' minute(s)');
- el.textContent='Next class in '+parts.join(', ');
+  document.querySelectorAll('[data-next-class-timestamp]').forEach(el=>{
+    el.textContent=String(el.dataset.prefix||'Next class in ')+countdownParts(el.dataset.nextClassTimestamp);
+  });
+  const legacy=document.getElementById('nextClassCountdown');
+  if(legacy&&!legacy.hasAttribute('data-next-class-timestamp'))legacy.textContent='Next class in '+countdownParts(legacy.dataset.timestamp);
+}
+function nextClassNotice(next,prefix){
+  return next?'<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="mute">'+esc(prefix)+'</div><b>'+esc(next.item.course||'Quran class')+'</b><div data-next-class-timestamp="'+next.date.getTime()+'" data-prefix="'+esc(prefix+' in ')+'" style="margin-top:5px;font-weight:750">Calculating…</div><div class="mute" style="margin-top:4px">'+esc(next.item.day)+' · '+esc(next.item.start)+' · '+esc(teacherName(next.item.teacher))+'</div></div>':'';
 }
 function timetable(){
  const list=Array.isArray(S.timetable)?S.timetable:[],days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],isAdmin=user.role==='admin',isTeacher=user.role==='teacher',canManage=isAdmin||isTeacher;
@@ -2498,7 +2508,22 @@ function myclass(){
  const assignedTeacher=String(studentRec?.teacher||'').trim().toLowerCase();
  const myTeacher=String((S.teachers||[]).find(t=>String(t.username||'').trim().toLowerCase()===assignedTeacher||String(t.name||'').trim().toLowerCase()===assignedTeacher)?.username||assignedTeacher).trim().toLowerCase();
  const rows=student?S.classLinks.filter(c=>(!c.level||String(c.level).toLowerCase()==='all'||String(c.level).toLowerCase()===String(studentRec?.level||'').toLowerCase())&&(!c.teacher||String(c.teacher).toLowerCase()===myTeacher)):S.classLinks.filter(c=>admin||String(c.owner||'').toLowerCase()===me);
- return `<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">${student?'Class links saved by your academy or teacher. New links appear automatically when they match your level and assigned teacher.':'Save reusable class links here. Students will see matching links automatically, including students enrolled later.'}</span></div>${!student?'<button class="btn" onclick="editClassLink()">+ Add class link</button>':''}</div>
+ let nextNotices='';
+ if(teacher){
+  const ownSchedule=(S.timetable||[]).filter(x=>[user.username,user.id,user.name].some(v=>String(x.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase()));
+  nextNotices=nextClassNotice(nextScheduledClass(ownSchedule),'Your next class');
+ }else if(admin){
+  nextNotices=(S.teachers||[]).map(tr=>{
+   const schedule=(S.timetable||[]).filter(x=>[tr.username,tr.name,tr.id].some(v=>String(x.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase()));
+   return nextClassNotice(nextScheduledClass(schedule),"Teacher "+(tr.name||tr.username)+"’s next class");
+  }).join('')||'<div class="card mute">No teachers have been added yet.</div>';
+ }
+ if(nextNotices){
+  if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
+  updateNextClassCountdown();
+  window._nextClassTimer=setInterval(updateNextClassCountdown,60000);
+ }
+ return nextNotices+`<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">${student?'Class links saved by your academy or teacher. New links appear automatically when they match your level and assigned teacher.':'Save reusable class links here. Students will see matching links automatically, including students enrolled later.'}</span></div>${!student?'<button class="btn" onclick="editClassLink()">+ Add class link</button>':''}</div>
  ${rows.map(c=>`<div class="card" style="margin-bottom:12px"><h3 style="margin-top:0">${esc(c.title)}</h3><div class="mute">${esc(c.level&&c.level!=='all'?'Level: '+c.level:'All levels')}${c.teacher?' · Teacher: '+esc(teacherName(c.teacher)):' · Available across teachers'}</div>${student?'<p class="mute">The meeting link stays hidden until the timetable check allows entry.</p>':'<p style="word-break:break-all">'+esc(c.url)+'</p>'}<div class="row">${student?'<button class="btn gold" type="button" data-id="'+esc(c.id)+'" onclick="openMyClassScheduledLink(this.dataset.id)">Check timetable &amp; open class</button>':'<a class="btn gold" href="'+esc(c.url)+'" target="_blank" rel="noopener">Open class</a><button class="btn ghost" data-url="'+esc(c.url)+'" onclick="copy(this.dataset.url)">Copy link</button>'}${!student&&(admin||String(c.owner||'').toLowerCase()===me)?'<button class="btn ghost" data-id="'+esc(c.id)+'" onclick="editClassLink(this.dataset.id)">Edit</button><button class="btn ghost" data-id="'+esc(c.id)+'" onclick="deleteClassLink(this.dataset.id)">Delete</button>':''}</div></div>`).join('')||'<div class="card mute">'+(student?'No class links are assigned to your level or teacher yet. Please contact your teacher or administrator.':'No saved class links yet. Add a link once and eligible students will see it automatically.')+'</div>'}`
 }
 async function openMyClassScheduledLink(classLinkId){
