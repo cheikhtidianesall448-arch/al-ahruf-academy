@@ -74,6 +74,7 @@ function studentState(state: any, username: string) {
 
   const me = s.students.find((student: any) => lower(student?.id) === id);
   s.timetable = (s.timetable || []).filter((item: any) => Array.isArray(item?.students) && item.students.map((studentId: any) => lower(studentId)).includes(id));
+  s.classes = (s.classes || []).filter((cls: any) => s.timetable.some((item: any) => text(item?.classCode) ? text(item.classCode) === text(cls?.code) : lower(item?.course) === lower(cls?.title))).map((cls: any) => ({ title: cls.title, code: cls.code }));
   // Share only public leaderboard fields; keep payments, contact details and account data private.
   s.ranking = s.students.map((student: any) => ({
     id: String(student?.id ?? ""),
