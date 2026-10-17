@@ -43,6 +43,7 @@ function cleanState(state: any) {
   s.pay = Array.isArray(s.pay) ? s.pay : [];
   s.att = s.att && typeof s.att === "object" ? s.att : {};
   s.classes = Array.isArray(s.classes) ? s.classes : [];
+  s.timetable = Array.isArray(s.timetable) ? s.timetable : [];
   s.classLinks = Array.isArray(s.classLinks) ? s.classLinks : [];
   s.messages = Array.isArray(s.messages) ? s.messages : [];
   s.notifications = Array.isArray(s.notifications) ? s.notifications : [];
@@ -99,8 +100,9 @@ function studentState(state: any, username: string) {
 
   const filteredAttendance: Record<string, any> = {};
   for (const [date, value] of Object.entries(s.att || {})) {
-    if (value && typeof value === "object" && value[id]) {
-      filteredAttendance[date] = { [id]: value[id] };
+    if (value && typeof value === "object") {
+      const ownEntry = Object.entries(value as Record<string, any>).find(([sid]) => lower(sid) === id);
+      if (ownEntry) filteredAttendance[date] = { [id]: ownEntry[1] };
     }
   }
   s.att = filteredAttendance;
@@ -1015,6 +1017,46 @@ async function getState(ctx: any) {
   };
 }
 
+async function recordClassAttendance(ctx: any, body: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  if (normalizedRole(profile.role) !== "student") throw new Error("Only student accounts can record their class attendance.");
+  const state = await getAcademyState(ctx);
+  const studentId = lower(profile.username);
+  const student = state.students.find((s: any) => lower(s?.id) === studentId);
+  if (!student) throw new Error("Your student record could not be found.");
+  const item = state.timetable.find((x: any) => text(x?.id) === text(body.timetableId) && Array.isArray(x?.students) && x.students.map((id: any) => lower(id)).includes(studentId));
+  if (!item) return { status: "not_scheduled", message: "This class is not assigned to you in your timetable." };
+  const meet = (state.classes || []).find((x: any) => text(x?.code) === text(item.classCode) && /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(x?.url)));
+  if (!item.classCode || !meet) return { status: "not_scheduled", message: "Your teacher has not connected a Google Meet link to this timetable entry yet." };
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Dakar", year: "numeric", month: "2-digit", day: "2-digit", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const part = (name: string) => parts.find((p) => p.type === name)?.value || "";
+  const date = part("year") + "-" + part("month") + "-" + part("day");
+  const weekday = part("weekday");
+  if (lower(item.day) !== lower(weekday)) return { status: "not_yet", message: "It is not time for class yet. Your next scheduled class is " + text(item.day) + " at " + text(item.start) + " (Senegal time)." };
+  const [startHour, startMinute] = text(item.start).split(":").map(Number);
+  if (!Number.isFinite(startHour) || !Number.isFinite(startMinute) || startHour < 0 || startHour > 23 || startMinute < 0 || startMinute > 59) throw new Error("The timetable start time is invalid. Please ask your teacher to correct it.");
+  const nowMinutes = Number(part("hour")) * 60 + Number(part("minute"));
+  const startMinutes = startHour * 60 + startMinute;
+  const elapsed = nowMinutes - startMinutes;
+  if (elapsed < 0) return { status: "not_yet", message: "It is not time for class yet. Your class starts at " + text(item.start) + " (Senegal time)." };
+  const dayState = state.att[date] && typeof state.att[date] === "object" ? state.att[date] : {};
+  const oldRecord = dayState[student.id] && typeof dayState[student.id] === "object" ? dayState[student.id] : {};
+  const sessions = oldRecord.sessions && typeof oldRecord.sessions === "object" ? oldRecord.sessions : {};
+  const sessionId = text(item.id);
+  let status = sessions[sessionId]?.status;
+  if (!["present", "late", "absent"].includes(status)) status = elapsed >= 30 ? "absent" : elapsed >= 10 ? "late" : "present";
+  if (!sessions[sessionId]) {
+    sessions[sessionId] = { status, course: text(item.course) || "Quran class", day: text(item.day), start: text(item.start), end: text(item.end), teacher: text(item.teacher), time: now.toISOString(), timetableId: sessionId };
+    state.att[date] = { ...dayState, [student.id]: { ...oldRecord, sessions } };
+    const { error } = await ctx.supabaseAdmin.from("academy_state").update({ state: cleanState(state), updated_at: now.toISOString() }).eq("id", 1);
+    if (error) throw error;
+  }
+  if (status === "absent") return { status, message: "You are marked absent because you tried to join 30 minutes or more after class started. Please message your teacher to negotiate another day for a catch-up class.", date, state: studentState(state, profile.username) };
+  return { status, message: status === "late" ? "You are late. Your attendance has been recorded." : "You are present. Your attendance has been recorded.", url: meet.url, date, state: studentState(state, profile.username) };
+}
+
 async function saveState(ctx: any, body: any) {
   const profile = await requireStaff(ctx, ["admin", "teacher"]);
   if (!body.state || typeof body.state !== "object") throw new Error("A valid state object is required.");
@@ -1102,6 +1144,10 @@ export default {
         // user session; the service-role client is never exposed to the browser.
         if (action === "login") {
           return json(await login(ctx, body));
+        }
+
+        if (action === "record_class_attendance") {
+          return json(await recordClassAttendance(ctx, body));
         }
 
         if (action === "get_state") {
