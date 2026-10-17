@@ -361,6 +361,28 @@ async function sendPaymentReminders(ctx: any) {
   return {ok:true,sent};
 }
 
+async function markMessagesRead(ctx: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  const me = lower(profile.username);
+  const state = ensureMessageState(await getAcademyState(ctx));
+  let changed = false;
+  for (const message of state.messages) {
+    if (lower(message?.to) !== me) continue;
+    const readBy = Array.isArray(message.readBy) ? message.readBy : [];
+    if (!readBy.some((id: any) => lower(id) === me)) {
+      message.readBy = [...readBy, profile.username];
+      changed = true;
+    }
+  }
+  if (changed) {
+    const { error } = await ctx.supabaseAdmin.from("academy_state")
+      .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw error;
+  }
+  return { ok: true, messages: visibleMessages(state, profile) };
+}
+
 async function markNotificationRead(ctx: any, body: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
@@ -1240,6 +1262,10 @@ export default {
 
         if (action === "send_payment_reminders") {
           return json(await sendPaymentReminders(ctx));
+        }
+
+        if (action === "mark_messages_read") {
+          return json(await markMessagesRead(ctx));
         }
 
         if (action === "mark_notification_read") {
