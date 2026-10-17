@@ -1806,16 +1806,27 @@ function myTeacher(){
 function currentStudent(){
  const sid=String(user.username||user.studentId||user.student_id||user.id||'').trim().toLowerCase();
  const students=Array.isArray(S.students)?S.students:[];
- const byId=students.find(x=>[x.id,x.studentId,x.student_id].some(v=>String(v||'').trim().toLowerCase()===sid));
+ const byId=students.find(x=>[x.id,x.studentId,x.student_id,x.username,x.userId,x.user_id].some(v=>String(v||'').trim().toLowerCase()===sid));
  if(byId)return byId;
- // Some older student logins still use an account ID that differs from the
- // ID stored on the student record. Use the exact display-name match as a
- // safe fallback so the student's own timetable assignments are still found.
+ // Legacy accounts can use an older ID than the student record. Match exact
+ // normalized account name first, then phone/email only when the login provides it.
  const normalizeName=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
- const accountName=normalizeName(user.name);
- if(user.role==='student'&&accountName){
-  const byName=students.find(x=>normalizeName(x.name)===accountName);
-  if(byName)return byName;
+ if(user.role==='student'){
+  const accountName=normalizeName(user.name||user.fullName||user.full_name);
+  if(accountName){
+   const byName=students.find(x=>normalizeName(x.name)===accountName);
+   if(byName)return byName;
+  }
+  const accountEmail=String(user.email||'').trim().toLowerCase();
+  if(accountEmail){
+   const byEmail=students.find(x=>String(x.email||'').trim().toLowerCase()===accountEmail);
+   if(byEmail)return byEmail;
+  }
+  const accountPhone=String(user.phone||user.mobile||'').replace(/\D/g,'');
+  if(accountPhone.length>=7){
+   const byPhone=students.find(x=>String(x.phone||x.mobile||'').replace(/\D/g,'')===accountPhone);
+   if(byPhone)return byPhone;
+  }
  }
  return user.role==='student'&&students.length===1?students[0]:null;
 }
@@ -2522,10 +2533,14 @@ function newInv(){if(user.role!=='admin')return toast('Only the administrator ca
 function classLinkTarget(raw){return String(raw||'').trim();}
 function normalizeClassMatch(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/_/g,' ').replace(/[^\w\u0600-\u06FF]+/g,' ').replace(/\s+/g,' ').trim()}
 function studentTimetableIds(studentRec){
- return [...new Set([studentRec?.id,studentRec?.studentId,studentRec?.student_id,user?.username,user?.studentId,user?.student_id,user?.id].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean))];
+ return [...new Set([studentRec?.id,studentRec?.studentId,studentRec?.student_id,studentRec?.username,studentRec?.userId,studentRec?.user_id,user?.username,user?.studentId,user?.student_id,user?.id].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean))];
 }
 function timetableHasClassLink(item,link,ids,studentRec=null){
- const assigned=(Array.isArray(item.students)?item.students:[]).some(v=>ids.includes(String(v||'').trim().toLowerCase()));
+ const normalizeName=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+ const assigned=(Array.isArray(item.students)?item.students:[]).some(v=>{
+  const key=String(v||'').trim().toLowerCase();
+  return ids.includes(key)||(!!studentRec&&normalizeName(v)===normalizeName(studentRec.name));
+ });
  if(!assigned)return false;
  const codes=[link.id,link.code].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);
  const itemCode=String(item.classCode||'').trim().toLowerCase();
