@@ -231,14 +231,12 @@ async function sendMessage(ctx: any, body: any) {
 
   const targetRole = normalizedRole(target.role);
   const myStudent = role === "student" ? state.students.find((s:any)=>lower(s?.id)===me) : null;
-  const targetStudent = targetRole === "student" ? state.students.find((s:any)=>lower(s?.id)===lower(target.username)) : null;
   const allowed =
     role === "admin" ||
     (role === "teacher" && targetRole === "student" && state.students.some((s:any)=>lower(s?.id)===lower(target.username)&&lower(s?.teacher)===me)) ||
-    (role === "student" && targetRole === "teacher" && lower(target.username) === lower(myStudent?.teacher)) ||
-    false;
+    (role === "student" && targetRole === "teacher" && lower(target.username) === lower(myStudent?.teacher));
 
-  if (!allowed) throw new Error("You can only message the academy or your assigned teacher/student.");
+  if (!allowed) throw new Error("You can only message the academy or your assigned teacher.");
 
   const item = {
     id: crypto.randomUUID(),
