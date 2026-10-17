@@ -1667,8 +1667,28 @@ function save(){
  if(ONLINE&&user){
    clearTimeout(saveTimer);
    saveTimer=setTimeout(async()=>{
-     try{await onlineApi('save_state',{state:cleanState(S)});toast('Saved online')}
-     catch(e){console.error(e);toast('Online save failed')}
+     try{
+       await onlineApi('save_state',{state:cleanState(S)});
+       toast('Saved online');
+     }catch(e){
+       console.error('Al-Ahruf online save failed:',e);
+       let reason=String(e?.message||'Please try again.');
+       if(/permission denied/i.test(reason)){
+         try{
+           const identity=await onlineApi('get_state');
+           const serverRole=String(identity?.user?.role||'').toLowerCase();
+           const pageRole=String(user?.role||'').toLowerCase();
+           if(serverRole&&pageRole&&serverRole!==pageRole){
+             reason='The secure online session is signed in as '+serverRole+', but this page is open as '+pageRole+'. Log out, then sign in again with the administrator account (ahruf). Your timetable change was not saved online.';
+           }else{
+             reason='This online account does not have permission to save the timetable. Log out and sign in with the administrator account (ahruf).';
+           }
+         }catch(checkError){
+           reason='This online account does not have permission to save the timetable. Log out and sign in with the administrator account (ahruf).';
+         }
+       }
+       toast('Online save failed: '+reason);
+     }
    },350);
  }
 }
