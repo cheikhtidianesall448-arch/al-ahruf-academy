@@ -1976,7 +1976,11 @@ function updateNextClassCountdown(){
   if(legacy&&!legacy.hasAttribute('data-next-class-timestamp'))legacy.textContent='Next class in '+countdownParts(legacy.dataset.timestamp);
 }
 function nextClassNotice(next,prefix){
-  return next?'<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="mute">'+esc(prefix)+'</div><b>'+esc(next.item.course||'Quran class')+'</b><div data-next-class-timestamp="'+next.date.getTime()+'" data-prefix="'+esc(prefix+' in ')+'" style="margin-top:5px;font-weight:750">Calculating…</div><div class="mute" style="margin-top:4px">'+esc(next.item.day)+' · '+esc(next.item.start)+' · '+esc(teacherName(next.item.teacher))+'</div></div>':'';
+ if(!next)return '';
+ const assignedIds=Array.isArray(next.item.students)?next.item.students:[];
+ const assignedNames=assignedIds.map(id=>(S.students||[]).find(st=>[st.id,st.studentId,st.student_id].some(v=>String(v||'').trim().toLowerCase()===String(id||'').trim().toLowerCase()))?.name||String(id||'')).filter(Boolean);
+ const studentLine=assignedNames.length?'<div class="mute" style="margin-top:4px">Student'+(assignedNames.length===1?'':'s')+': '+esc(assignedNames.join(', '))+'</div>':'';
+ return '<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="mute">'+esc(prefix)+'</div><b>'+esc(next.item.course||'Quran class')+'</b><div data-next-class-timestamp="'+next.date.getTime()+'" data-prefix="'+esc(prefix+' in ')+'" style="margin-top:5px;font-weight:750">Calculating…</div><div class="mute" style="margin-top:4px">'+esc(next.item.day)+' · '+esc(next.item.start)+' · '+esc(teacherName(next.item.teacher))+'</div>'+studentLine+'</div>';
 }
 function timetable(){
  const list=Array.isArray(S.timetable)?S.timetable:[],days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],isAdmin=user.role==='admin',isTeacher=user.role==='teacher',canManage=isAdmin||isTeacher;
