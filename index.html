@@ -2052,10 +2052,41 @@ function replyToPlatformMessage(id){
  if(String(m.to||'').toLowerCase().startsWith('group:'))return toast('Please reply to a private message.');
  composeMessage(m.from,id)
 }
+function messageThreadItem(m,me){
+ const from=String(m.from||'').toLowerCase();
+ const canEdit=user.role==='admin'||from===me;
+ return '<div class="message-thread-item" style="padding:12px 0;border-bottom:1px solid var(--line)"><div class="mute" style="font-size:.82rem">'+esc(m.fromName||m.from)+' · '+new Date(m.createdAt||Date.now()).toLocaleString()+(m.editedAt?' · edited':'')+'</div>'+(m.body?'<p style="white-space:pre-wrap;margin:7px 0">'+esc(m.body)+'</p>':'')+(m.attachment?(String(m.attachment.type||'').startsWith('audio/')?'<p>🎙 '+esc(m.attachment.name||'Voice message')+'</p><audio controls preload="none" style="width:100%;max-width:420px" src="'+esc(m.attachment.data||m.attachment.url||'')+'"></audio>':'<p><a href="'+esc(m.attachment.data||m.attachment.url||'#')+'" download="'+esc(m.attachment.name||'attachment')+'" target="_blank" rel="noopener">📎 '+esc(m.attachment.name||'Attached file')+'</a></p>'):'')+(canEdit?'<div class="row" style="gap:8px;margin-top:7px"><button class="btn ghost sm" onclick="editPlatformMessage(\''+esc(m.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button></div>':'')+'</div>';
+}
+async function sendThreadReply(e,f){e.preventDefault();await sendPlatformMessage(f);return false}
 function messages(){
- const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase(),myStudent=currentStudent();
- const list=[...(S.messages||[])].filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
- return '<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Private messages, class discussions, files and voice notes.</span></div><button class="btn" onclick="composeMessage()">New message</button></div><div class="card">'+(list.map(m=>'<div class="card" style="margin-bottom:10px;border-color:var(--line)"><div class="mute">'+esc(m.fromName||m.from)+' → '+esc(String(m.to||'').startsWith('group:')?'Class group':(m.toName||m.to))+' · '+new Date(m.createdAt||Date.now()).toLocaleString()+(m.editedAt?' · edited':'')+'</div>'+(m.body?'<p style="white-space:pre-wrap;margin:8px 0">'+esc(m.body)+'</p>':'')+(m.attachment?(String(m.attachment.type||'').startsWith('audio/')?'<p>🎙 '+esc(m.attachment.name||'Voice message')+'</p><audio controls preload="none" style="width:100%;max-width:420px" src="'+esc(m.attachment.data||m.attachment.url||'')+'"></audio>':'<p><a href="'+esc(m.attachment.data||m.attachment.url||'#')+'" download="'+esc(m.attachment.name||'attachment')+'" target="_blank" rel="noopener">📎 '+esc(m.attachment.name||'Attached file')+'</a></p>'):'')+((user.role==='admin'||String(m.to||'').toLowerCase()===me)&&String(m.from||'').toLowerCase()!==me&&!String(m.to||'').toLowerCase().startsWith('group:')?'<div class="row" style="gap:8px;margin-top:8px"><button class="btn sm" onclick="replyToPlatformMessage(\''+esc(m.id)+'\')">Reply</button></div>':'')+((user.role==='admin'||String(m.from||'').toLowerCase()===me)?'<div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost sm" onclick="editPlatformMessage(\''+esc(m.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button></div>':'')+'</div>').join('')||'<p class="mute">No messages yet.</p>')+'</div>'
+ const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
+ const visible=[...(S.messages||[])].filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+ const groups=new Map();
+ visible.forEach(m=>{
+  const from=String(m.from||'').toLowerCase(),to=String(m.to||'').toLowerCase();
+  const pair=[from,to].sort().join('|');
+  const key=String(m.conversationId||'').trim()||pair;
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(m);
+ });
+ const threads=[...groups.entries()].map(([key,items])=>({key,items:items.sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))})).sort((a,b)=>String(b.items[b.items.length-1]?.createdAt||'').localeCompare(String(a.items[a.items.length-1]?.createdAt||'')));
+ const cards=threads.map(thread=>{
+  const items=thread.items,last=items[items.length-1];
+  const participants=[...new Set(items.flatMap(m=>[m.from,m.to]).filter(x=>x&&!String(x).startsWith('group:')))];
+  const other=participants.find(x=>String(x).toLowerCase()!==me);
+  const otherMsg=items.find(m=>String(m.from||'').toLowerCase()===String(other||'').toLowerCase());
+  const myMsg=items.find(m=>String(m.from||'').toLowerCase()===String(other||'').toLowerCase());
+  let heading;
+  if(other)heading=(otherMsg?.fromName||otherMsg?.from||items.find(m=>String(m.to||'').toLowerCase()===String(other).toLowerCase())?.toName||other);
+  else heading=(last.fromName||last.from)+' ↔ '+(last.toName||last.to);
+  if(user.role==='admin'&&!participants.some(x=>String(x).toLowerCase()===me))heading=(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
+  const target=String(last.from||'').toLowerCase()===me?last.to:last.from;
+  const replyId=last.id;
+  const canReply=target&&!String(target).startsWith('group:')&&(user.role==='admin'||participants.some(x=>String(x).toLowerCase()===me));
+  const replyForm=canReply?'<form onsubmit="return sendThreadReply(event,this)" style="display:flex;flex-direction:column;gap:8px;padding-top:12px"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(replyId)+'"><textarea name="message" rows="2" placeholder="Write your reply..." required style="width:100%;box-sizing:border-box"></textarea><div class="row between" style="gap:8px"><input type="file" name="attachment" accept=".pdf,.epub,.txt,.doc,.docx,.mp3,.wav,.m4a,.mp4,.mov,.webm,.jpg,.jpeg,.png,.gif,.webp" style="min-width:0;max-width:100%"><button class="btn sm" type="submit">Send</button></div><span class="mute">Maximum attachment size: 10 MB.</span></form>':'';
+  return '<section class="card" style="margin-bottom:14px;border-color:var(--line);padding:16px"><div class="row between" style="gap:8px;align-items:center"><h4 style="margin:0">'+esc(heading)+'</h4><span class="mute">'+items.length+' message'+(items.length===1?'':'s')+'</span></div><div class="message-thread" style="margin-top:8px">'+items.map(m=>messageThreadItem(m,me)).join('')+'</div>'+replyForm+'</section>';
+ }).join('');
+ return '<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Each discussion stays together in one conversation box.</span></div><button class="btn" onclick="composeMessage()">New message</button></div><div>'+(cards||'<div class="card"><p class="mute">No messages yet.</p></div>')+'</div>';
 }
 async function editPlatformMessage(id){
  const m=(S.messages||[]).find(x=>String(x.id)===String(id));if(!m)return toast('Message not found.');
