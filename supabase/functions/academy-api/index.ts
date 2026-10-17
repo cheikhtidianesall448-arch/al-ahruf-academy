@@ -245,9 +245,16 @@ async function sendMessage(ctx: any, body: any) {
     lower(originalMessage?.from),
     lower(originalMessage?.to),
   ].filter(Boolean));
+  const threadKey = (m: any) => text(m?.conversationId) ||
+    [lower(m?.from), lower(m?.to)].sort().join("|");
+  const myThreadKeys = new Set(
+    state.messages
+      .filter((m: any) => lower(m?.from) === me || lower(m?.to) === me)
+      .map(threadKey),
+  );
   const validReply = !!originalMessage &&
     originalParticipants.has(lower(target.username)) &&
-    (role === "admin" || originalParticipants.has(me));
+    (role === "admin" || originalParticipants.has(me) || myThreadKeys.has(threadKey(originalMessage)));
   const allowed =
     role === "admin" ||
     validReply ||
