@@ -2322,7 +2322,7 @@ function students(){
  const ages=list.filter(s=>Number(s.age)>0);
  const avgAge=ages.length?ages.reduce((a,s)=>a+Number(s.age),0)/ages.length:0;
  return `<div class="row between" style="margin-bottom:12px"><div><h3>${teacher?'My students':'Students'}</h3><span class="mute">${teacher?'Students assigned to you.':'Manage and monitor academy students.'}</span></div><div class="row" style="flex:1;justify-content:flex-end"><input id="q" placeholder="Search by name, ID, phone or teacher" oninput="rows()" style="max-width:340px">${teacher?'':'<button class="btn" onclick="editS()">Add student</button>'}</div></div>
- <div class="stats" style="margin-bottom:14px"><div class="card"><b>${list.length}</b><span>${teacher?'Assigned students':'Total students'}</span></div><div class="card"><b>${males}</b><span>Male</span></div><div class="card"><b>${females}</b><span>Female</span></div><div class="card"><b>${avgAge?avgAge.toFixed(1):'—'}</b><span>Average age</span></div></div>
+ <div class="stats" style="margin-bottom:14px"><div class="card"><b>${list.length}</b><span>${teacher?'Assigned students':'Total students'}</span></div><div class="card"><b>${males}</b><span>Male(s)</span></div><div class="card"><b>${females}</b><span>Female(s)</span></div><div class="card"><b>${avgAge?avgAge.toFixed(1):'—'}</b><span>Average age</span></div></div>
  <div class="card tw"><table><thead><tr><th>ID</th><th>Student</th><th>Age</th><th>Sex</th><th>Level</th><th>Quran progress</th>${teacher?'<th>Actions</th>':'<th>Payment</th><th>Teacher</th><th>Actions</th>'}</tr></thead><tbody id="tb"></tbody></table></div>`+(setTimeout(rows),'')}
 function rows(){const q=($('#q')?.value||'').toLowerCase(),tb=$('#tb');if(!tb)return;
  const teacher=user.role==='teacher';
