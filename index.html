@@ -1919,11 +1919,13 @@ async function deletePlatformMessage(id){
 }
 async function markNotice(id){if(ONLINE){try{const r=await onlineApi('mark_notification_read',{id});if(r.state){S.messages=r.state.messages||S.messages;S.notifications=r.state.notifications||S.notifications}}catch(e){toast(e.message)}}else{const n=(S.notifications||[]).find(x=>x.id===id);if(n)n.read=true;save()}render()}
 function notifications(){const list=[...(S.notifications||[])].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));return '<div class="row between" style="margin-bottom:12px"><div><h3>Notifications</h3><span class="mute">Messages, payment reminders and academy alerts.</span></div></div><div class="card">'+(list.map(n=>'<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);opacity:'+(n.read?'.6':'1')+'"><div><b>'+esc(n.title)+'</b><div class="mute">'+esc(n.body)+'</div></div>'+(n.read?'':'<button class="btn ghost sm" onclick="markNotice(\''+esc(n.id)+'\')">Mark read</button>')+'</div>').join('')||'<p class="mute">No notifications.</p>')+'</div>'}function nextScheduledClass(entries){
+ // Timetable entries use Senegal time (Africa/Dakar, UTC+0), regardless of the viewer's location.
  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],now=new Date();let best=null;
  (entries||[]).forEach(item=>{
   const day=dayNames.indexOf(String(item.day||''));if(day<0||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(item.start||'')))return;
-  const [hh,mm]=item.start.split(':').map(Number),date=new Date(now);date.setHours(hh,mm,0,0);
-  let add=(day-now.getDay()+7)%7;date.setDate(date.getDate()+add);if(date<=now)date.setDate(date.getDate()+7);
+  const [hh,mm]=item.start.split(':').map(Number);
+  const date=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),hh,mm,0,0));
+  let add=(day-now.getUTCDay()+7)%7;date.setUTCDate(date.getUTCDate()+add);if(date<=now)date.setUTCDate(date.getUTCDate()+7);
   if(!best||date<best.date)best={item,date};
  });
  return best;
