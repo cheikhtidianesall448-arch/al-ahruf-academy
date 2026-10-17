@@ -1264,12 +1264,18 @@ async function onlineApi(action,payload={}){
     if(sessionError) console.warn('Could not read academy session:',sessionError.message);
     const expiresAt=Number(session?.expires_at||0);
     const shouldRefresh=forceRefresh||!session?.access_token||(expiresAt>0&&expiresAt*1000<=Date.now()+60000);
-    if(shouldRefresh&&session?.refresh_token){
+    if(shouldRefresh){
+      if(!session?.refresh_token){
+        console.warn('Academy session refresh unavailable: no refresh token.');
+        return null;
+      }
       const refreshed=await sb.auth.refreshSession({refresh_token:session.refresh_token});
       if(refreshed?.data?.session?.access_token){
         session=refreshed.data.session;
       }else{
         console.warn('Academy session refresh failed:',refreshed?.error?.message||'No refreshed session returned.');
+        // Never continue sending a stale access token after a failed refresh.
+        return null;
       }
     }
     return session||null;
@@ -2524,12 +2530,11 @@ function myclass(){
  const assignedTeacher=String(studentRec?.teacher||'').trim().toLowerCase();
  const myTeacher=String((S.teachers||[]).find(t=>String(t.username||'').trim().toLowerCase()===assignedTeacher||String(t.name||'').trim().toLowerCase()===assignedTeacher)?.username||assignedTeacher).trim().toLowerCase();
  const studentIds=student?studentTimetableIds(studentRec):[];
- const rows=student?S.classLinks.filter(c=>{
-  const scheduled=(S.timetable||[]).some(item=>timetableHasClassLink(item,c,studentIds));
-  const levelMatches=!c.level||String(c.level).trim().toLowerCase()==='all'||normalizeClassMatch(c.level)===normalizeClassMatch(studentRec?.level);
-  const teacherMatches=!c.teacher||String(c.teacher).trim().toLowerCase()===myTeacher;
-  return scheduled||(levelMatches&&teacherMatches);
- }):S.classLinks.filter(c=>admin||String(c.owner||'').toLowerCase()===me);
+ // Students must have an explicit matching timetable assignment to see a class link.
+ // Matching level/teacher labels alone must never expose an unscheduled meeting.
+ const rows=student?S.classLinks.filter(c=>
+  (S.timetable||[]).some(item=>timetableHasClassLink(item,c,studentIds))
+ ):S.classLinks.filter(c=>admin||String(c.owner||'').toLowerCase()===me);
  let nextNotices='';
  if(teacher){
   const ownSchedule=(S.timetable||[]).filter(x=>[user.username,user.id,user.name].some(v=>String(x.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase()));
