@@ -2513,13 +2513,31 @@ function normalizeClassMatch(value){return String(value||'').normalize('NFD').re
 function studentTimetableIds(studentRec){
  return [...new Set([studentRec?.id,studentRec?.studentId,studentRec?.student_id,user?.username,user?.studentId,user?.student_id,user?.id].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean))];
 }
-function timetableHasClassLink(item,link,ids){
+function timetableHasClassLink(item,link,ids,studentRec=null){
  const assigned=(Array.isArray(item.students)?item.students:[]).some(v=>ids.includes(String(v||'').trim().toLowerCase()));
  if(!assigned)return false;
  const codes=[link.id,link.code].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);
  const itemCode=String(item.classCode||'').trim().toLowerCase();
  if(itemCode&&codes.includes(itemCode))return true;
- return !!normalizeClassMatch(link.title)&&normalizeClassMatch(item.course)===normalizeClassMatch(link.title);
+ const linkTitle=normalizeClassMatch(link.title),courseTitle=normalizeClassMatch(item.course);
+ if(linkTitle&&courseTitle&&courseTitle===linkTitle)return true;
+
+ // Legacy timetable entries often store a course label that differs from the teacher's
+ // reusable link title. In that case, match the scheduled student + assigned teacher
+ // + level, rather than hiding the teacher's link because of a naming mismatch.
+ const normalizeKey=v=>String(v||'').trim().toLowerCase();
+ const linkTeacher=normalizeKey(link.teacher),scheduleTeacher=normalizeKey(item.teacher);
+ if(!linkTeacher||!scheduleTeacher)return false;
+ const teacherRecord=(S.teachers||[]).find(t=>
+  normalizeKey(t.username)===linkTeacher||normalizeKey(t.name)===linkTeacher||
+  normalizeKey(t.username)===scheduleTeacher||normalizeKey(t.name)===scheduleTeacher
+ );
+ const sameTeacher=linkTeacher===scheduleTeacher||
+  (!!teacherRecord&&[teacherRecord.username,teacherRecord.name].some(v=>normalizeKey(v)===linkTeacher)&&[teacherRecord.username,teacherRecord.name].some(v=>normalizeKey(v)===scheduleTeacher));
+ if(!sameTeacher)return false;
+ const linkLevel=normalizeKey(link.level);
+ const studentLevel=normalizeKey(studentRec?.level);
+ return !linkLevel||linkLevel==='all'||!studentLevel||normalizeClassMatch(linkLevel)===normalizeClassMatch(studentLevel);
 }
 function myclass(){
  S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
@@ -2533,7 +2551,7 @@ function myclass(){
  // Students must have an explicit matching timetable assignment to see a class link.
  // Matching level/teacher labels alone must never expose an unscheduled meeting.
  const rows=student?S.classLinks.filter(c=>
-  (S.timetable||[]).some(item=>timetableHasClassLink(item,c,studentIds))
+  (S.timetable||[]).some(item=>timetableHasClassLink(item,c,studentIds,studentRec))
  ):S.classLinks.filter(c=>admin||String(c.owner||'').toLowerCase()===me);
  let nextNotices='';
  if(teacher){
@@ -2559,7 +2577,7 @@ async function openMyClassScheduledLink(classLinkId){
  if(!link)return modal(t('Class not available'),t('This saved class link could not be found.'),()=>{},t('OK'));
  const studentRec=currentStudent();
  const ids=studentTimetableIds(studentRec);
- const match=(S.timetable||[]).find(item=>timetableHasClassLink(item,link,ids));
+ const match=(S.timetable||[]).find(item=>timetableHasClassLink(item,link,ids,student));
  if(!match){modal(t('Class not available'),t('This saved link is not connected to a class in your assigned timetable yet. Please ask your teacher or administrator to connect the correct Google Meet class to your scheduled lesson.'),()=>{},t('OK'));return;}
  await requestScheduledClass(match.id);
 }
