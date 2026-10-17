@@ -235,18 +235,24 @@ async function sendMessage(ctx: any, body: any) {
 
   const targetRole = normalizedRole(target.role);
   const myStudent = role === "student" ? state.students.find((s:any)=>lower(s?.id)===me) : null;
+  const replyToId = text(body.replyToId);
+  const originalMessage = replyToId ? state.messages.find((m:any)=>text(m?.id)===replyToId) : null;
+  const validReply = !!originalMessage &&
+    lower(originalMessage.from) === lower(target.username) &&
+    (role === "admin" || lower(originalMessage.to) === me);
   const allowed =
     role === "admin" ||
+    validReply ||
     (role === "teacher" && targetRole === "student" && state.students.some((s:any)=>lower(s?.id)===lower(target.username)&&lower(s?.teacher)===me)) ||
     (role === "student" && targetRole === "teacher" && lower(target.username) === lower(myStudent?.teacher));
 
-  if (!allowed) throw new Error("You can only message the academy or your assigned teacher.");
+  if (!allowed) throw new Error("You can only message the academy, your assigned teacher, or reply to a message addressed to you.");
 
   const item = {
     id: crypto.randomUUID(),
     from: profile.username, fromName: profileName(profile), fromRole: role,
     to: target.username, toName: profileName(target), toRole: targetRole,
-    subject: "", category, body: message, attachment: body.attachment || null,
+    subject: "", category, body: message, replyToId: replyToId || null, attachment: body.attachment || null,
     status: "open", createdAt: new Date().toISOString(), readBy: [profile.username],
   };
 
