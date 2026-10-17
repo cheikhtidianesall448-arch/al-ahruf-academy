@@ -1758,6 +1758,8 @@ function render(){
  if(out)out.style.display=user?'':'none';
  if(!app)return;
  app.innerHTML=!user?viewLogin():user.role==='student'?viewStudent():viewStaff();
+ // Refresh countdowns after rendering so newly inserted MyClass notices never stay on “Calculating…”.
+ if(user&&typeof updateNextClassCountdown==='function')updateNextClassCountdown();
  document.body.querySelectorAll('.lang-switch').forEach(x=>x.remove());
  try{document.body.appendChild(languageUI());applyI18n();applyArabicIndicDigits(document.body)}catch(e){console.warn('Language UI skipped:',e)}
 }
