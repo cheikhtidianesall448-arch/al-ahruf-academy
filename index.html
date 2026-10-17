@@ -1922,7 +1922,7 @@ function notifications(){const list=[...(S.notifications||[])].sort((a,b)=>Strin
  // Timetable entries use Senegal time (Africa/Dakar, UTC+0), regardless of the viewer's location.
  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],now=new Date();let best=null;
  (entries||[]).forEach(item=>{
-  const day=dayNames.indexOf(String(item.day||''));if(day<0||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(item.start||'')))return;
+  const day=dayNames.indexOf(String(item.day||''));if(day<0||!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(item.start||'')))return;
   const [hh,mm]=item.start.split(':').map(Number);
   const date=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),hh,mm,0,0));
   let add=(day-now.getUTCDay()+7)%7;date.setUTCDate(date.getUTCDate()+add);if(date<=now)date.setUTCDate(date.getUTCDate()+7);
