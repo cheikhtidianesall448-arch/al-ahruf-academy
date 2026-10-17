@@ -875,9 +875,10 @@ async function upsertStudent(ctx: any, body: any) {
     }
   }
 
-  const age = Number(s.age);
+  const ageText = text(s.age);
+  const age = ageText === "" ? null : Number(s.age);
   const sex = text(s.sex);
-  if (!Number.isInteger(age) || age < 1 || age > 120) throw new Error("A valid student age between 1 and 120 is required.");
+  if (age !== null && (!Number.isInteger(age) || age < 1 || age > 120)) throw new Error("Enter a valid student age between 1 and 120, or leave it blank.");
   if (sex !== "Male" && sex !== "Female") throw new Error("Student sex must be Male or Female.");
 
   const cleanStudent = {
