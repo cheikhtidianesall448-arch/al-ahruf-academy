@@ -1956,7 +1956,15 @@ function timetable(){
  const teacherKey=String(user.username||user.id||'').toLowerCase();
  const owns=x=>String(x.teacher||'').toLowerCase()===teacherKey||String(x.teacher||'')===String(user.id||'');
  let visible=list;
- if(user.role==='student')visible=list.filter(x=>(x.students||[]).map(String).includes(String(user.id)));
+ if(user.role==='student'){
+   // Resolve the logged-in profile to its academy student record first.
+   // The login username, profile ID, and student ID are not guaranteed to be identical.
+   const me=typeof currentStudent==='function'?currentStudent():null;
+   const studentKeys=[user.username,user.studentId,user.student_id,user.id,me?.id,me?.studentId,me?.student_id,me?.name,user.name]
+     .map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);
+   visible=list.filter(x=>(Array.isArray(x.students)?x.students:[])
+     .some(v=>studentKeys.includes(String(v||'').trim().toLowerCase())));
+ }
  if(isTeacher)visible=list.filter(owns);
  visible=visible.slice().sort((a,b)=>days.indexOf(a.day)-days.indexOf(b.day)||String(a.start).localeCompare(String(b.start)));
  const next=user.role==='student'?nextScheduledClass(visible):null;
