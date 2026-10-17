@@ -2030,7 +2030,7 @@ async function sendPlatformMessage(f){
  if(ONLINE){const result=await onlineApi('send_message',d);if(result.state){S.messages=result.state.messages||S.messages;S.notifications=result.state.notifications||S.notifications}}
  else{
   const rec=messageRecipients().find(x=>x.u===d.to)||{n:d.to.startsWith('group:')?'Class group':d.to,r:'user'};
-  const item={id:String(Date.now()),from:user.id,fromName:user.name,fromRole:user.role,to:d.to,toName:rec.n,toRole:rec.r,subject:'',category:'general',body:d.message,attachment:d.attachment||null,status:'open',createdAt:new Date().toISOString(),readBy:[user.id]};
+  const item={id:String(Date.now()),conversationId:d.replyToId?((S.messages||[]).find(m=>String(m.id)===String(d.replyToId))?.conversationId||[String((S.messages||[]).find(m=>String(m.id)===String(d.replyToId))?.from||'').toLowerCase(),String((S.messages||[]).find(m=>String(m.id)===String(d.replyToId))?.to||'').toLowerCase()].sort().join('|')):String(Date.now()),replyToId:d.replyToId||null,from:user.id,fromName:user.name,fromRole:user.role,to:d.to,toName:rec.n,toRole:rec.r,subject:'',category:'general',body:d.message,attachment:d.attachment||null,status:'open',createdAt:new Date().toISOString(),readBy:[user.id]};
   S.messages.push(item);save()
  }
  recordedAudioAttachment=null;activeMessageRecorder=null;activeMessageChunks=[];toast('Message sent');render()
@@ -2060,7 +2060,10 @@ function messageThreadItem(m,me){
 async function sendThreadReply(e,f){e.preventDefault();await sendPlatformMessage(f);return false}
 function messages(){
  const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
- const visible=[...(S.messages||[])].filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+ const allMessages=[...(S.messages||[])];
+ const threadKey=m=>String(m.conversationId||'').trim()||[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|');
+ const myThreadKeys=new Set(allMessages.filter(m=>String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me).map(threadKey));
+ const visible=allMessages.filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me||myThreadKeys.has(threadKey(m))).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
  const groups=new Map();
  visible.forEach(m=>{
   const from=String(m.from||'').toLowerCase(),to=String(m.to||'').toLowerCase();
