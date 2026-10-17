@@ -1614,6 +1614,7 @@ Object.assign(I18N.ar,{
  'Students can open this link only during their assigned class time.':'يمكن للطلاب فتح هذا الرابط في موعد الدرس المحدد فقط.',
  'Show collected amount':'إظهار المبلغ المحصّل','Hide collected amount':'إخفاء المبلغ المحصّل'
 });
+I18N.fr['Class not started yet']='Le cours n’a pas encore commencé';I18N.fr['Your class will start in']='Votre cours commencera dans';I18N.fr.day='jour';I18N.fr.days='jours';I18N.fr.hour='heure';I18N.fr.hours='heures';I18N.fr.minute='minute';I18N.fr.minutes='minutes';I18N.ar['Class not started yet']='لم يبدأ الدرس بعد';I18N.ar['Your class will start in']='سيبدأ درسك خلال';I18N.ar.day='يوم';I18N.ar.days='أيام';I18N.ar.hour='ساعة';I18N.ar.hours='ساعات';I18N.ar.minute='دقيقة';I18N.ar.minutes='دقائق';
 function t(key){return (I18N[currentLang]&&I18N[currentLang][key])||key}
 function setLanguage(lang){
  if(!LANGS[lang])return;
@@ -1953,15 +1954,40 @@ function timetable(){
  return countdown+'<div class="row between" style="margin-bottom:12px;gap:12px"><div><h3>'+(isAdmin?'Timetable Management':isTeacher?'My Teaching Timetable':'My Timetable')+'</h3><span class="mute">Days are columns and hours are rows. All class times use Senegal time (GMT/UTC+0).</span></div><div class="row">'+(canManage?'<button class="btn" onclick="editTimetable()">Add course</button>':'')+'</div></div>'+table;
 }
 function attendanceDateLabel(date){const locale=currentLang==='fr'?'fr-FR':currentLang==='ar'?'ar':'en-GB';return new Date(date+'T12:00:00Z').toLocaleDateString(locale,{year:'numeric',month:'short',day:'numeric',timeZone:'UTC'})}
+function scheduledClassCountdown(item){
+ const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+ const day=dayNames.indexOf(String(item.day||''));
+ if(day<0||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(item.start||'')))return null;
+ const [hh,mm]=String(item.start).split(':').map(Number);
+ const now=new Date(),nowUtc=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),now.getUTCHours(),now.getUTCMinutes(),now.getUTCSeconds());
+ const today=now.getUTCDay(),daysAhead=(day-today+7)%7;
+ const target=new Date(nowUtc);
+ target.setUTCDate(target.getUTCDate()+daysAhead);
+ target.setUTCHours(hh,mm,0,0);
+ if(daysAhead===0&&target.getTime()<=nowUtc)return null;
+ let minutes=Math.floor(Math.max(0,target.getTime()-nowUtc)/60000);
+ const days=Math.floor(minutes/1440);minutes%=1440;
+ const hours=Math.floor(minutes/60);minutes%=60;
+ const parts=[];
+ if(days)parts.push(days+' '+(days===1?t('day'):t('days')));
+ if(hours)parts.push(hours+' '+(hours===1?t('hour'):t('hours')));
+ if(minutes||!parts.length)parts.push(minutes+' '+(minutes===1?t('minute'):t('minutes')));
+ return parts.join(', ');
+}
 async function requestScheduledClass(timetableId){
  if(user?.role!=='student')return toast(t('Only students can use this class entry.'));
  const item=(S.timetable||[]).find(x=>String(x.id)===String(timetableId));
  if(!item)return toast(t('This timetable entry could not be found.'));
+ const remaining=scheduledClassCountdown(item);
+ if(remaining){
+  modal(t('Class not started yet'),t('Your class will start in')+' '+remaining+'.<p style="margin-top:8px">'+t('Scheduled class time:')+' '+esc(item.day||'')+' '+esc(item.start||'')+' ('+t('Senegal time')+').</p>',()=>{},t('OK'));
+  return;
+ }
  try{
   const result=await onlineApi('record_class_attendance',{timetableId:String(timetableId)});
   if(result.status==='not_yet'){
-   const msg=(String(result.message||'').startsWith('It is not time for class yet'))?t('Please return at your scheduled class time.'):t('Please return at your scheduled class time.');
-   modal(t('It is not time for class yet'),msg+' '+t('Scheduled class time:')+' '+esc(item.day||'')+' '+esc(item.start||'')+' ('+t('Senegal time')+').',()=>{},t('OK'));return
+   const remaining=scheduledClassCountdown(item)||t('soon');
+   modal(t('Class not started yet'),t('Your class will start in')+' '+remaining+'.<p style="margin-top:8px">'+t('Scheduled class time:')+' '+esc(item.day||'')+' '+esc(item.start||'')+' ('+t('Senegal time')+').</p>',()=>{},t('OK'));return
   }
   if(result.status==='not_scheduled'){modal(t('Class not available'),t('This class is not assigned to you in your timetable.'),()=>{},t('OK'));return}
   if(result.status==='absent'){
@@ -1976,7 +2002,7 @@ async function requestScheduledClass(timetableId){
    return;
   }
   modal(t('Class status'),t('Please contact your teacher.'),()=>{},t('OK'));
- }catch(e){modal(t('Could not check attendance'),t('The academy server did not respond. Please try again.'),()=>{},t('OK'))}
+ }catch(e){modal(t('Could not check attendance'),esc(e&&e.message?e.message:t('The academy server did not respond. Please try again.')),()=>{},t('OK'))}
 }
 function studentAttendance(){
  const sid=String(user.username||user.id||'').toLowerCase(),records=[];
@@ -2014,7 +2040,7 @@ function deleteTimetable(id,b){const isAdmin=user.role==='admin',isTeacher=user.
 function viewStaff(){
  const admin=user.role==='admin';
  const items=admin
-  ? [['overview','Overview'],['students','Students'],['teachers','Teachers'],['myclass','MyClass'],['surahs','All surahs'],['timetable','Timetable'],['attendance','Attendance'],['payments','Payments'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')],['class','Live class']]
+  ? [['overview','Overview'],['students','Students'],['teachers','Teachers'],['myclass','MyClass'],['surahs','All surahs'],['timetable','Timetable'],['attendance','Attendance'],['payments','Payments'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]]
   : [['students','My students'],['myclass','MyClass'],['class','Live class'],['timetable','My timetable'],['attendance','Attendance'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]];
  const allowed=items.map(x=>x[0]);
  if(!allowed.includes(tab))tab=admin?'overview':'students';
@@ -2807,7 +2833,7 @@ function adminSurahs(){
  const gapAhead=ahead?Math.max(0,Number(ahead.surahCount||0)-s.sur.length):0;
  const gapBehind=behind?Math.max(0,s.sur.length-Number(behind.surahCount||0)):0;
  const myInvoices=(S.pay||[]).map((p,i)=>({p,i})).filter(x=>String(x.p.sid||'').trim().toLowerCase()===String(s.id||'').trim().toLowerCase()).reverse();
- return `<h2>${t('As-salamu alaykum,')} ${esc(s.name)}</h2><div class="card" style="margin:10px 0 16px;border-color:var(--gold)"><div class="row between" style="align-items:center"><div><span class="mute">${t('Student ID')}</span><div style="font-size:1.2rem;font-weight:800;letter-spacing:.04em;margin-top:4px">${esc(s.id||'—')}</div></div><button class="btn ghost sm" type="button" onclick="copyAccountId('${esc(s.id||'')}')">${t('Copy ID')}</button></div></div>`+nav([['home','My progress'],['myclass','MyClass'],['class','Live class'],['timetable','My Timetable'],['attendance','Attendance'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]])+
+ return `<h2>${t('As-salamu alaykum,')} ${esc(s.name)}</h2><div class="card" style="margin:10px 0 16px;border-color:var(--gold)"><div class="row between" style="align-items:center"><div><span class="mute">${t('Student ID')}</span><div style="font-size:1.2rem;font-weight:800;letter-spacing:.04em;margin-top:4px">${esc(s.id||'—')}</div></div><button class="btn ghost sm" type="button" onclick="copyAccountId('${esc(s.id||'')}')">${t('Copy ID')}</button></div></div>`+nav([['home','My progress'],['myclass','MyClass'],['timetable','My Timetable'],['attendance','Attendance'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]])+
  (tab==='myclass'?myclass():tab==='class'?studentLiveClass():tab==='attendance'?studentAttendance():tab==='messages'?messages():tab==='myteacher'?myTeacher():tab==='classmates'?classmates():tab==='notifications'?notifications():tab==='timetable'?timetable():tab==='join'?`<div class="card"><h3>Join your class</h3><p class="mute">Paste the code or invite link from your teacher.</p><form onsubmit="event.preventDefault();doJoin2(this)"><input name="c" required placeholder="Class code or invite link"><br><br><button class="btn">Continue</button></form>${joinInfo?`<br><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(joinInfo.c,s.name))}">Enter classroom</a>`:''}</div>`
  :tab==='surahs'?`<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${s.sur.length} of 114 ${t('surahs memorized')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><label>${t('Start at Mushaf page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><label class="quran-translation-control" for="quranTranslationSelect">${t('Translation')} <select id="quranTranslationSelect" onchange="quranSetTranslation(this.value)"><option value="off">Off</option><option value="en">English</option><option value="fr">Français</option><option value="ar">العربية (Tafsir)</option></select></label><span class="mute">${t('Scroll up and down inside the Mushaf box to continue reading.')}</span></div><div id="quranReaderContent" class="quran-reading" onpointerdown="quranSwipeStart(event)" onpointerup="quranSwipeEnd(event)" onpointercancel="quranSwipeCancel()"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
  :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>${t('Surahs memorized')}</span></div><div class="card"><b>${lvl(s)}%</b><span>${t('Of the Quran')}</span></div><div class="card"><b>${rankText}</b><span>${t('Your ranking')}</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">${t('Payment')}</span></div></div>
