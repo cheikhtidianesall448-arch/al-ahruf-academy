@@ -1075,6 +1075,27 @@ async function saveState(ctx: any, body: any) {
   if (Array.isArray(incoming.classes)) full.classes = incoming.classes;
 
   const teacher = lower(profile.username);
+  if (Array.isArray(incoming.timetable)) {
+    const existing = Array.isArray(full.timetable) ? full.timetable : [];
+    const submittedOwn = incoming.timetable.filter((item: any) =>
+      lower(item?.teacher) === teacher || lower(item?.teacher) === lower(profileName(profile))
+    ).filter((item: any) => text(item?.course) && text(item?.day) && text(item?.start) && text(item?.end))
+      .map((item: any) => ({
+        ...item,
+        id: text(item.id),
+        course: text(item.course).slice(0, 120),
+        teacher: profile.username,
+        classCode: (full.classes || []).some((cls: any) => text(cls?.code) === text(item?.classCode) && /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(cls?.url))) ? text(item.classCode) : "",
+        students: (Array.isArray(item.students) ? item.students : []).map((sid: any) => text(sid)).filter((sid: string) => {
+          const student = full.students.find((s: any) => lower(s?.id) === lower(sid));
+          return !!student && (!student.teacher || lower(student.teacher) === teacher || lower(student.teacher) === lower(profileName(profile)));
+        }),
+      }));
+    full.timetable = [
+      ...existing.filter((item: any) => lower(item?.teacher) !== teacher && lower(item?.teacher) !== lower(profileName(profile))),
+      ...submittedOwn,
+    ];
+  }
   // Teachers may create, edit, and delete only their own saved MyClass links.
   if (Array.isArray(incoming.classLinks)) {
     const existingLinks = Array.isArray(full.classLinks) ? full.classLinks : [];
