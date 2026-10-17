@@ -1913,11 +1913,11 @@ async function requestScheduledClass(timetableId){
   const result=await onlineApi('record_class_attendance',{timetableId:String(timetableId)});
   if(result.status==='not_yet'){modal('It is not time for class yet',esc(result.message||'Please return at your scheduled class time.'),()=>{},'OK');return}
   if(result.status==='not_scheduled'){modal('Class not available',esc(result.message||'This class is not scheduled for you now.'),()=>{},'OK');return}
-  if(result.status==='absent'){S=cleanState(result.state||S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}modal('You are marked absent',esc(result.message||'You arrived 30 minutes or more after class started.')+'<p style="margin-top:12px">Please message your teacher to negotiate another day for a catch-up class.</p><button class="btn gold" type="button" onclick="closeModal();tab=\'messages\';render()">Message my teacher</button>',()=>{},'Close');return}
+  if(result.status==='absent'){S=cleanState(result.state||S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}modal('You are marked absent',esc(result.message||'You arrived 30 minutes or more after class started.')+'<p style="margin-top:12px">Please message your teacher to negotiate another day for a catch-up class.</p><button class="btn gold" type="button" onclick="document.getElementById(\'dlg\').close();tab=\'messages\';render()">Message my teacher</button>',()=>{},'Close');return}
   if(result.status==='present'||result.status==='late'){
    S=cleanState(result.state||S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
    toast(result.status==='present'?'Attendance marked: Present':'Attendance marked: Late');
-   if(result.url&&/^https:\/\/meet\.google\.com\//i.test(result.url)){window.open(result.url,'_blank','noopener');}
+   if(result.url&&/^https:\/\/meet\.google\.com\//i.test(result.url)){const w=window.open(result.url,'_blank');if(w)w.opener=null;else modal('Attendance recorded','Your attendance is recorded. <a href="'+esc(result.url)+'" target="_blank" rel="noopener">Click here to enter Google Meet</a>.',()=>{},'OK');}
    else modal('Attendance recorded','Your attendance is recorded, but the teacher has not saved a valid Google Meet link for this class.',()=>{},'OK');
    return;
   }
