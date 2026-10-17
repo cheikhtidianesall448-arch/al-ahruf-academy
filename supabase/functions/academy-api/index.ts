@@ -73,6 +73,7 @@ function studentState(state: any, username: string) {
   };
 
   const me = s.students.find((student: any) => lower(student?.id) === id);
+  s.timetable = (s.timetable || []).filter((item: any) => Array.isArray(item?.students) && item.students.map((studentId: any) => lower(studentId)).includes(id));
   // Share only public leaderboard fields; keep payments, contact details and account data private.
   s.ranking = s.students.map((student: any) => ({
     id: String(student?.id ?? ""),
@@ -1027,8 +1028,8 @@ async function recordClassAttendance(ctx: any, body: any) {
   if (!student) throw new Error("Your student record could not be found.");
   const item = state.timetable.find((x: any) => text(x?.id) === text(body.timetableId) && Array.isArray(x?.students) && x.students.map((id: any) => lower(id)).includes(studentId));
   if (!item) return { status: "not_scheduled", message: "This class is not assigned to you in your timetable." };
-  const meet = (state.classes || []).find((x: any) => text(x?.code) === text(item.classCode) && /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(x?.url)));
-  if (!item.classCode || !meet) return { status: "not_scheduled", message: "Your teacher has not connected a Google Meet link to this timetable entry yet." };
+  const meet = (state.classes || []).find((x: any) => (text(item.classCode) ? text(x?.code) === text(item.classCode) : lower(x?.title) === lower(item?.course)) && /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(x?.url)));
+  if (!meet) return { status: "not_scheduled", message: "Your teacher has not connected a Google Meet link to this timetable entry yet." };
   const now = new Date();
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Dakar", year: "numeric", month: "2-digit", day: "2-digit", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
   const part = (name: string) => parts.find((p) => p.type === name)?.value || "";
