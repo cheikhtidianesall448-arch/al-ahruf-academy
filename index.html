@@ -1957,7 +1957,7 @@ function attendanceDateLabel(date){const locale=currentLang==='fr'?'fr-FR':curre
 function scheduledClassCountdown(item){
  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
  const day=dayNames.indexOf(String(item.day||''));
- if(day<0||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(item.start||'')))return null;
+ if(day<0||!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(item.start||'')))return null;
  const [hh,mm]=String(item.start).split(':').map(Number);
  const now=new Date(),nowUtc=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),now.getUTCHours(),now.getUTCMinutes(),now.getUTCSeconds());
  const today=now.getUTCDay(),daysAhead=(day-today+7)%7;
