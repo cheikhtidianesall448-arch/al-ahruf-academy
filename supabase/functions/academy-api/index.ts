@@ -720,8 +720,8 @@ async function deleteTeacher(ctx: any, body: any) {
 function generatedStudentId(fullName: string, phone: string, usedIds: string[], preserveId = "") {
   const keep = text(preserveId);
   if (keep) return keep;
-  const letters = fullName.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^A-Za-z]/g, "").toUpperCase();
-  const digits = phone.replace(/\\D/g, "");
+  const letters = fullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z]/g, "").toUpperCase();
+  const digits = phone.replace(/\D/g, "");
   if (letters.length < 2) throw new Error("The student's full name must contain at least two letters.");
   if (digits.length < 2) throw new Error("A valid phone number with at least two digits is required to generate the Student ID.");
   const base = `${letters[0]}${letters[letters.length - 1]}ARF${digits.slice(-2)}`;
@@ -751,8 +751,13 @@ async function upsertStudent(ctx: any, body: any) {
     ? (state.students || []).find((x: any) => lower(x?.id) === lower(existingId))
     : null;
 
-  let studentId = existingId || text(s.id);
-  if (!studentId) {
+  let studentId = "";
+  if (existingId) {
+    if (!currentStudent) throw new Error("The existing Student ID could not be verified.");
+    // Preserve the ID when editing an existing student.
+    studentId = text(currentStudent.id);
+  } else {
+    // Generate IDs on the server; never trust an ID supplied by the browser.
     const profileResult = await ctx.supabaseAdmin
       .from("profiles")
       .select("username")
@@ -763,8 +768,6 @@ async function upsertStudent(ctx: any, body: any) {
       ...(profileResult.data || []).map((x: any) => text(x?.username)),
     ].filter(Boolean);
     studentId = generatedStudentId(fullName, phone, usedIds);
-  } else if (currentStudent && lower(studentId) !== lower(currentStudent.id)) {
-    throw new Error("The existing Student ID could not be verified.");
   }
 
   const normalizedStudentId = studentId.toLowerCase();
