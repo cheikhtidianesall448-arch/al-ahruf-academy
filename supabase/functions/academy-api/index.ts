@@ -465,9 +465,24 @@ function isActive(profile: any) {
   return profile?.is_active !== false;
 }
 
-async function findProfileForLogin(ctx: any, username: string) {
+async function findProfileForLogin(ctx: any, username: string, wantedRole = "") {
   const input = lower(username);
   if (!input) return null;
+
+  // The shared administrator login ID ("ahruf") must resolve to the active
+  // admin account even if a legacy student profile happens to use that username.
+  // Keep role selection authoritative; never authenticate a student as admin.
+  if (input === "ahruf" && normalizedRole(wantedRole) === "admin") {
+    const admins = await ctx.supabaseAdmin
+      .from("profiles")
+      .select("id,username,name,full_name,role,email,phone,photo_url,gender,is_active")
+      .eq("role", "admin")
+      .neq("is_active", false)
+      .limit(2);
+    if (admins.error) throw admins.error;
+    if (admins.data?.length === 1) return admins.data[0];
+    if (admins.data?.length > 1) throw new Error("More than one active administrator account exists. Please contact support.");
+  }
 
   // 1. Username — case insensitive.
   const byUsername = await ctx.supabaseAdmin
@@ -528,13 +543,13 @@ async function findProfileForLogin(ctx: any, username: string) {
   return null;
 }
 
-async function authenticateLogin(ctx: any, username: string, password: string) {
+async function authenticateLogin(ctx: any, username: string, password: string, wantedRole = "") {
   const input = lower(username);
 
   if (!input) throw new Error("Username or student ID is required.");
   if (!password) throw new Error("Password is required.");
 
-  let profile = await findProfileForLogin(ctx, input);
+  let profile = await findProfileForLogin(ctx, input, wantedRole);
   let authEmail = "";
 
   // If the user supplied an email, we can authenticate directly even when
@@ -603,6 +618,7 @@ async function login(ctx: any, payload: any) {
     ctx,
     username,
     password,
+    wantedRole,
   );
 
   const actualRole = normalizedRole(profile.role);
