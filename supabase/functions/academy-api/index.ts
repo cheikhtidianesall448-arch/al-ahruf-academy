@@ -98,6 +98,10 @@ function studentState(state: any, username: string) {
     (student: any) => lower(student?.id) === id,
   );
 
+  // Never expose reusable Google Meet URLs in student state. Students receive a link
+  // only from record_class_attendance after the server verifies their timetable time.
+  s.classLinks = (s.classLinks || []).map((link: any) => ({ ...link, url: "" }));
+
   s.pay = s.pay.filter((payment: any) => lower(payment?.sid) === id);
 
   const filteredAttendance: Record<string, any> = {};
