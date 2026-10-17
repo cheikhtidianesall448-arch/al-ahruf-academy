@@ -1831,7 +1831,7 @@ function classmates(){
  ): [];
  const list=(peers.length?peers:fallback).filter(p=>String(p.id||'').trim().toLowerCase()!==sid);
  if(!me&&!peers.length)return '<div class="card"><h3>Classmates</h3><p class="mute">Your class list is loading or your teacher has not been assigned yet. Please refresh or contact the administrator.</p></div>';
- const rows=list.map(p=>`<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);gap:12px"><div><b>${esc(p.name||'Student')}</b><div class="mute">${esc(p.sex||'Classmate')}</div></div><button class="btn sm" onclick="composeMessage('${esc(p.id)}')">Message</button></div>`).join('');
+ const rows=list.map(p=>`<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);gap:12px"><div><b>${esc(p.name||'Student')}</b><div class="mute">${esc(p.sex||'Classmate')}</div></div></div>`).join('');
  return `<div class="row between" style="margin-bottom:12px"><div><h3>Classmates</h3><span class="mute">Students assigned to the same teacher as you.</span></div></div><div class="card">${rows||'<p class="mute">No classmates have been assigned to your teacher yet.'+(me&&me.teacher?'':' Your teacher assignment may need to be checked by the administrator.')+'</p>'}</div>`;
 }
 async function sendClassGroupChat(f){
