@@ -1911,7 +1911,10 @@ function showResetHelp(){modal('Reset your admin password',`<p class="mute">For 
 function doJoin(f){const c=parseCode(f.c.value);if(c.length<4)return toast('Check the class code');joinInfo={n:f.n.value.trim(),c};render();$('#app').scrollIntoView()}
 
 function nav(items){return `<div class="nav">${items.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('')}</div>`}
-function unreadCount(){return 0}
+function unreadCount(){
+ const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
+ return (S.messages||[]).filter(m=>String(m.to||'').toLowerCase()===me&&!(Array.isArray(m.readBy)?m.readBy:[]).some(x=>String(x).toLowerCase()===me)).length;
+}
 function myTeacher(){
  if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
  const student=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(user.username||user.id||'').toLowerCase())||((S.students||[]).length===1?(S.students||[])[0]:null);
@@ -2054,13 +2057,25 @@ function replyToPlatformMessage(id){
 }
 function messageThreadItem(m,me){
  const from=String(m.from||'').toLowerCase();
+ const to=String(m.to||'').toLowerCase();
+ const readBy=Array.isArray(m.readBy)?m.readBy:[];
+ const unread=to===me&&!readBy.some(x=>String(x).toLowerCase()===me);
  const canEdit=user.role==='admin'||from===me;
- return '<div class="message-thread-item" style="padding:12px 0;border-bottom:1px solid var(--line)"><div class="mute" style="font-size:.82rem">'+esc(m.fromName||m.from)+' · '+new Date(m.createdAt||Date.now()).toLocaleString()+(m.editedAt?' · edited':'')+'</div>'+(m.body?'<p style="white-space:pre-wrap;margin:7px 0">'+esc(m.body)+'</p>':'')+(m.attachment?(String(m.attachment.type||'').startsWith('audio/')?'<p>🎙 '+esc(m.attachment.name||'Voice message')+'</p><audio controls preload="none" style="width:100%;max-width:420px" src="'+esc(m.attachment.data||m.attachment.url||'')+'"></audio>':'<p><a href="'+esc(m.attachment.data||m.attachment.url||'#')+'" download="'+esc(m.attachment.name||'attachment')+'" target="_blank" rel="noopener">📎 '+esc(m.attachment.name||'Attached file')+'</a></p>'):'')+(canEdit?'<div class="row" style="gap:8px;margin-top:7px"><button class="btn ghost sm" onclick="editPlatformMessage(\''+esc(m.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button></div>':'')+'</div>';
+ return '<div class="message-thread-item" style="padding:12px 0;border-bottom:1px solid var(--line);'+(unread?'background:color-mix(in srgb,var(--gold) 12%,transparent);border-left:4px solid var(--gold);padding-left:10px;':'')+'"><div class="mute" style="font-size:.82rem">'+esc(m.fromName||m.from)+' · '+new Date(m.createdAt||Date.now()).toLocaleString()+(m.editedAt?' · edited':'')+'</div>'+(unread?'<span class="badge" style="background:var(--gold);color:#241a05">Unread</span>':'')+(m.body?'<p style="white-space:pre-wrap;margin:7px 0">'+esc(m.body)+'</p>':'')+(m.attachment?(String(m.attachment.type||'').startsWith('audio/')?'<p>🎙 '+esc(m.attachment.name||'Voice message')+'</p><audio controls preload="none" style="width:100%;max-width:420px" src="'+esc(m.attachment.data||m.attachment.url||'')+'"></audio>':'<p><a href="'+esc(m.attachment.data||m.attachment.url||'#')+'" download="'+esc(m.attachment.name||'attachment')+'" target="_blank" rel="noopener">📎 '+esc(m.attachment.name||'Attached file')+'</a></p>'):'')+(canEdit?'<div class="row" style="gap:8px;margin-top:7px"><button class="btn ghost sm" onclick="editPlatformMessage(\''+esc(m.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button></div>':'')+'</div>';
 }
 async function sendThreadReply(e,f){e.preventDefault();await sendPlatformMessage(f);return false}
 function messages(){
  const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
  const allMessages=[...(S.messages||[])];
+ const unreadIncoming=allMessages.some(m=>String(m.to||'').toLowerCase()===me&&!(Array.isArray(m.readBy)?m.readBy:[]).some(x=>String(x).toLowerCase()===me));
+ if(unreadIncoming){
+  if(ONLINE){
+   onlineApi('mark_messages_read').then(r=>{if(Array.isArray(r.messages))S.messages=r.messages;else if(r.state&&Array.isArray(r.state.messages))S.messages=r.state.messages;render()}).catch(e=>console.warn('Could not mark messages read:',e.message));
+  }else{
+   (S.messages||[]).forEach(m=>{if(String(m.to||'').toLowerCase()===me){m.readBy=Array.isArray(m.readBy)?m.readBy:[];if(!m.readBy.some(x=>String(x).toLowerCase()===me))m.readBy.push(user.username||user.id)}});
+   save();
+  }
+ }
  const threadKey=m=>String(m.conversationId||'').trim()||[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|');
  const myThreadKeys=new Set(allMessages.filter(m=>String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me).map(threadKey));
  const visible=allMessages.filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me||myThreadKeys.has(threadKey(m))).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
@@ -2072,9 +2087,9 @@ function messages(){
   if(!groups.has(key))groups.set(key,[]);
   groups.get(key).push(m);
  });
- const threads=[...groups.entries()].map(([key,items])=>({key,items:items.sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))})).sort((a,b)=>String(b.items[b.items.length-1]?.createdAt||'').localeCompare(String(a.items[a.items.length-1]?.createdAt||'')));
+ const threads=[...groups.entries()].map(([key,items])=>({key,items:items.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))})).sort((a,b)=>String(b.items[0]?.createdAt||'').localeCompare(String(a.items[0]?.createdAt||'')));
  const cards=threads.map(thread=>{
-  const items=thread.items,last=items[items.length-1];
+  const items=thread.items,last=items[0];
   const participants=[...new Set(items.flatMap(m=>[m.from,m.to]).filter(x=>x&&!String(x).startsWith('group:')))];
   const other=participants.find(x=>String(x).toLowerCase()!==me);
   const otherMsg=items.find(m=>String(m.from||'').toLowerCase()===String(other||'').toLowerCase());
