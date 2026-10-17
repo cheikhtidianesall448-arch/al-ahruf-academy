@@ -159,17 +159,21 @@ function visibleMessages(state: any, profile: any) {
   const role = normalizedRole(profile?.role);
   const me = lower(profile?.username);
   if (role === "admin") return s.messages;
+  const threadKey = (m: any) => text(m?.conversationId) ||
+    [lower(m?.from), lower(m?.to)].sort().join("|");
+  const myThreadKeys = new Set(
+    s.messages
+      .filter((m: any) => lower(m?.from) === me || lower(m?.to) === me)
+      .map(threadKey),
+  );
   const assignedIds = role === "teacher"
     ? new Set(s.students.filter((x: any) => lower(x?.teacher) === me).map((x: any) => lower(x?.id)))
     : new Set([me]);
   const myStudent = role === "student" ? s.students.find((x: any) => lower(x?.id) === me) : null;
-  const peerIds = role === "student" && myStudent?.teacher
-    ? new Set(s.students.filter((x: any) => lower(x?.teacher) === lower(myStudent.teacher)).map((x: any) => lower(x?.id)))
-    : new Set<string>();
   return s.messages.filter((m: any) => {
     const from = lower(m?.from);
     const to = lower(m?.to);
-    if (from === me || to === me) return true;
+    if (from === me || to === me || myThreadKeys.has(threadKey(m))) return true;
     if (role === "student" && myStudent?.teacher && to === "group:" + lower(myStudent.teacher)) return true;
     if (role === "teacher" && to === "group:" + me) return true;
     if (role === "teacher" && assignedIds.has(from) && assignedIds.has(to)) return true;
@@ -254,7 +258,8 @@ async function sendMessage(ctx: any, body: any) {
 
   const messageId = crypto.randomUUID();
   const conversationId = originalMessage
-    ? (text(originalMessage.conversationId) || text(originalMessage.id))
+    ? (text(originalMessage.conversationId) ||
+      [lower(originalMessage.from), lower(originalMessage.to)].sort().join("|"))
     : messageId;
   const item = {
     id: messageId,
