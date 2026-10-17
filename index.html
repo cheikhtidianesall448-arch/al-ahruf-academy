@@ -2577,7 +2577,7 @@ async function openMyClassScheduledLink(classLinkId){
  if(!link)return modal(t('Class not available'),t('This saved class link could not be found.'),()=>{},t('OK'));
  const studentRec=currentStudent();
  const ids=studentTimetableIds(studentRec);
- const match=(S.timetable||[]).find(item=>timetableHasClassLink(item,link,ids,student));
+ const match=(S.timetable||[]).find(item=>timetableHasClassLink(item,link,ids,studentRec));
  if(!match){modal(t('Class not available'),t('This saved link is not connected to a class in your assigned timetable yet. Please ask your teacher or administrator to connect the correct Google Meet class to your scheduled lesson.'),()=>{},t('OK'));return;}
  await requestScheduledClass(match.id);
 }
