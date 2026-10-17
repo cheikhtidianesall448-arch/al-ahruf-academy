@@ -1569,7 +1569,7 @@ Object.assign(I18N.ar,{
 });
 let currentLang='en';try{const savedLang=window.localStorage&&window.localStorage.getItem(LANG_KEY);if(savedLang&&LANGS[savedLang])currentLang=savedLang}catch(e){console.warn('Language preference storage unavailable:',e)}
 Object.assign(I18N.fr,{
- 'Attendance':'Présence','My Attendance':'Mon historique de présence','Your class attendance history from your assigned timetable.':'Historique de votre présence aux cours selon votre emploi du temps.',
+ 'Attendance':'Présence','Attendance history':'Historique des présences','Attendance is recorded automatically when students enter their scheduled class.':'La présence est enregistrée automatiquement lorsque les étudiants rejoignent leur cours prévu.','Filter by date':'Filtrer par date','Recorded sessions':'Séances enregistrées','Recorded at':'Enregistré à','My Attendance':'Mon historique de présence','Your class attendance history from your assigned timetable.':'Historique de votre présence aux cours selon votre emploi du temps.',
  'Present':'Présent','Late':'En retard','Absent':'Absent','Date':'Date','Class':'Cours','Scheduled time':'Heure prévue','Status':'Statut',
  'No class attendance has been recorded yet.':'Aucune présence aux cours n’a encore été enregistrée.',
  'View my timetable':'Voir mon emploi du temps','Check attendance & join class':'Vérifier la présence et rejoindre le cours',
@@ -1592,7 +1592,7 @@ Object.assign(I18N.fr,{
  'Show collected amount':'Afficher le montant encaissé','Hide collected amount':'Masquer le montant encaissé'
 });
 Object.assign(I18N.ar,{
- 'Attendance':'الحضور','My Attendance':'سجل حضوري','Your class attendance history from your assigned timetable.':'سجل حضورك للدروس وفقاً لجدولك الدراسي.',
+ 'Attendance':'الحضور','Attendance history':'سجل الحضور','Attendance is recorded automatically when students enter their scheduled class.':'يُسجَّل الحضور تلقائياً عند دخول الطلاب إلى الدرس المحدد في جدولهم.','Filter by date':'تصفية حسب التاريخ','Recorded sessions':'الحصص المسجلة','Recorded at':'وقت التسجيل','My Attendance':'سجل حضوري','Your class attendance history from your assigned timetable.':'سجل حضورك للدروس وفقاً لجدولك الدراسي.',
  'Present':'حاضر','Late':'متأخر','Absent':'غائب','Date':'التاريخ','Class':'الدرس','Scheduled time':'الوقت المحدد','Status':'الحالة',
  'No class attendance has been recorded yet.':'لم يتم تسجيل أي حضور للدروس حتى الآن.',
  'View my timetable':'عرض جدولي الدراسي','Check attendance & join class':'التحقق من الحضور والانضمام إلى الدرس',
@@ -2236,9 +2236,34 @@ function editS(id){if(user.role!=='admin'){toast('Only the administrator can edi
 }else{const i=S.students.findIndex(x=>x.id===id);i<0?S.students.push(d):S.students[i]=d;save();}
  toast(ONLINE?'Student account created/updated online':'Student saved');render()})}
 
-function attendance(){if(user.role!=='admin'&&user.role!=='teacher')return '<div class="card"><b>Permission denied.</b></div>';const d=new Date().toISOString().slice(0,10);
- return `<div class="card"><div class="row between"><h3>Attendance</h3><input type="date" id="ad" value="${d}" style="max-width:180px" onchange="render()"></div><br><div class="tw"><table><thead><tr><th>Student</th><th>Status</th><th>Memorization</th></tr></thead><tbody>${S.students.map(s=>{const r=(S.att[d]||{})[s.id]||{};return `<tr><td><b>${esc(s.name)}</b></td><td><select id="a-${s.id}"><option value="present" ${r.a==='present'?'selected':''}>Present</option><option value="late" ${r.a==='late'?'selected':''}>Late</option><option value="absent" ${r.a==='absent'?'selected':''}>Absent</option></select></td><td><select id="m-${s.id}"><option value="memorized">Memorized</option><option value="partial" ${r.m==='partial'?'selected':''}>Partial</option><option value="not" ${r.m==='not'?'selected':''}>Not memorized</option></select></td></tr>`}).join('')}</tbody></table></div><div class="row end"><button class="btn" onclick="saveAtt()">Save attendance</button></div></div>`}
-function saveAtt(){if(user.role!=='admin'&&user.role!=='teacher')return toast('You do not have permission to edit attendance.');const d=$('#ad').value;S.att[d]={};S.students.forEach(s=>S.att[d][s.id]={a:$('#a-'+s.id).value,m:$('#m-'+s.id).value});save();toast('Attendance saved')}
+function attendance(){
+  if(user.role!=='admin'&&user.role!=='teacher')return '<div class="card"><b>Permission denied.</b></div>';
+  const selectedDate=document.getElementById('ad')?.value||'';
+  const isTeacher=user.role==='teacher';
+  const teacherKey=String(user.username||user.id||'').toLowerCase();
+  const ownsClass=item=>String(item?.teacher||'').toLowerCase()===teacherKey||String(item?.teacher||'')===String(user.id||'');
+  const allowedClasses=(S.timetable||[]).filter(item=>!isTeacher||ownsClass(item));
+  const records=[];
+  for(const [date,day] of Object.entries(S.att||{})){
+   if(selectedDate&&date!==selectedDate)continue;
+   for(const [studentKey,entry] of Object.entries(day||{})){
+    const student=(S.students||[]).find(st=>[st.id,st.username,st.studentId,st.student_id].some(v=>String(v||'').toLowerCase()===String(studentKey).toLowerCase()));
+    const sessions=entry&&entry.sessions&&typeof entry.sessions==='object'?entry.sessions:{};
+    for(const [sessionKey,record] of Object.entries(sessions)){
+     if(!record||!record.status)continue;
+     const timetableItem=allowedClasses.find(item=>String(item.id)===String(record.timetableId||sessionKey));
+     if(isTeacher&&!timetableItem&&!ownsClass({teacher:record.teacher}))continue;
+     records.push({date,student:student?.name||studentKey,studentId:student?.id||studentKey,course:record.course||timetableItem?.course||'Quran class',day:record.day||timetableItem?.day||'',start:record.start||timetableItem?.start||'',status:record.status,time:record.time||''});
+    }
+   }
+  }
+  records.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||String(b.time||'').localeCompare(String(a.time||'')));
+  const count=status=>records.filter(r=>r.status===status).length;
+  const rows=records.map(r=>'<tr><td>'+esc(attendanceDateLabel(r.date))+'</td><td><b>'+esc(r.student)+'</b><div class="mute">'+esc(r.studentId)+'</div></td><td>'+esc(r.course)+'</td><td>'+esc((r.day?r.day+' · ':'')+r.start)+'</td><td><span class="badge '+esc(r.status)+'">'+esc(t(r.status.charAt(0).toUpperCase()+r.status.slice(1)))+'</span></td><td>'+esc(r.time?new Date(r.time).toLocaleTimeString(currentLang==='fr'?'fr-FR':currentLang==='ar'?'ar':'en-GB',{hour:'2-digit',minute:'2-digit'}):'—')+'</td></tr>').join('');
+  return '<div class="row between" style="margin-bottom:12px;gap:12px;flex-wrap:wrap"><div><h3>'+t('Attendance history')+'</h3><p class="mute">'+t('Attendance is recorded automatically when students enter their scheduled class.')+'</p></div><label>'+t('Filter by date')+' <input type="date" id="ad" value="'+esc(selectedDate)+'" style="max-width:180px" onchange="render()"></label></div>'+
+   '<div class="stats"><div class="card"><b>'+records.length+'</b><span>'+t('Recorded sessions')+'</span></div><div class="card"><b>'+count('present')+'</b><span>'+t('Present')+'</span></div><div class="card"><b>'+count('late')+'</b><span>'+t('Late')+'</span></div><div class="card"><b>'+count('absent')+'</b><span>'+t('Absent')+'</span></div></div>'+
+   '<div class="card tw" style="margin-top:12px"><table><thead><tr><th>'+t('Date')+'</th><th>'+t('Student')+'</th><th>'+t('Class')+'</th><th>'+t('Scheduled time')+'</th><th>'+t('Status')+'</th><th>'+t('Recorded at')+'</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" class="mute">'+t('No class attendance has been recorded yet.')+'</td></tr>')+'</tbody></table></div>';
+}
 function invoiceStudent(p){const sid=String(p?.sid||'').trim().toLowerCase();return (S.students||[]).find(s=>String(s?.id||'').trim().toLowerCase()===sid)||null}
 function closeInvoice(){const el=document.getElementById('invoiceOverlay');if(el)el.remove()}
 function viewInvoiceById(inv){const i=(S.pay||[]).findIndex(p=>String(p?.inv||'')===String(inv||''));if(i<0)return toast('Invoice not found');return viewInvoice(i)}
