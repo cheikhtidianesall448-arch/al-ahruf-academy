@@ -2503,6 +2503,18 @@ function markPaid(i){if(user.role!=='admin')return toast('Only the administrator
 function newInv(){if(user.role!=='admin')return toast('Only the administrator can create invoices.');if(!S.students.length)return toast('Add a student first');const today=new Date().toISOString().slice(0,10),due=new Date(Date.now()+2592e6).toISOString().slice(0,10);
  modal('New invoice',`<label>Student</label><select name="s">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><label>Amount (USD)</label><input name="a" type="number" min="1" step="0.01" value="50" required><label>Description / Month</label><input name="desc" placeholder="e.g. October 2026 tuition" required><label>Due date</label><input name="d" type="date" required value="${due}">`,f=>{const inv='INV-'+new Date().getFullYear()+String(Date.now()).slice(-6);S.pay.push({inv,sid:f.s.value,amt:+f.a.value,due:f.d.value,date:today,description:f.desc.value.trim(),st:'pending'});save();toast('Invoice created and saved for the selected student');render()},'Create')}
 function classLinkTarget(raw){return String(raw||'').trim();}
+function normalizeClassMatch(value){return String(value||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^\\w\\u0600-\\u06FF]+/g,' ').replace(/\\s+/g,' ').trim()}
+function studentTimetableIds(studentRec){
+ return [...new Set([studentRec?.id,studentRec?.studentId,studentRec?.student_id,user?.username,user?.studentId,user?.student_id,user?.id].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean))];
+}
+function timetableHasClassLink(item,link,ids){
+ const assigned=(Array.isArray(item.students)?item.students:[]).some(v=>ids.includes(String(v||'').trim().toLowerCase()));
+ if(!assigned)return false;
+ const codes=[link.id,link.code].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);
+ const itemCode=String(item.classCode||'').trim().toLowerCase();
+ if(itemCode&&codes.includes(itemCode))return true;
+ return !!normalizeClassMatch(link.title)&&normalizeClassMatch(item.course)===normalizeClassMatch(link.title);
+}
 function myclass(){
  S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
  S.classLinks=S.classLinks.map(c=>({...c,url:classLinkTarget(c.url)}));
@@ -2511,7 +2523,13 @@ function myclass(){
  const studentRec=student?((S.students||[]).find(x=>String(x.id||'').trim().toLowerCase()===me)||currentStudent()):null;
  const assignedTeacher=String(studentRec?.teacher||'').trim().toLowerCase();
  const myTeacher=String((S.teachers||[]).find(t=>String(t.username||'').trim().toLowerCase()===assignedTeacher||String(t.name||'').trim().toLowerCase()===assignedTeacher)?.username||assignedTeacher).trim().toLowerCase();
- const rows=student?S.classLinks.filter(c=>(!c.level||String(c.level).toLowerCase()==='all'||String(c.level).toLowerCase()===String(studentRec?.level||'').toLowerCase())&&(!c.teacher||String(c.teacher).toLowerCase()===myTeacher)):S.classLinks.filter(c=>admin||String(c.owner||'').toLowerCase()===me);
+ const studentIds=student?studentTimetableIds(studentRec):[];
+ const rows=student?S.classLinks.filter(c=>{
+  const scheduled=(S.timetable||[]).some(item=>timetableHasClassLink(item,c,studentIds));
+  const levelMatches=!c.level||String(c.level).trim().toLowerCase()==='all'||normalizeClassMatch(c.level)===normalizeClassMatch(studentRec?.level);
+  const teacherMatches=!c.teacher||String(c.teacher).trim().toLowerCase()===myTeacher;
+  return scheduled||(levelMatches&&teacherMatches);
+ }):S.classLinks.filter(c=>admin||String(c.owner||'').toLowerCase()===me);
  let nextNotices='';
  if(teacher){
   const ownSchedule=(S.timetable||[]).filter(x=>[user.username,user.id,user.name].some(v=>String(x.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase()));
@@ -2534,11 +2552,9 @@ async function openMyClassScheduledLink(classLinkId){
  if(user?.role!=='student')return toast(t('Only students can use this class entry.'));
  const link=(S.classLinks||[]).find(c=>String(c.id)===String(classLinkId));
  if(!link)return modal(t('Class not available'),t('This saved class link could not be found.'),()=>{},t('OK'));
- const sid=String(user.username||user.id||'').trim().toLowerCase();
- const match=(S.timetable||[]).find(item=>(item.students||[]).map(v=>String(v).trim().toLowerCase()).includes(sid)&&(
-  String(item.classCode||'')===String(link.id)||String(item.classCode||'')===String(link.code||'')||
-  String(item.course||'').trim().toLowerCase()===String(link.title||'').trim().toLowerCase()
- ));
+ const studentRec=currentStudent();
+ const ids=studentTimetableIds(studentRec);
+ const match=(S.timetable||[]).find(item=>timetableHasClassLink(item,link,ids));
  if(!match){modal(t('Class not available'),t('This saved link is not connected to a class in your assigned timetable yet. Please ask your teacher or administrator to connect the correct Google Meet class to your scheduled lesson.'),()=>{},t('OK'));return;}
  await requestScheduledClass(match.id);
 }
