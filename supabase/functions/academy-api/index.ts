@@ -237,19 +237,28 @@ async function sendMessage(ctx: any, body: any) {
   const myStudent = role === "student" ? state.students.find((s:any)=>lower(s?.id)===me) : null;
   const replyToId = text(body.replyToId);
   const originalMessage = replyToId ? state.messages.find((m:any)=>text(m?.id)===replyToId) : null;
+  const originalParticipants = new Set([
+    lower(originalMessage?.from),
+    lower(originalMessage?.to),
+  ].filter(Boolean));
   const validReply = !!originalMessage &&
-    lower(originalMessage.from) === lower(target.username) &&
-    (role === "admin" || lower(originalMessage.to) === me);
+    originalParticipants.has(lower(target.username)) &&
+    (role === "admin" || originalParticipants.has(me));
   const allowed =
     role === "admin" ||
     validReply ||
     (role === "teacher" && targetRole === "student" && state.students.some((s:any)=>lower(s?.id)===lower(target.username)&&lower(s?.teacher)===me)) ||
     (role === "student" && targetRole === "teacher" && lower(target.username) === lower(myStudent?.teacher));
 
-  if (!allowed) throw new Error("You can only message the academy, your assigned teacher, or reply to a message addressed to you.");
+  if (!allowed) throw new Error("You can only message the academy, your assigned teacher, or continue a conversation you are part of.");
 
+  const messageId = crypto.randomUUID();
+  const conversationId = originalMessage
+    ? (text(originalMessage.conversationId) || text(originalMessage.id))
+    : messageId;
   const item = {
-    id: crypto.randomUUID(),
+    id: messageId,
+    conversationId,
     from: profile.username, fromName: profileName(profile), fromRole: role,
     to: target.username, toName: profileName(target), toRole: targetRole,
     subject: "", category, body: message, replyToId: replyToId || null, attachment: body.attachment || null,
