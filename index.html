@@ -1806,7 +1806,18 @@ function myTeacher(){
 function currentStudent(){
  const sid=String(user.username||user.studentId||user.student_id||user.id||'').trim().toLowerCase();
  const students=Array.isArray(S.students)?S.students:[];
- return students.find(x=>[x.id,x.studentId,x.student_id].some(v=>String(v||'').trim().toLowerCase()===sid))||(user.role==='student'&&students.length===1?students[0]:null);
+ const byId=students.find(x=>[x.id,x.studentId,x.student_id].some(v=>String(v||'').trim().toLowerCase()===sid));
+ if(byId)return byId;
+ // Some older student logins still use an account ID that differs from the
+ // ID stored on the student record. Use the exact display-name match as a
+ // safe fallback so the student's own timetable assignments are still found.
+ const normalizeName=value=>String(value||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+ const accountName=normalizeName(user.name);
+ if(user.role==='student'&&accountName){
+  const byName=students.find(x=>normalizeName(x.name)===accountName);
+  if(byName)return byName;
+ }
+ return user.role==='student'&&students.length===1?students[0]:null;
 }
 function classmates(){
  if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
