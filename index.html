@@ -1566,6 +1566,52 @@ Object.assign(I18N.ar,{
  'Line':'السطر','Ikhfa':'الإخفاء','Idgham / Ghunnah':'الإدغام / الغنة','Iqlab':'الإقلاب','Qalqalah':'القلقلة','Madd':'المد'
 });
 let currentLang='en';try{const savedLang=window.localStorage&&window.localStorage.getItem(LANG_KEY);if(savedLang&&LANGS[savedLang])currentLang=savedLang}catch(e){console.warn('Language preference storage unavailable:',e)}
+Object.assign(I18N.fr,{
+ 'Attendance':'Présence','My Attendance':'Mon historique de présence','Your class attendance history from your assigned timetable.':'Historique de votre présence aux cours selon votre emploi du temps.',
+ 'Present':'Présent','Late':'En retard','Absent':'Absent','Date':'Date','Class':'Cours','Scheduled time':'Heure prévue','Status':'Statut',
+ 'No class attendance has been recorded yet.':'Aucune présence aux cours n’a encore été enregistrée.',
+ 'View my timetable':'Voir mon emploi du temps','Check attendance & join class':'Vérifier la présence et rejoindre le cours',
+ 'Your class links are unlocked only at the time assigned in your timetable. Present and late attendance is recorded automatically.':'Les liens des cours sont accessibles uniquement à l’heure prévue dans votre emploi du temps. Les présences et les retards sont enregistrés automatiquement.',
+ 'No class links are assigned to your timetable yet. Ask your teacher to connect a Google Meet link to your scheduled class.':'Aucun lien de cours n’est encore associé à votre emploi du temps. Demandez à votre enseignant d’associer un lien Google Meet au cours prévu.',
+ 'Only students can use this class entry.':'Seuls les étudiants peuvent accéder à ce cours.','This timetable entry could not be found.':'Cette entrée de l’emploi du temps est introuvable.',
+ 'It is not time for class yet':'Ce n’est pas encore l’heure du cours','Please return at your scheduled class time.':'Veuillez revenir à l’heure prévue du cours.',
+ 'Class not available':'Cours indisponible','This class is not assigned to you in your timetable.':'Ce cours ne figure pas dans votre emploi du temps.',
+ 'You are marked absent':'Vous êtes marqué absent','You arrived 30 minutes or more after class started.':'Vous êtes arrivé au moins 30 minutes après le début du cours.',
+ 'Please message your teacher to negotiate another day for a catch-up class.':'Veuillez contacter votre enseignant pour convenir d’un autre jour pour rattraper le cours.',
+ 'Message my teacher':'Écrire à mon enseignant','Could not check attendance':'Impossible de vérifier la présence',
+ 'The academy server did not respond. Please try again.':'Le serveur de l’académie n’a pas répondu. Veuillez réessayer.',
+ 'Attendance marked: Present':'Présence enregistrée : présent','Attendance marked: Late':'Présence enregistrée : en retard',
+ 'You are late. Your attendance has been recorded.':'Vous êtes en retard. Votre présence a été enregistrée.',
+ 'You are present. Your attendance has been recorded.':'Vous êtes présent. Votre présence a été enregistrée.',
+ 'Attendance recorded':'Présence enregistrée','Your attendance is recorded, but the teacher has not saved a valid Google Meet link for this class.':'Votre présence est enregistrée, mais l’enseignant n’a pas enregistré de lien Google Meet valide pour ce cours.',
+ 'Click here to enter Google Meet':'Cliquez ici pour rejoindre Google Meet','Class status':'Statut du cours','Please contact your teacher.':'Veuillez contacter votre enseignant.',
+ 'Google Meet link for this class':'Lien Google Meet pour ce cours','Select saved Google Meet link':'Sélectionner un lien Google Meet enregistré',
+ 'Students can open this link only during their assigned class time.':'Les étudiants ne peuvent ouvrir ce lien qu’à l’heure prévue de leur cours.',
+ 'Show collected amount':'Afficher le montant encaissé','Hide collected amount':'Masquer le montant encaissé'
+});
+Object.assign(I18N.ar,{
+ 'Attendance':'الحضور','My Attendance':'سجل حضوري','Your class attendance history from your assigned timetable.':'سجل حضورك للدروس وفقاً لجدولك الدراسي.',
+ 'Present':'حاضر','Late':'متأخر','Absent':'غائب','Date':'التاريخ','Class':'الدرس','Scheduled time':'الوقت المحدد','Status':'الحالة',
+ 'No class attendance has been recorded yet.':'لم يتم تسجيل أي حضور للدروس حتى الآن.',
+ 'View my timetable':'عرض جدولي الدراسي','Check attendance & join class':'التحقق من الحضور والانضمام إلى الدرس',
+ 'Your class links are unlocked only at the time assigned in your timetable. Present and late attendance is recorded automatically.':'لا تتاح روابط الدروس إلا في الوقت المحدد في جدولك الدراسي. يتم تسجيل الحضور والتأخر تلقائياً.',
+ 'No class links are assigned to your timetable yet. Ask your teacher to connect a Google Meet link to your scheduled class.':'لم يتم ربط أي رابط درس بجدولك بعد. اطلب من معلمك ربط رابط Google Meet بالدرس المحدد.',
+ 'Only students can use this class entry.':'يمكن للطلاب فقط الدخول إلى هذا الدرس.','This timetable entry could not be found.':'تعذر العثور على هذا الموعد في الجدول.',
+ 'It is not time for class yet':'لم يحن وقت الدرس بعد','Please return at your scheduled class time.':'يرجى العودة في موعد الدرس المحدد.',
+ 'Class not available':'الدرس غير متاح','This class is not assigned to you in your timetable.':'هذا الدرس غير مدرج في جدولك الدراسي.',
+ 'You are marked absent':'تم تسجيلك غائباً','You arrived 30 minutes or more after class started.':'لقد حاولت الدخول بعد مرور 30 دقيقة أو أكثر من بداية الدرس.',
+ 'Please message your teacher to negotiate another day for a catch-up class.':'يرجى مراسلة معلمك للاتفاق على يوم آخر لتعويض الدرس.',
+ 'Message my teacher':'مراسلة معلمي','Could not check attendance':'تعذر التحقق من الحضور',
+ 'The academy server did not respond. Please try again.':'لم يستجب خادم الأكاديمية. يرجى المحاولة مرة أخرى.',
+ 'Attendance marked: Present':'تم تسجيل الحضور: حاضر','Attendance marked: Late':'تم تسجيل الحضور: متأخر',
+ 'You are late. Your attendance has been recorded.':'لقد تأخرت. تم تسجيل حضورك.',
+ 'You are present. Your attendance has been recorded.':'أنت حاضر. تم تسجيل حضورك.',
+ 'Attendance recorded':'تم تسجيل الحضور','Your attendance is recorded, but the teacher has not saved a valid Google Meet link for this class.':'تم تسجيل حضورك، لكن المعلم لم يحفظ رابط Google Meet صالحاً لهذا الدرس.',
+ 'Click here to enter Google Meet':'اضغط هنا للدخول إلى Google Meet','Class status':'حالة الدرس','Please contact your teacher.':'يرجى التواصل مع معلمك.',
+ 'Google Meet link for this class':'رابط Google Meet لهذا الدرس','Select saved Google Meet link':'اختر رابط Google Meet محفوظاً',
+ 'Students can open this link only during their assigned class time.':'يمكن للطلاب فتح هذا الرابط في موعد الدرس المحدد فقط.',
+ 'Show collected amount':'إظهار المبلغ المحصّل','Hide collected amount':'إخفاء المبلغ المحصّل'
+});
 function t(key){return (I18N[currentLang]&&I18N[currentLang][key])||key}
 function setLanguage(lang){
  if(!LANGS[lang])return;
