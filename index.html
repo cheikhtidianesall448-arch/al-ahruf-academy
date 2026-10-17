@@ -1724,7 +1724,7 @@ async function login(role,u,p){
      }
      user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
      toast('Signed in securely');render();openCurtains();
-   }catch(e){console.error('Al-Ahruf login failed:',e);const msg=String(e?.message||'Login failed.').replace(/[\r\n\t]+/g,' ').trim();toast(msg.length>0&&msg.length<180?msg:'Login failed. Check the browser console for details.')}
+   }catch(e){console.error('Al-Ahruf login failed:',e);toast('Sign-in failed. Check your credentials or contact the administrator.');}
    finally{onlineBusy=false}
    return;
  }
