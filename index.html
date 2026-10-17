@@ -1811,7 +1811,7 @@ function currentStudent(){
  // Some older student logins still use an account ID that differs from the
  // ID stored on the student record. Use the exact display-name match as a
  // safe fallback so the student's own timetable assignments are still found.
- const normalizeName=value=>String(value||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+ const normalizeName=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
  const accountName=normalizeName(user.name);
  if(user.role==='student'&&accountName){
   const byName=students.find(x=>normalizeName(x.name)===accountName);
