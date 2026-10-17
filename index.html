@@ -2042,7 +2042,7 @@ function composeMessage(to,replyToId){
  if(to&&!recipients.some(x=>String(x.u).toLowerCase()===String(to).toLowerCase())&&original){recipients.push({u:to,n:original.fromName||to,r:original.fromRole||'user'});}
  const opts=recipients.map(x=>'<option value="'+esc(x.u)+'" '+(String(x.u).toLowerCase()===String(to||'').toLowerCase()?'selected':'')+'>'+esc(x.n)+' — '+esc(x.r)+'</option>').join('');
  const replyField=replyToId?'<input type="hidden" name="replyToId" value="'+esc(replyToId)+'">':'';
- modal(replyToId?'Reply to message':'New message',replyField+'<label>Recipient</label><select name="to" required>'+opts+'</select><label>Message</label><textarea name="message" rows="5" placeholder="Write a message..." required></textarea><label>Attach a file (PDF, book, music, video, or picture)</label><input type="file" name="attachment" accept=".pdf,.epub,.txt,.doc,.docx,.mp3,.wav,.m4a,.mp4,.mov,.webm,.jpg,.jpeg,.png,.gif,.webp" style="padding:10px"><p class="mute">Maximum file size: 10 MB.</p>',sendPlatformMessage,replyToId?'Send reply':'Send message')
+ modal(replyToId?'Reply':'New message',replyField+'<label>Recipient</label><select name="to" required>'+opts+'</select><label>Message</label><textarea name="message" rows="5" placeholder="Write a message..." required></textarea><label>Attach a file (PDF, book, music, video, or picture)</label><input type="file" name="attachment" accept=".pdf,.epub,.txt,.doc,.docx,.mp3,.wav,.m4a,.mp4,.mov,.webm,.jpg,.jpeg,.png,.gif,.webp" style="padding:10px"><p class="mute">Maximum file size: 10 MB.</p>',sendPlatformMessage,'Send message')
 }
 function replyMessage(to){composeMessage(to)}
 function replyToPlatformMessage(id){
