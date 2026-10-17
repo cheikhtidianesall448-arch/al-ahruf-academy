@@ -1627,6 +1627,8 @@ function setLanguage(lang){
  currentLang=lang;try{window.localStorage&&window.localStorage.setItem(LANG_KEY,lang)}catch(e){}
  document.documentElement.lang=lang;document.body.classList.toggle('rtl',lang==='ar');
  render();
+ if(typeof applyI18n==='function')applyI18n();
+ if(typeof installGlobalLanguageObserver==='function')installGlobalLanguageObserver();
 }
 function applyI18n(){
  document.documentElement.lang=currentLang;
@@ -1646,6 +1648,121 @@ function applyI18n(){
 }
 Object.assign(I18N.fr,{'Your ranking':'Votre classement','Of the Quran':'Du Coran','Your Memorization Ranking':'Votre classement de mémorisation','Keep memorizing to move higher in the ranking.':'Continuez à mémoriser pour monter dans le classement.','Your progress':'Votre progression','My invoices':'Mes factures','Invoices issued to you are available here. Only your own invoices are shown.':'Les factures qui vous sont destinées sont disponibles ici. Vous ne voyez que vos propres factures.','No invoices have been issued to you yet.':'Aucune facture ne vous a encore été délivrée.','View invoice':'Voir la facture','Your memorized surahs will appear here.':'Vos sourates mémorisées apparaîtront ici.','Copy ID':'Copier l’identifiant','Mushaf page view':'Vue page du Mushaf','Choose a surah':'Choisir une sourate','Next page':'Page suivante','Previous page':'Page précédente','Page':'Page','MyClass':'Ma classe','My Timetable':'Mon emploi du temps','All surahs':'Les 114 sourates','My Teacher':'Mon enseignant','Classmates':'Camarades de classe'});
 Object.assign(I18N.ar,{'Your ranking':'ترتيبك','Of the Quran':'من القرآن','Your Memorization Ranking':'ترتيبك في الحفظ','Keep memorizing to move higher in the ranking.':'واصل الحفظ لتحسين ترتيبك.','Your progress':'تقدمك','My invoices':'فواتيري','Invoices issued to you are available here. Only your own invoices are shown.':'الفواتير الصادرة لك متاحة هنا. يمكنك رؤية فواتيرك فقط.','No invoices have been issued to you yet.':'لم تصدر لك أي فواتير بعد.','View invoice':'عرض الفاتورة','Your memorized surahs will appear here.':'ستظهر السور التي حفظتها هنا.','Copy ID':'نسخ المعرّف','Mushaf page view':'عرض صفحات المصحف','Choose a surah':'اختر سورة','Next page':'الصفحة التالية','Previous page':'الصفحة السابقة','Page':'الصفحة','MyClass':'صفي','My Timetable':'جدولي الدراسي','All surahs':'جميع السور','My Teacher':'معلمي','Classmates':'زملاء الصف','Nurturing faith, enhancing learning':'نرعى الإيمان ونطوّر التعلّم','Al-Ahruf International Academy':'أكاديمية الأحرف الدولية'});
+/* Global language coverage: shared labels used across all roles and dynamically rendered features. */
+Object.assign(I18N.fr,{
+ 'Language':'Langue','Choose language':'Choisir la langue','Settings':'Paramètres','Overview':'Vue d’ensemble',
+ 'MyClass':'Ma classe','My class':'Ma classe','My timetable':'Mon emploi du temps','My progress':'Ma progression',
+ 'All surahs':'Les 114 sourates','Quran reader':'Lecteur du Coran','Mushaf page view':'Vue page du Mushaf',
+ 'Choose a surah':'Choisir une sourate','Start at Mushaf page':'Commencer à la page du Mushaf',
+ 'Page theme':'Thème de la page','Day':'Jour','Sepia':'Sépia','Night':'Nuit','Save bookmark':'Enregistrer le signet',
+ 'Resume bookmark':'Reprendre le signet','Reset settings':'Réinitialiser les paramètres','Try again':'Réessayer',
+ 'Line':'Ligne','Surah':'Sourate','Mushaf page':'Page du Mushaf','15-line Tajweed Mushaf':'Mushaf de tajwid à 15 lignes',
+ 'Translation':'Traduction','Off':'Désactivé','English':'Anglais','Scroll up and down inside the Mushaf box to continue reading.':'Faites défiler le cadre du Mushaf vers le haut ou le bas pour continuer la lecture.',
+ 'Choose a surah or Mushaf page to begin reading.':'Choisissez une sourate ou une page du Mushaf pour commencer la lecture.',
+ 'End of the 604-page Mushaf.':'Fin du Mushaf de 604 pages.','Try again':'Réessayer',
+ 'The exact 15-line Tajweed page could not be loaded from the verified source. No reflowed text is shown, to avoid changing the Mushaf layout.':'Impossible de charger la page exacte du Mushaf de tajwid à 15 lignes depuis la source vérifiée. Aucun texte réorganisé ne sera affiché afin de préserver la mise en page.',
+ 'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.':'Pour la récitation et la mémorisation, comparez avec un Mushaf imprimé fiable et votre enseignant.',
+ 'Loading...':'Chargement…','Calculating…':'Calcul en cours…','Class not started yet':'Le cours n’a pas encore commencé',
+ 'Class not available':'Cours indisponible','No class available':'Aucun cours disponible','No class scheduled':'Aucun cours programmé',
+ 'Open class':'Ouvrir le cours','Open classroom':'Ouvrir la salle de cours','Join class':'Rejoindre le cours',
+ 'Next class':'Prochain cours','Upcoming class':'Cours à venir','No upcoming class':'Aucun cours à venir',
+ 'Today':'Aujourd’hui','Tomorrow':'Demain','Yesterday':'Hier','Day':'Jour','Days':'Jours','Hour':'Heure','Hours':'Heures','Minute':'Minute','Minutes':'Minutes',
+ 'No students found.':'Aucun étudiant trouvé.','No teachers found.':'Aucun enseignant trouvé.','No classes scheduled.':'Aucun cours programmé.',
+ 'No data available.':'Aucune donnée disponible.','No messages yet.':'Aucun message pour le moment.','No notifications.':'Aucune notification.',
+ 'Please wait...':'Veuillez patienter…','Loading':'Chargement','Error':'Erreur','Success':'Réussite','Failed':'Échec',
+ 'Save':'Enregistrer','Cancel':'Annuler','Close':'Fermer','Delete':'Supprimer','Edit':'Modifier','Add':'Ajouter','Update':'Mettre à jour',
+ 'Search':'Rechercher','Search students':'Rechercher des étudiants','Filter':'Filtrer','Refresh':'Actualiser','Back':'Retour','Next':'Suivant','Previous':'Précédent',
+ 'Confirm':'Confirmer','Are you sure?':'Êtes-vous sûr ?','This action cannot be undone.':'Cette action est irréversible.',
+ 'Copy':'Copier','Copied':'Copié','Copy ID':'Copier l’identifiant','Print':'Imprimer','Download':'Télécharger','View':'Afficher','Details':'Détails',
+ 'Name':'Nom','Full name':'Nom complet','Username':'Nom d’utilisateur','Password':'Mot de passe','Email':'E-mail','Phone':'Téléphone','Age':'Âge','Sex':'Sexe',
+ 'Student':'Étudiant','Students':'Étudiants','Teacher':'Enseignant','Teachers':'Enseignants','Administrator':'Administrateur',
+ 'Status':'Statut','Actions':'Actions','Date':'Date','Time':'Heure','Level':'Niveau','Progress':'Progression','Payment':'Paiement','Amount':'Montant',
+ 'Present':'Présent','Absent':'Absent','Late':'En retard','Paid':'Payé','Unpaid':'Impayé','pending':'en attente','paid':'payé','overdue':'en retard',
+ 'Start class':'Démarrer le cours','End class':'Terminer le cours','Start a live class':'Démarrer un cours en direct',
+ 'No active classes. Start one above.':'Aucun cours actif. Démarrez-en un ci-dessus.',
+ 'Wrong username or password':'Nom d’utilisateur ou mot de passe incorrect','Signed in securely':'Connexion sécurisée',
+ 'Saved online':'Enregistré en ligne','Online save failed':'Échec de l’enregistrement en ligne',
+ 'Permission denied.':'Accès refusé.','Not authenticated':'Non authentifié','Network error':'Erreur réseau',
+ 'Class not started yet':'Le cours n’a pas encore commencé','Your class will start in':'Votre cours commencera dans',
+ 'Emergency line:':'Ligne d’urgence :','Sign in':'Se connecter','Log in':'Se connecter','Log out':'Déconnexion',
+ 'Welcome':'Bienvenue','Welcome,':'Bienvenue,','Continue':'Continuer','Send message':'Envoyer le message','Reply':'Répondre',
+ 'Subject':'Objet','Message':'Message','Write your message...':'Écrivez votre message…','Notifications':'Notifications',
+ 'Attendance saved':'Présence enregistrée','Record attendance':'Enregistrer la présence','Save attendance':'Enregistrer les présences',
+ 'Invoice':'Facture','Invoices':'Factures','Create invoice':'Créer une facture','New invoice':'Nouvelle facture','Due date':'Date d’échéance',
+ 'Collected':'Encaissé','Unpaid invoices':'Factures impayées','Total':'Total','Description':'Description','Notes':'Notes',
+ 'Monday':'Lundi','Tuesday':'Mardi','Wednesday':'Mercredi','Thursday':'Jeudi','Friday':'Vendredi','Saturday':'Samedi','Sunday':'Dimanche',
+ 'Beginner':'Débutant','Intermediate':'Intermédiaire','Advanced':'Avancé','Unassigned':'Non attribué'
+});
+Object.assign(I18N.ar,{
+ 'Language':'اللغة','Choose language':'اختر اللغة','Settings':'الإعدادات','Overview':'نظرة عامة',
+ 'MyClass':'صفي','My class':'صفي','My Timetable':'جدولي الدراسي','My timetable':'جدولي الدراسي','My progress':'تقدمي',
+ 'All surahs':'جميع السور','Quran reader':'قارئ القرآن','Mushaf page view':'عرض صفحات المصحف',
+ 'Choose a surah':'اختر سورة','Start at Mushaf page':'ابدأ من صفحة المصحف','Page theme':'مظهر الصفحة',
+ 'Day':'نهاري','Sepia':'بني فاتح','Night':'ليلي','Save bookmark':'حفظ العلامة','Resume bookmark':'استئناف من العلامة',
+ 'Reset settings':'إعادة ضبط الإعدادات','Try again':'حاول مرة أخرى','Line':'السطر','Surah':'سورة',
+ 'Mushaf page':'صفحة المصحف','15-line Tajweed Mushaf':'مصحف التجويد ذو ١٥ سطراً','Translation':'الترجمة',
+ 'Off':'إيقاف','English':'الإنجليزية','Scroll up and down inside the Mushaf box to continue reading.':'مرّر داخل إطار المصحف إلى الأعلى أو الأسفل لمتابعة القراءة.',
+ 'Choose a surah or Mushaf page to begin reading.':'اختر سورة أو صفحة من المصحف لبدء القراءة.',
+ 'End of the 604-page Mushaf.':'نهاية المصحف ذي الصفحات الـ٦٠٤.',
+ 'The exact 15-line Tajweed page could not be loaded from the verified source. No reflowed text is shown, to avoid changing the Mushaf layout.':'تعذّر تحميل صفحة التجويد ذات الأسطر الخمسة عشر من المصدر الموثوق. لن يُعرض نص معاد التنسيق حفاظاً على تخطيط المصحف.',
+ 'For recitation and memorization, compare with a trusted printed Mushaf and your teacher.':'للتلاوة والحفظ، راجع مصحفاً مطبوعاً موثوقاً واستشر معلّمك.',
+ 'Loading...':'جارٍ التحميل…','Calculating…':'جارٍ الحساب…','Class not started yet':'لم يبدأ الدرس بعد',
+ 'Class not available':'الدرس غير متاح','No class available':'لا يوجد درس متاح','No class scheduled':'لا يوجد درس مجدول',
+ 'Open class':'فتح الدرس','Open classroom':'فتح قاعة الدرس','Join class':'الانضمام إلى الدرس',
+ 'Next class':'الدرس القادم','Upcoming class':'الدرس القادم','No upcoming class':'لا يوجد درس قادم',
+ 'Today':'اليوم','Tomorrow':'غداً','Yesterday':'أمس','Days':'أيام','Hour':'ساعة','Hours':'ساعات','Minute':'دقيقة','Minutes':'دقائق',
+ 'No students found.':'لم يتم العثور على طلاب.','No teachers found.':'لم يتم العثور على معلمين.','No classes scheduled.':'لا توجد دروس مجدولة.',
+ 'No data available.':'لا توجد بيانات.','No messages yet.':'لا توجد رسائل بعد.','No notifications.':'لا توجد إشعارات.',
+ 'Please wait...':'يرجى الانتظار…','Loading':'جارٍ التحميل','Error':'خطأ','Success':'تم بنجاح','Failed':'فشل',
+ 'Save':'حفظ','Cancel':'إلغاء','Close':'إغلاق','Delete':'حذف','Edit':'تعديل','Add':'إضافة','Update':'تحديث',
+ 'Search':'بحث','Search students':'البحث عن الطلاب','Filter':'تصفية','Refresh':'تحديث','Back':'رجوع','Next':'التالي','Previous':'السابق',
+ 'Confirm':'تأكيد','Are you sure?':'هل أنت متأكد؟','This action cannot be undone.':'لا يمكن التراجع عن هذا الإجراء.',
+ 'Copy':'نسخ','Copied':'تم النسخ','Copy ID':'نسخ المعرّف','Print':'طباعة','Download':'تنزيل','View':'عرض','Details':'التفاصيل',
+ 'Name':'الاسم','Full name':'الاسم الكامل','Username':'اسم المستخدم','Password':'كلمة المرور','Email':'البريد الإلكتروني','Phone':'الهاتف','Age':'العمر','Sex':'الجنس',
+ 'Student':'الطالب','Students':'الطلاب','Teacher':'المعلم','Teachers':'المعلمون','Administrator':'المدير',
+ 'Status':'الحالة','Actions':'الإجراءات','Date':'التاريخ','Time':'الوقت','Level':'المستوى','Progress':'التقدم','Payment':'الدفع','Amount':'المبلغ',
+ 'Present':'حاضر','Absent':'غائب','Late':'متأخر','Paid':'مدفوع','Unpaid':'غير مدفوع','pending':'قيد الانتظار','paid':'مدفوع','overdue':'متأخر',
+ 'Start class':'بدء الدرس','End class':'إنهاء الدرس','Start a live class':'بدء درس مباشر',
+ 'No active classes. Start one above.':'لا توجد دروس نشطة. ابدأ درساً أعلاه.',
+ 'Wrong username or password':'اسم المستخدم أو كلمة المرور غير صحيحة','Signed in securely':'تم تسجيل الدخول بأمان',
+ 'Saved online':'تم الحفظ عبر الإنترنت','Online save failed':'فشل الحفظ عبر الإنترنت',
+ 'Permission denied.':'غير مسموح بالوصول.','Not authenticated':'لم يتم التحقق من الهوية','Network error':'خطأ في الشبكة',
+ 'Your class will start in':'سيبدأ درسك خلال','Emergency line:':'خط الطوارئ:','Sign in':'تسجيل الدخول','Log in':'تسجيل الدخول','Log out':'تسجيل الخروج',
+ 'Welcome':'مرحباً','Welcome,':'مرحباً،','Continue':'متابعة','Send message':'إرسال الرسالة','Reply':'رد',
+ 'Subject':'الموضوع','Message':'الرسالة','Write your message...':'اكتب رسالتك…','Notifications':'الإشعارات',
+ 'Attendance saved':'تم حفظ الحضور','Record attendance':'تسجيل الحضور','Save attendance':'حفظ الحضور',
+ 'Invoice':'فاتورة','Invoices':'الفواتير','Create invoice':'إنشاء فاتورة','New invoice':'فاتورة جديدة','Due date':'تاريخ الاستحقاق',
+ 'Collected':'المبلغ المحصّل','Unpaid invoices':'الفواتير غير المدفوعة','Total':'الإجمالي','Description':'الوصف','Notes':'ملاحظات',
+ 'Monday':'الاثنين','Tuesday':'الثلاثاء','Wednesday':'الأربعاء','Thursday':'الخميس','Friday':'الجمعة','Saturday':'السبت','Sunday':'الأحد',
+ 'Beginner':'مبتدئ','Intermediate':'متوسط','Advanced':'متقدم','Unassigned':'غير معيّن'
+});
+/* Translate dynamically inserted text and attributes too, including async responses and toasts. */
+function installGlobalLanguageObserver(){
+ if(window.__ahrufLanguageObserverInstalled)return;
+ window.__ahrufLanguageObserverInstalled=true;
+ const translateNode=node=>{
+  if(!node)return;
+  const dict=I18N[currentLang]||{};
+  if(node.nodeType===Node.TEXT_NODE){
+   const p=node.parentElement;
+   if(!p||p.closest('script,style,noscript,textarea,[contenteditable="true"]'))return;
+   if(!node.hasAttribute?.('data-ahruf-original'))node.__ahrufOriginal=node.nodeValue;
+   const original=node.__ahrufOriginal??node.nodeValue;
+   const key=original.trim();
+   if(key&&dict[key])node.nodeValue=original.replace(key,dict[key]);
+   else if(currentLang==='en')node.nodeValue=original;
+  }else if(node.nodeType===Node.ELEMENT_NODE){
+   ['placeholder','title','aria-label'].forEach(attr=>{
+    const key=node.getAttribute('data-ahruf-'+attr)||node.getAttribute(attr);
+    if(key){if(!node.hasAttribute('data-ahruf-'+attr))node.setAttribute('data-ahruf-'+attr,key);const original=node.getAttribute('data-ahruf-'+attr);if(dict[original])node.setAttribute(attr,dict[original]);else if(currentLang==='en')node.setAttribute(attr,original)}
+   });
+   node.childNodes.forEach(translateNode);
+  }
+ };
+ const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(translateNode)));
+ observer.observe(document.body,{childList:true,subtree:true});
+ window.__ahrufLanguageObserver=observer;
+}
 function languageUI(){
  const el=document.createElement('div');el.className='lang-switch';
  el.innerHTML='<span aria-hidden="true">🌐</span><select aria-label="Language" onchange="setLanguage(this.value)"><option value="en">English</option><option value="fr">Français</option><option value="ar">العربية</option></select>';
@@ -1767,7 +1884,7 @@ function render(){
  // Refresh countdowns after rendering so newly inserted MyClass notices never stay on “Calculating…”.
  if(user&&typeof updateNextClassCountdown==='function')updateNextClassCountdown();
  document.body.querySelectorAll('.lang-switch').forEach(x=>x.remove());
- try{document.body.appendChild(languageUI());applyI18n();applyArabicIndicDigits(document.body)}catch(e){console.warn('Language UI skipped:',e)}
+ try{document.body.appendChild(languageUI());applyI18n();applyArabicIndicDigits(document.body);installGlobalLanguageObserver()}catch(e){console.warn('Language UI skipped:',e)}
 }
 
 function viewLogin(){
