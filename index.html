@@ -1673,21 +1673,23 @@ function save(){
      }catch(e){
        console.error('Al-Ahruf online save failed:',e);
        let reason=String(e?.message||'Please try again.');
-       if(/permission denied/i.test(reason)){
+       if(/permission|forbidden|admin|staff|not authenticated|unauthorized|401|403/i.test(reason)){
          try{
            const identity=await onlineApi('get_state');
            const serverRole=String(identity?.user?.role||'').toLowerCase();
            const pageRole=String(user?.role||'').toLowerCase();
            if(serverRole&&pageRole&&serverRole!==pageRole){
-             reason='The secure online session is signed in as '+serverRole+', but this page is open as '+pageRole+'. Log out, then sign in again with the administrator account (ahruf). Your timetable change was not saved online.';
+             reason='SECURITY SESSION MISMATCH: server session is '+serverRole+', but this page shows '+pageRole+'. Your change is NOT saved online. Log out, then sign in again using Administrator and account ID ahruf. Re-enter the timetable change after signing in.';
            }else{
-             reason='This online account does not have permission to save the timetable. Log out and sign in with the administrator account (ahruf).';
+             reason='The server rejected this save because this session lacks staff permission. Your change is NOT saved online. Log out and sign in again using Administrator and account ID ahruf, then re-enter the timetable change.';
            }
          }catch(checkError){
-           reason='This online account does not have permission to save the timetable. Log out and sign in with the administrator account (ahruf).';
+           reason='The server rejected this save. Your change is NOT saved online. Log out and sign in again using Administrator and account ID ahruf, then re-enter the timetable change.';
          }
+       }else{
+         reason='Your change is NOT confirmed in the online database. '+reason+' Check your connection and try again.';
        }
-       toast('Online save failed: '+reason);
+       toast('Online save failed — '+reason,10000);
      }
    },350);
  }
@@ -1695,7 +1697,7 @@ function save(){
 
 const STAFF={ahruf:{pw:'ahruf25',name:'Cheikh Tidiane Sall',role:'admin'},teacher1:{pw:'teacher123',name:'Ustadh Ibrahim',role:'teacher'}};
 let user=null,tab='overview',lt='in',joinInfo=null;
-const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2800)};
+const toast=(m,duration=2800)=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',duration)};
 function theme(){const r=document.documentElement;const dark=r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('ahruf_theme',r.dataset.theme)}catch(e){}}
 function modal(title,body,ok,txt='Save'){const d=$('#dlg');d.innerHTML=`<h2>${title}</h2><form id="mf">${body}<div class="row end"><button type="button" class="btn ghost" onclick="dlg.close()">Cancel</button><button class="btn">${txt}</button></div></form>`;$('#mf').onsubmit=async e=>{e.preventDefault();try{if(await ok($('#mf').elements)!==false)d.close()}catch(err){console.error(err);toast(err.message||'Something went wrong')}};d.showModal()}
 const base=()=>location.href.split('#')[0];
