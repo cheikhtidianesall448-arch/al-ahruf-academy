@@ -2041,7 +2041,7 @@ function viewStaff(){
  const admin=user.role==='admin';
  const items=admin
   ? [['overview','Overview'],['students','Students'],['teachers','Teachers'],['myclass','MyClass'],['surahs','All surahs'],['timetable','Timetable'],['attendance','Attendance'],['payments','Payments'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]]
-  : [['students','My students'],['myclass','MyClass'],['class','Live class'],['timetable','My timetable'],['attendance','Attendance'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]];
+  : [['students','My students'],['myclass','MyClass'],['timetable','My timetable'],['attendance','Attendance'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]];
  const allowed=items.map(x=>x[0]);
  if(!allowed.includes(tab))tab=admin?'overview':'students';
  const pages={overview,students,teachers,attendance,payments,messages,notifications,timetable,klass,myclass,surahs:adminSurahs};
