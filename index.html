@@ -2575,6 +2575,19 @@ function myclass(){
  const admin=user.role==='admin',teacher=user.role==='teacher',student=user.role==='student';
  const me=String(user.username||user.id||'').trim().toLowerCase();
  const studentRec=student?((S.students||[]).find(x=>String(x.id||'').trim().toLowerCase()===me)||currentStudent()):null;
+ let studentNextNotice='';
+ if(student){
+  const ids=studentTimetableIds(studentRec);
+  const normalizeStudentName=v=>String(v||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const scheduled=(S.timetable||[]).filter(item=>(Array.isArray(item.students)?item.students:[]).some(v=>ids.includes(String(v||'').trim().toLowerCase())||(!!studentRec&&normalizeStudentName(v)===normalizeStudentName(studentRec.name))));
+  const next=nextScheduledClass(scheduled);
+  if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
+  if(next){
+   const prefix='Your next class';
+   studentNextNotice='<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="mute">UPCOMING CLASS · SENEGAL TIME (GMT/UTC+0)</div><b>'+esc(next.item.course||'Quran class')+'</b><div data-next-class-timestamp="'+next.date.getTime()+'" data-prefix="'+esc(prefix+' in ')+'" style="margin-top:5px;font-weight:750">Calculating…</div><div class="mute" style="margin-top:4px">'+esc(next.item.day)+' · '+esc(next.item.start)+'</div><div class="mute" style="margin-top:4px">Teacher: '+esc(teacherName(next.item.teacher))+'</div></div>';
+   window._nextClassTimer=setInterval(updateNextClassCountdown,60000);
+  }
+ }
  const assignedTeacher=String(studentRec?.teacher||'').trim().toLowerCase();
  const myTeacher=String((S.teachers||[]).find(t=>String(t.username||'').trim().toLowerCase()===assignedTeacher||String(t.name||'').trim().toLowerCase()===assignedTeacher)?.username||assignedTeacher).trim().toLowerCase();
  const studentIds=student?studentTimetableIds(studentRec):[];
@@ -2598,7 +2611,7 @@ function myclass(){
   updateNextClassCountdown();
   window._nextClassTimer=setInterval(updateNextClassCountdown,60000);
  }
- return nextNotices+`<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">${student?'Class links saved by your academy or teacher. New links appear automatically when they match your level and assigned teacher.':'Save reusable class links here. Students will see matching links automatically, including students enrolled later.'}</span></div>${!student?'<button class="btn" onclick="editClassLink()">+ Add class link</button>':''}</div>
+ return (student?studentNextNotice:nextNotices)+`<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">${student?'Class links saved by your academy or teacher. New links appear automatically when they match your level and assigned teacher.':'Save reusable class links here. Students will see matching links automatically, including students enrolled later.'}</span></div>${!student?'<button class="btn" onclick="editClassLink()">+ Add class link</button>':''}</div>
  ${rows.map(c=>`<div class="card" style="margin-bottom:12px"><h3 style="margin-top:0">${esc(c.title)}</h3><div class="mute">${esc(c.level&&c.level!=='all'?'Level: '+c.level:'All levels')}${c.teacher?' · Teacher: '+esc(teacherName(c.teacher)):' · Available across teachers'}</div>${student?'<p class="mute">Open your scheduled class using this link.</p>':'<p style="word-break:break-all">'+esc(c.url)+'</p>'}<div class="row">${student?'<button class="btn gold" type="button" data-id="'+esc(c.id)+'" onclick="openMyClassScheduledLink(this.dataset.id)">Open link</button>':'<a class="btn gold" href="'+esc(c.url)+'" target="_blank" rel="noopener">Open class</a><button class="btn ghost" data-url="'+esc(c.url)+'" onclick="copy(this.dataset.url)">Copy link</button>'}${!student&&(admin||String(c.owner||'').toLowerCase()===me)?'<button class="btn ghost" data-id="'+esc(c.id)+'" onclick="editClassLink(this.dataset.id)">Edit</button><button class="btn ghost" data-id="'+esc(c.id)+'" onclick="deleteClassLink(this.dataset.id)">Delete</button>':''}</div></div>`).join('')||'<div class="card mute">'+(student?'No class links are assigned to your level or teacher yet. Please contact your teacher or administrator.':'No saved class links yet. Add a link once and eligible students will see it automatically.')+'</div>'}`
 }
 async function openMyClassScheduledLink(classLinkId){
