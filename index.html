@@ -2503,7 +2503,7 @@ function markPaid(i){if(user.role!=='admin')return toast('Only the administrator
 function newInv(){if(user.role!=='admin')return toast('Only the administrator can create invoices.');if(!S.students.length)return toast('Add a student first');const today=new Date().toISOString().slice(0,10),due=new Date(Date.now()+2592e6).toISOString().slice(0,10);
  modal('New invoice',`<label>Student</label><select name="s">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><label>Amount (USD)</label><input name="a" type="number" min="1" step="0.01" value="50" required><label>Description / Month</label><input name="desc" placeholder="e.g. October 2026 tuition" required><label>Due date</label><input name="d" type="date" required value="${due}">`,f=>{const inv='INV-'+new Date().getFullYear()+String(Date.now()).slice(-6);S.pay.push({inv,sid:f.s.value,amt:+f.a.value,due:f.d.value,date:today,description:f.desc.value.trim(),st:'pending'});save();toast('Invoice created and saved for the selected student');render()},'Create')}
 function classLinkTarget(raw){return String(raw||'').trim();}
-function normalizeClassMatch(value){return String(value||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^\\w\\u0600-\\u06FF]+/g,' ').replace(/\\s+/g,' ').trim()}
+function normalizeClassMatch(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\w\u0600-\u06FF]+/g,' ').replace(/\s+/g,' ').trim()}
 function studentTimetableIds(studentRec){
  return [...new Set([studentRec?.id,studentRec?.studentId,studentRec?.student_id,user?.username,user?.studentId,user?.student_id,user?.id].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean))];
 }
