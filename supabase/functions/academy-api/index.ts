@@ -36,6 +36,10 @@ function lower(value: unknown) {
   return text(value).toLowerCase();
 }
 
+function normalizeClassTitle(value: unknown) {
+  return text(value).normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/_/g, " ").replace(/[^\\w\\u0600-\\u06FF]+/g, " ").replace(/\\s+/g, " ").trim();
+}
+
 function cleanState(state: any) {
   const s = JSON.parse(JSON.stringify(state || EMPTY_STATE));
   s.students = Array.isArray(s.students) ? s.students : [];
@@ -1027,7 +1031,7 @@ async function recordClassAttendance(ctx: any, body: any) {
   if (!student) throw new Error("Your student record could not be found.");
   const item = state.timetable.find((x: any) => text(x?.id) === text(body.timetableId) && Array.isArray(x?.students) && x.students.map((id: any) => lower(id)).includes(studentId));
   if (!item) return { status: "not_scheduled", message: "This class is not assigned to you in your timetable." };
-  const meet = (state.classes || []).find((x: any) => (text(item.classCode) ? text(x?.code) === text(item.classCode) : lower(x?.title) === lower(item?.course)) && /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(x?.url)));
+  const meet = (state.classes || []).find((x: any) => (text(item.classCode) ? lower(x?.code) === lower(item.classCode) : normalizeClassTitle(x?.title) === normalizeClassTitle(item?.course)) && /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(x?.url)));
   if (!meet) return { status: "not_scheduled", message: "Your teacher has not connected a Google Meet link to this timetable entry yet." };
   const now = new Date();
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Dakar", year: "numeric", month: "2-digit", day: "2-digit", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
