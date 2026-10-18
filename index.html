@@ -2073,47 +2073,65 @@ function messageThreadItem(m,me){
  return '<div class="message-thread-item" style="padding:12px 0;border-bottom:1px solid var(--line);'+(unread?'background:color-mix(in srgb,var(--gold) 12%,transparent);border-left:4px solid var(--gold);padding-left:10px;':'')+'"><div class="mute" style="font-size:.82rem">'+esc(m.fromName||m.from)+' · '+new Date(m.createdAt||Date.now()).toLocaleString()+(m.editedAt?' · edited':'')+'</div>'+(unread?'<span class="badge" style="background:var(--gold);color:#241a05">Unread</span>':'')+(m.body?'<p style="white-space:pre-wrap;margin:7px 0">'+formatMessageBody(m.body)+'</p>':'')+(m.attachment?(String(m.attachment.type||'').startsWith('audio/')?'<p>🎙 '+esc(m.attachment.name||'Voice message')+'</p><audio controls preload="none" style="width:100%;max-width:420px" src="'+esc(m.attachment.data||m.attachment.url||'')+'"></audio>':'<p><a href="'+esc(m.attachment.data||m.attachment.url||'#')+'" download="'+esc(m.attachment.name||'attachment')+'" target="_blank" rel="noopener">📎 '+esc(m.attachment.name||'Attached file')+'</a></p>'):'')+(canEdit?'<div class="row" style="gap:8px;margin-top:7px"><button class="btn ghost sm" onclick="editPlatformMessage(\''+esc(m.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button></div>':'')+'</div>';
 }
 async function sendThreadReply(e,f){e.preventDefault();await sendPlatformMessage(f);return false}
+let activeMessageConversationKey=null;
+function openMessageConversation(key){
+ activeMessageConversationKey=String(key||'');
+ const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
+ if(ONLINE){
+  onlineApi('mark_messages_read',{conversationId:activeMessageConversationKey}).then(r=>{
+   if(Array.isArray(r.messages))S.messages=r.messages;
+   else if(r.state&&Array.isArray(r.state.messages))S.messages=r.state.messages;
+   render();
+  }).catch(e=>console.warn('Could not mark this discussion read:',e.message));
+ }else{
+  (S.messages||[]).forEach(m=>{
+   const keyOf=String(m.conversationId||'').trim()||[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|');
+   if(keyOf===activeMessageConversationKey&&String(m.to||'').toLowerCase()===me){
+    m.readBy=Array.isArray(m.readBy)?m.readBy:[];
+    if(!m.readBy.some(x=>String(x).toLowerCase()===me))m.readBy.push(user.username||user.id);
+   }
+  });
+  save();
+ }
+ render();
+}
 function messages(){
  const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
  const allMessages=[...(S.messages||[])];
- const unreadIncoming=allMessages.some(m=>String(m.to||'').toLowerCase()===me&&!(Array.isArray(m.readBy)?m.readBy:[]).some(x=>String(x).toLowerCase()===me));
- if(unreadIncoming){
-  if(ONLINE){
-   onlineApi('mark_messages_read').then(r=>{if(Array.isArray(r.messages))S.messages=r.messages;else if(r.state&&Array.isArray(r.state.messages))S.messages=r.state.messages;render()}).catch(e=>console.warn('Could not mark messages read:',e.message));
-  }else{
-   (S.messages||[]).forEach(m=>{if(String(m.to||'').toLowerCase()===me){m.readBy=Array.isArray(m.readBy)?m.readBy:[];if(!m.readBy.some(x=>String(x).toLowerCase()===me))m.readBy.push(user.username||user.id)}});
-   save();
-  }
- }
  const threadKey=m=>String(m.conversationId||'').trim()||[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|');
  const myThreadKeys=new Set(allMessages.filter(m=>String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me).map(threadKey));
- const visible=allMessages.filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me||myThreadKeys.has(threadKey(m))).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+ const visible=allMessages.filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me||myThreadKeys.has(threadKey(m)));
  const groups=new Map();
- visible.forEach(m=>{
-  const from=String(m.from||'').toLowerCase(),to=String(m.to||'').toLowerCase();
-  const pair=[from,to].sort().join('|');
-  const key=String(m.conversationId||'').trim()||pair;
-  if(!groups.has(key))groups.set(key,[]);
-  groups.get(key).push(m);
- });
- const threads=[...groups.entries()].map(([key,items])=>({key,items:items.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))})).sort((a,b)=>String(b.items[0]?.createdAt||'').localeCompare(String(a.items[0]?.createdAt||'')));
- const cards=threads.map(thread=>{
-  const items=thread.items,last=items[0];
+ visible.forEach(m=>{const key=threadKey(m);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(m)});
+ const threads=[...groups.entries()].map(([key,items])=>({key,items:items.sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))}))
+  .sort((a,b)=>String(b.items[b.items.length-1]?.createdAt||'').localeCompare(String(a.items[a.items.length-1]?.createdAt||'')));
+ const inbox=threads.map(thread=>{
+  const items=thread.items,last=items[items.length-1];
   const participants=[...new Set(items.flatMap(m=>[m.from,m.to]).filter(x=>x&&!String(x).startsWith('group:')))];
   const other=participants.find(x=>String(x).toLowerCase()!==me);
-  const otherMsg=items.find(m=>String(m.from||'').toLowerCase()===String(other||'').toLowerCase());
-  const myMsg=items.find(m=>String(m.from||'').toLowerCase()===String(other||'').toLowerCase());
-  let heading;
-  if(other)heading=(otherMsg?.fromName||otherMsg?.from||items.find(m=>String(m.to||'').toLowerCase()===String(other).toLowerCase())?.toName||other);
-  else heading=(last.fromName||last.from)+' ↔ '+(last.toName||last.to);
+  const otherMessage=items.find(m=>String(m.from||'').toLowerCase()===String(other||'').toLowerCase());
+  let heading=other?(otherMessage?.fromName||otherMessage?.from||items.find(m=>String(m.to||'').toLowerCase()===String(other).toLowerCase())?.toName||other):(last.fromName||last.from)+' ↔ '+(last.toName||last.to);
   if(user.role==='admin'&&!participants.some(x=>String(x).toLowerCase()===me))heading=(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
-  const target=String(last.from||'').toLowerCase()===me?last.to:last.from;
-  const replyId=last.id;
-  const canReply=target&&!String(target).startsWith('group:')&&(user.role==='admin'||participants.some(x=>String(x).toLowerCase()===me));
-  const replyForm=canReply?'<form onsubmit="return sendThreadReply(event,this)" style="display:flex;flex-direction:column;gap:8px;padding-top:12px"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(replyId)+'"><textarea name="message" rows="2" placeholder="Write your reply..." required style="width:100%;box-sizing:border-box"></textarea><div class="row between" style="gap:8px"><input type="file" name="attachment" accept=".pdf,.epub,.txt,.doc,.docx,.mp3,.wav,.m4a,.mp4,.mov,.webm,.jpg,.jpeg,.png,.gif,.webp" style="min-width:0;max-width:100%"><button class="btn sm" type="submit">Send</button></div><span class="mute">Maximum attachment size: 10 MB.</span></form>':'';
-  return '<section class="card" style="margin-bottom:14px;border-color:var(--line);padding:16px"><div class="row between" style="gap:8px;align-items:center"><h4 style="margin:0">'+esc(heading)+'</h4><span class="mute">'+items.length+' message'+(items.length===1?'':'s')+'</span></div><div class="message-thread" style="margin-top:8px">'+items.map(m=>messageThreadItem(m,me)).join('')+'</div>'+replyForm+'</section>';
+  const unread=items.filter(m=>String(m.to||'').toLowerCase()===me&&!(Array.isArray(m.readBy)?m.readBy:[]).some(x=>String(x).toLowerCase()===me)).length;
+  const preview=last.attachment?(last.body||'📎 Attachment'):(last.body||'');
+  return '<button type="button" onclick="openMessageConversation(\''+esc(thread.key)+'\')" class="message-inbox-row" style="width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:14px 12px;border:0;border-bottom:1px solid var(--line);background:'+(unread?'color-mix(in srgb,var(--gold) 9%,var(--card))':'var(--card)')+';color:var(--ink);cursor:pointer"><span style="width:44px;height:44px;flex:0 0 44px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--pri);font-weight:800;font-size:1.1rem">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><span style="min-width:0;flex:1"><span style="display:flex;gap:8px;align-items:center;justify-content:space-between"><b>'+esc(heading)+'</b><span class="mute" style="font-size:.72rem;white-space:nowrap">'+esc(new Date(last.createdAt||Date.now()).toLocaleDateString())+'</span></span><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute);font-size:.86rem;margin-top:3px">'+formatMessageBody(preview)+'</span></span>'+(unread?'<span style="min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--ok);color:white;display:grid;place-items:center;font-size:.72rem;font-weight:800">'+unread+'</span>':'')+'</button>';
  }).join('');
- return '<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Each discussion stays together in one conversation box.</span></div><button class="btn" onclick="composeMessage()">New message</button></div><div>'+(cards||'<div class="card"><p class="mute">No messages yet.</p></div>')+'</div>';
+ const header='<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Open a discussion to read messages. New messages stay unread until you open that discussion.</span></div><button class="btn" onclick="composeMessage()">New message</button></div>';
+ if(!activeMessageConversationKey){
+  return header+'<div class="card" style="padding:0;overflow:hidden">'+(inbox||'<p class="mute" style="padding:16px">No discussions yet. Start a new message.</p>')+'</div>';
+ }
+ const thread=threads.find(x=>x.key===activeMessageConversationKey);
+ if(!thread){activeMessageConversationKey=null;return messages()}
+ const items=thread.items;
+ const participants=[...new Set(items.flatMap(m=>[m.from,m.to]).filter(x=>x&&!String(x).startsWith('group:')))];
+ const other=participants.find(x=>String(x).toLowerCase()!==me);
+ const otherMessage=items.find(m=>String(m.from||'').toLowerCase()===String(other||'').toLowerCase());
+ let heading=other?(otherMessage?.fromName||otherMessage?.from||items.find(m=>String(m.to||'').toLowerCase()===String(other).toLowerCase())?.toName||other):(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
+ if(user.role==='admin'&&!participants.some(x=>String(x).toLowerCase()===me))heading=(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
+ const last=items[items.length-1],target=String(last.from||'').toLowerCase()===me?last.to:last.from;
+ const canReply=target&&!String(target).startsWith('group:')&&(user.role==='admin'||participants.some(x=>String(x).toLowerCase()===me));
+ const replyForm=canReply?'<form onsubmit="return sendThreadReply(event,this)" style="display:flex;flex-direction:column;gap:8px;padding-top:12px"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(last.id)+'"><textarea name="message" rows="2" placeholder="Write your reply..." required style="width:100%;box-sizing:border-box"></textarea><div class="row between" style="gap:8px"><input type="file" name="attachment" accept=".pdf,.epub,.txt,.doc,.docx,.mp3,.wav,.m4a,.mp4,.mov,.webm,.jpg,.jpeg,.png,.gif,.webp" style="min-width:0;max-width:100%"><button class="btn sm" type="submit">Send</button></div><span class="mute">Maximum attachment size: 10 MB.</span></form>':'';
+ return header+'<section class="card" style="padding:14px"><div class="row between" style="gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line)"><button class="btn ghost sm" onclick="activeMessageConversationKey=null;render()">← All discussions</button><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div class="mute">'+items.length+' message'+(items.length===1?'':'s')+'</div></div></div><div class="message-thread" style="margin-top:8px">'+items.map(m=>messageThreadItem(m,me)).join('')+'</div>'+replyForm+'</section>';
 }
 async function editPlatformMessage(id){
  const m=(S.messages||[]).find(x=>String(x.id)===String(id));if(!m)return toast('Message not found.');
