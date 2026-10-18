@@ -1910,7 +1910,15 @@ function toggleLoginPassword(button){
 function showResetHelp(){modal('Reset your admin password',`<p class="mute">For security, the academy cannot display your current password.</p><p>Open Supabase Dashboard → Authentication → Users, select the <b>ahruf</b> admin account, then choose the password reset/change option.</p><div class="card" style="margin-top:12px"><b>Admin username</b><div class="code" style="font-size:1.3rem">ahruf</div></div>`,()=>{},'Close')}
 function doJoin(f){const c=parseCode(f.c.value);if(c.length<4)return toast('Check the class code');joinInfo={n:f.n.value.trim(),c};render();$('#app').scrollIntoView()}
 
-function nav(items){return `<div class="nav">${items.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('')}</div>`}
+async function openStudentAttendance(){
+ try{
+  const result=await onlineApi('get_state');
+  if(result&&result.state)S=cleanState(result.state);
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+ }catch(e){console.warn('Could not refresh attendance:',e)}
+ tab='attendance';render();
+}
+function nav(items){return `<div class="nav">${items.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="${user?.role==='student'&&k==='attendance'?'openStudentAttendance()':`tab='${k}';render()`}" >${l}</button>`).join('')}</div>`}
 function unreadCount(){
  const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
  return (S.messages||[]).filter(m=>String(m.to||'').toLowerCase()===me&&!(Array.isArray(m.readBy)?m.readBy:[]).some(x=>String(x).toLowerCase()===me)).length;
