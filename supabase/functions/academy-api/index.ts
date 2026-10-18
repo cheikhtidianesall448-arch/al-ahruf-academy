@@ -373,14 +373,17 @@ async function sendPaymentReminders(ctx: any) {
   return {ok:true,sent};
 }
 
-async function markMessagesRead(ctx: any) {
+async function markMessagesRead(ctx: any, body: any = {}) {
   const profile = await getCurrentProfile(ctx);
   if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
   const me = lower(profile.username);
+  const conversationId = text(body.conversationId);
+  if (!conversationId) throw new Error("Conversation ID is required.");
   const state = ensureMessageState(await getAcademyState(ctx));
   let changed = false;
   for (const message of state.messages) {
-    if (lower(message?.to) !== me) continue;
+    const messageConversationId = text(message?.conversationId) || [lower(message?.from), lower(message?.to)].sort().join("|");
+    if (messageConversationId !== conversationId || lower(message?.to) !== me) continue;
     const readBy = Array.isArray(message.readBy) ? message.readBy : [];
     if (!readBy.some((id: any) => lower(id) === me)) {
       message.readBy = [...readBy, profile.username];
@@ -1330,7 +1333,7 @@ export default {
         }
 
         if (action === "mark_messages_read") {
-          return json(await markMessagesRead(ctx));
+          return json(await markMessagesRead(ctx, body));
         }
 
         if (action === "mark_notification_read") {
