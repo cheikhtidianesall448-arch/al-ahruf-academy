@@ -2814,8 +2814,20 @@ async function openMyClassScheduledLink(classLinkId){
  if(!link)return modal(t('Class not available'),t('This saved class link could not be found.'),()=>{},t('OK'));
  const studentRec=currentStudent();
  const ids=studentTimetableIds(studentRec);
- const match=(S.timetable||[]).find(item=>timetableHasClassLink(item,link,ids,studentRec));
- if(!match){modal(t('Class not available'),t('This saved link is not connected to a class in your assigned timetable yet. Please ask your teacher or administrator to connect the correct Google Meet class to your scheduled lesson.'),()=>{},t('OK'));return;}
+ const matches=(S.timetable||[]).filter(item=>timetableHasClassLink(item,link,ids,studentRec));
+ if(!matches.length){modal(t('Class not available'),t('This saved link is not connected to a class in your assigned timetable yet. Please ask your teacher or administrator to connect the correct Google Meet class to your scheduled lesson.'),()=>{},t('OK'));return;}
+ // A reusable teacher/level link may match several timetable entries. Choose the
+ // matching lesson that occurs next, rather than the first entry in storage.
+ const linkTitle=normalizeClassMatch(link.title);
+ const exactMatches=matches.filter(item=>{
+  const code=String(item.classCode||'').trim().toLowerCase();
+  const linkCodes=[link.id,link.code].map(v=>String(v||'').trim().toLowerCase());
+  return (code&&linkCodes.includes(code))||
+   (!!linkTitle&&normalizeClassMatch(item.course)===linkTitle);
+ });
+ const candidates=exactMatches.length?exactMatches:matches;
+ const next=nextScheduledClass(candidates);
+ const match=next?.item||candidates[0];
  await requestScheduledClass(match.id);
 }
 function editClassLink(id){
