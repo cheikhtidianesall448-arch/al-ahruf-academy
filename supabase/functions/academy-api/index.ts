@@ -1060,12 +1060,65 @@ async function deleteStudent(ctx: any, body: any) {
   return { ok: true, state: cleanState(state) };
 }
 
+async function recordMissedTimetableClasses(ctx: any, state: any) {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Dakar", year: "numeric", month: "2-digit", day: "2-digit",
+    weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(now);
+  const part = (name: string) => parts.find((p) => p.type === name)?.value || "";
+  const date = part("year") + "-" + part("month") + "-" + part("day");
+  const weekday = lower(part("weekday"));
+  const nowMinutes = Number(part("hour")) * 60 + Number(part("minute"));
+  const dayState = state.att[date] && typeof state.att[date] === "object" ? state.att[date] : {};
+  let changed = false;
+
+  for (const item of (state.timetable || [])) {
+    if (lower(item?.day) !== weekday || !text(item?.id)) continue;
+    const [hour, minute] = text(item?.start).split(":").map(Number);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) continue;
+    if (nowMinutes - (hour * 60 + minute) < 30) continue;
+
+    const meet = (state.classes || []).find((x: any) =>
+      (text(item.classCode) ? lower(x?.code) === lower(item.classCode) : normalizeClassTitle(x?.title) === normalizeClassTitle(item?.course)) &&
+      /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(x?.url))
+    );
+    if (!meet) continue;
+
+    for (const assignedId of (Array.isArray(item.students) ? item.students : [])) {
+      const student = (state.students || []).find((s: any) => lower(s?.id) === lower(assignedId));
+      if (!student?.id) continue;
+      const sid = text(student.id);
+      const oldEntry = dayState[sid] && typeof dayState[sid] === "object" ? dayState[sid] : {};
+      const sessions = oldEntry.sessions && typeof oldEntry.sessions === "object" ? oldEntry.sessions : {};
+      const sessionId = text(item.id);
+      if (sessions[sessionId]) continue;
+      sessions[sessionId] = {
+        status: "absent", course: text(item.course) || "Quran class",
+        day: text(item.day), start: text(item.start), end: text(item.end),
+        teacher: text(item.teacher), time: now.toISOString(), timetableId: sessionId,
+      };
+      dayState[sid] = { ...oldEntry, sessions };
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    state.att[date] = dayState;
+    const { error } = await ctx.supabaseAdmin.from("academy_state")
+      .update({ state: cleanState(state), updated_at: now.toISOString() }).eq("id", 1);
+    if (error) throw error;
+  }
+  return state;
+}
+
 async function getState(ctx: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile) throw new Error("Not authenticated.");
   if (!isActive(profile)) throw new Error("This account is inactive.");
 
-  const state = await getAcademyState(ctx);
+  let state = await getAcademyState(ctx);
+  state = await recordMissedTimetableClasses(ctx, state);
   const actualRole = normalizedRole(profile.role);
   const visibleState = actualRole === "student"
     ? studentState(state, profile.username)
