@@ -2032,13 +2032,13 @@ async function startMessageRecording(){
   activeMessageRecorder.onstop=()=>{
    const recorder=activeMessageRecorder,blob=new Blob(activeMessageChunks,{type:recorder?.mimeType||'audio/webm'});stream.getTracks().forEach(t=>t.stop());
    if(blob.size>10*1024*1024){recordedAudioAttachment=null;toast('Recording is larger than 10 MB. Please record a shorter message.');return}
-   const reader=new FileReader();reader.onload=()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};const status=document.querySelector('.recordingStatus');if(status)status.textContent='Voice message ready to send.'};reader.readAsDataURL(blob)
+   const reader=new FileReader();reader.onload=()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Voice message ready to send.')};reader.readAsDataURL(blob)
   };
-  activeMessageRecorder.start();const status=document.querySelector('.recordingStatus');if(status)status.textContent='Recording… press Stop recording when finished.';
-  const start=document.querySelector('.recordAudioBtn'),stop=document.querySelector('.stopAudioBtn');if(start)start.disabled=true;if(stop)stop.disabled=false
+  activeMessageRecorder.start();document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Recording… press Stop recording when finished.');
+  document.querySelectorAll('.recordAudioBtn').forEach(start=>start.disabled=true);document.querySelectorAll('.stopAudioBtn').forEach(stop=>stop.disabled=false)
  }catch(e){toast('Microphone permission was not granted. You can attach an audio file instead.')}
 }
-function stopMessageRecording(){if(activeMessageRecorder&&activeMessageRecorder.state!=='inactive'){activeMessageRecorder.stop();const start=document.querySelector('.recordAudioBtn'),stop=document.querySelector('.stopAudioBtn');if(start)start.disabled=false;if(stop)stop.disabled=true}}
+function stopMessageRecording(){if(activeMessageRecorder&&activeMessageRecorder.state!=='inactive'){activeMessageRecorder.stop();document.querySelectorAll('.recordAudioBtn').forEach(start=>start.disabled=false);document.querySelectorAll('.stopAudioBtn').forEach(stop=>stop.disabled=true)}}
 async function sendPlatformMessage(f){
  const fileInput=f.attachment,file=fileInput?.files?.[0];
  const d={to:f.to.value,subject:'',category:'general',message:f.message.value.trim(),replyToId:String(f.replyToId?.value||'').trim()};
