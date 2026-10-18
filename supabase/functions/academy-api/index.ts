@@ -239,6 +239,17 @@ async function sendMessage(ctx: any, body: any) {
 
   const targetRole = normalizedRole(target.role);
   const myStudent = role === "student" ? state.students.find((s:any)=>lower(s?.id)===me) : null;
+  const targetStudent = role === "student" && targetRole === "student"
+    ? state.students.find((s:any)=>lower(s?.id)===lower(target.username))
+    : null;
+  const assignedTeacherKey = (value: any) => {
+    const raw = lower(value);
+    const match = state.teachers.find((t:any)=>lower(t?.username)===raw || lower(t?.name)===raw);
+    return lower(match?.username || raw);
+  };
+  const sameClassmate = !!myStudent && !!targetStudent &&
+    !!assignedTeacherKey(myStudent.teacher) &&
+    assignedTeacherKey(myStudent.teacher) === assignedTeacherKey(targetStudent.teacher);
   const replyToId = text(body.replyToId);
   const originalMessage = replyToId ? state.messages.find((m:any)=>text(m?.id)===replyToId) : null;
   const originalParticipants = new Set([
@@ -259,9 +270,10 @@ async function sendMessage(ctx: any, body: any) {
     role === "admin" ||
     validReply ||
     (role === "teacher" && targetRole === "student" && state.students.some((s:any)=>lower(s?.id)===lower(target.username)&&lower(s?.teacher)===me)) ||
+    (role === "student" && targetRole === "student" && sameClassmate) ||
     (role === "student" && targetRole === "teacher" && lower(target.username) === lower(myStudent?.teacher));
 
-  if (!allowed) throw new Error("You can only message the academy, your assigned teacher, or continue a conversation you are part of.");
+  if (!allowed) throw new Error("You can only message the academy, your assigned teacher, a classmate assigned to the same teacher, or continue a conversation you are part of.");
 
   const messageId = crypto.randomUUID();
   const conversationId = originalMessage
