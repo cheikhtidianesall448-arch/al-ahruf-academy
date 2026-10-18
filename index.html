@@ -2065,7 +2065,7 @@ function composeMessage(to,replyToId){
  if(to&&!recipients.some(x=>String(x.u).toLowerCase()===String(to).toLowerCase())&&original){recipients.push({u:to,n:original.fromName||to,r:original.fromRole||'user'});}
  const opts=recipients.map(x=>'<option value="'+esc(x.u)+'" '+(String(x.u).toLowerCase()===String(to||'').toLowerCase()?'selected':'')+'>'+esc(x.n)+' — '+esc(x.r)+'</option>').join('');
  const replyField=replyToId?'<input type="hidden" name="replyToId" value="'+esc(replyToId)+'">':'';
-  modal(replyToId?'Reply':'New message',replyField+'<label>Recipient</label><select name="to" required>'+opts+'</select><label>Message (optional when attaching a file or voice message)</label><textarea name="message" rows="5" placeholder="Write a message..."></textarea><label>Attach any file type</label><input type="file" name="attachment" accept="*/*" style="padding:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn ghost sm" class="recordAudioBtn" type="button" onclick="startMessageRecording()">🎙 Record voice</button><button class="btn ghost sm" class="stopAudioBtn" type="button" onclick="stopMessageRecording()" disabled>■ Stop recording</button></div><p class="recordingStatus" class="mute">Any file type is accepted. Maximum file size: 10 MB.</p>',sendPlatformMessage,'Send message')
+  modal(replyToId?'Reply':'New message',replyField+'<label>Recipient</label><select name="to" required>'+opts+'</select><label>Message (optional when attaching a file or voice message)</label><textarea name="message" rows="5" placeholder="Write a message..."></textarea><label>Attach any file type</label><input type="file" name="attachment" accept="*/*" style="padding:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn ghost sm recordAudioBtn" type="button" onclick="startMessageRecording()">🎙 Record voice</button><button class="btn ghost sm stopAudioBtn" type="button" onclick="stopMessageRecording()" disabled>■ Stop recording</button></div><p class="recordingStatus" class="mute">Any file type is accepted. Maximum file size: 10 MB.</p>',sendPlatformMessage,'Send message')
 }
 function replyMessage(to){composeMessage(to)}
 function replyToPlatformMessage(id){
@@ -2201,8 +2201,44 @@ function messages(){
  if(user.role==='admin'&&!participants.some(x=>String(x).toLowerCase()===me))heading=(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
  const last=items[items.length-1],target=String(last.from||'').toLowerCase()===me?last.to:last.from;
  const canReply=target&&!String(target).startsWith('group:')&&(user.role==='admin'||participants.some(x=>String(x).toLowerCase()===me));
-  const replyForm=canReply?'<form onsubmit="return sendThreadReply(event,this)" style="display:flex;flex-direction:column;gap:8px;padding-top:12px"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(last.id)+'"><div style="display:flex;align-items:flex-end;gap:8px;width:100%"><textarea name="message" rows="2" placeholder="Write your reply..." style="flex:1;min-width:0;width:100%;box-sizing:border-box;resize:vertical"></textarea><button class="btn sm" type="submit" style="flex:0 0 auto;min-height:42px;align-self:stretch">Send ➤</button></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><input type="file" name="attachment" accept="*/*" aria-label="Attach any file" style="min-width:0;max-width:100%;flex:1"><button class="btn ghost sm" class="recordAudioBtn" type="button" onclick="startMessageRecording()">🎙 Voice</button><button class="btn ghost sm" class="stopAudioBtn" type="button" onclick="stopMessageRecording()" disabled>■ Stop</button></div><span class="recordingStatus" class="mute">Attach any file type, or record a voice message. Maximum file size: 10 MB.</span></form>':'';
+  const replyForm=canReply?'<form onsubmit="return sendThreadReply(event,this)" style="display:flex;flex-direction:column;gap:8px;padding-top:12px"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(last.id)+'"><div style="display:flex;align-items:flex-end;gap:8px;width:100%"><textarea name="message" rows="2" placeholder="Write your reply..." style="flex:1;min-width:0;width:100%;box-sizing:border-box;resize:vertical"></textarea><button class="btn sm" type="submit" style="flex:0 0 auto;min-height:42px;align-self:stretch">Send ➤</button></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><input type="file" name="attachment" accept="*/*" aria-label="Attach any file" style="min-width:0;max-width:100%;flex:1"><button class="btn ghost sm recordAudioBtn" type="button" onclick="startMessageRecording()">🎙 Voice</button><button class="btn ghost sm stopAudioBtn" type="button" onclick="stopMessageRecording()" disabled>■ Stop</button></div><span class="recordingStatus mute">Attach any file type, or record a voice message. Maximum file size: 10 MB.</span></form>':'';
  return header+'<section class="card" style="padding:14px"><div class="row between" style="gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line)"><button class="btn ghost sm" onclick="activeMessageConversationKey=null;render()">← All discussions</button><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div class="mute">'+items.length+' message'+(items.length===1?'':'s')+'</div></div></div><div class="message-thread" style="margin-top:8px">'+items.map(m=>messageThreadItem(m,me)).join('')+'</div>'+replyForm+'</section>';
+}
+let liveMessagePollBusy=false,lastLiveMessagePoll=0;
+function liveMessageSignature(list){return JSON.stringify((list||[]).map(m=>[m.id,m.body,m.attachment?.name,m.attachment?.size,m.createdAt,m.editedAt,(m.readBy||[]).join(',')]))}
+async function pollLiveMessages(){
+ if(!ONLINE||!user||liveMessagePollBusy||document.hidden)return;
+ const now=Date.now(),interval=tab==='messages'?3000:15000;
+ if(now-lastLiveMessagePoll<interval)return;
+ lastLiveMessagePoll=now;liveMessagePollBusy=true;
+ try{
+  const data=await onlineApi('get_state'),fresh=data?.state?.messages;
+  if(!Array.isArray(fresh))return;
+  const previous=S.messages||[],oldIds=new Set(previous.map(m=>String(m.id)));
+  if(liveMessageSignature(previous)===liveMessageSignature(fresh))return;
+  const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
+  const incoming=fresh.filter(m=>!oldIds.has(String(m.id))&&String(m.to||'').toLowerCase()===me);
+  S.messages=fresh;
+  if(Array.isArray(data.state.notifications))S.notifications=data.state.notifications;
+  if(tab==='messages'&&activeMessageConversationKey){
+   const key=activeMessageConversationKey,keyOf=m=>String(m.conversationId||'').trim()||[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|');
+   const items=fresh.filter(m=>keyOf(m)===key).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+   const thread=document.querySelector('.message-thread');
+   if(thread&&items.length){
+    const wasNearBottom=window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-180;
+    thread.innerHTML=items.map(m=>messageThreadItem(m,me)).join('');
+    const section=thread.closest('section'),count=section?.querySelector('.row .mute');
+    if(count)count.textContent=items.length+' message'+(items.length===1?'':'s');
+    const last=items[items.length-1],form=section?.querySelector('form[onsubmit*="sendThreadReply"]');
+    if(form){if(form.elements.replyToId)form.elements.replyToId.value=String(last.id||'');const target=String(last.from||'').toLowerCase()===me?last.to:last.from;if(form.elements.to&&target)form.elements.to.value=target}
+    if(wasNearBottom&&items.some(m=>!oldIds.has(String(m.id))))window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});
+   }else render();
+   if(incoming.some(m=>keyOf(m)===key))onlineApi('mark_messages_read',{conversationId:key}).then(r=>{const arr=Array.isArray(r.messages)?r.messages:r.state?.messages;if(Array.isArray(arr))S.messages=arr}).catch(e=>console.warn('Live read receipt skipped:',e.message));
+  }else if(tab==='messages'){
+   const y=window.scrollY;render();window.scrollTo(0,y);
+  }
+ }catch(e){console.warn('Live discussion update skipped:',e.message)}
+ finally{liveMessagePollBusy=false}
 }
 async function editPlatformMessage(id){
  const m=(S.messages||[]).find(x=>String(x.id)===String(id));if(!m)return toast('Message not found.');
@@ -3327,6 +3363,7 @@ async function startApp(){
  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startApp,{once:true});else startApp();
+setInterval(pollLiveMessages,3000);
 </script>
 </body>
 </html>
