@@ -2000,6 +2000,19 @@ function applyArabicIndicDigits(root=document.body){
   });
  });
 }
+function syncSiteFavicon(){
+ try{
+  const logo=document.querySelector('.bar img[alt="Al-Ahruf logo"], .brand img');
+  if(!logo)return;
+  const apply=()=>{
+   if(!logo.src||!logo.naturalWidth)return;
+   const favicon=document.getElementById('academy-favicon');
+   if(favicon){favicon.type=logo.src.startsWith('data:image/png')?'image/png':logo.src.startsWith('data:image/jpeg')?'image/jpeg':'image/png';favicon.href=logo.src;}
+   document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(link=>{link.href=logo.src;});
+  };
+  if(logo.complete)apply();else logo.addEventListener('load',apply,{once:true});
+ }catch(e){}
+}
 function render(){
  const who=$('#who'),out=$('#out'),app=$('#app'),themeBtn=$('button[onclick="theme()"]');
  if(themeBtn)themeBtn.textContent=currentLang==='fr'?'Thème':currentLang==='ar'?'المظهر':'Theme';
@@ -2007,6 +2020,8 @@ function render(){
  if(out)out.style.display=user?'':'none';
  if(!app)return;
  app.innerHTML=!user?viewLogin():user.role==='student'?viewStudent():viewStaff();
+ syncSiteFavicon();
+
  // Refresh countdowns after rendering so newly inserted MyClass notices never stay on “Calculating…”.
  if(user&&typeof updateNextClassCountdown==='function')updateNextClassCountdown();
  document.body.querySelectorAll('.lang-switch').forEach(x=>x.remove());
