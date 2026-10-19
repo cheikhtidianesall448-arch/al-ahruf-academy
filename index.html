@@ -2087,24 +2087,55 @@ function classGroupChat(){
  '<div class="card" style="margin-bottom:12px"><div style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto">'+(groupMessages.map(m=>'<div style="align-self:'+(String(m.from||'').toLowerCase()===me?'flex-end':'stretch')+';max-width:92%;padding:10px 12px;border-radius:12px;background:var(--soft);border:1px solid var(--line)"><b>'+esc(m.fromName||m.from||'Classmate')+'</b><div style="white-space:pre-wrap;margin:5px 0">'+formatMessageBody(m.body||'')+'</div><div class="mute">'+esc(new Date(m.createdAt||Date.now()).toLocaleString())+'</div></div>').join('')||'<p class="mute">No messages yet. Start the discussion and say hello to your classmates!</p>')+'</div></div>'+
  '<div class="card"><form onsubmit="event.preventDefault();sendClassGroupChat(this)"><label for="classGroupMessage">Write a message</label><textarea id="classGroupMessage" name="message" rows="3" maxlength="3000" required placeholder="Ask a question or share what you are studying…"></textarea><div class="row end"><button class="btn" type="submit">Send message</button></div></form><p class="mute">Please be respectful and keep the discussion helpful for learning.</p></div>'
 }
+<style>
+.whatsapp-mic{width:46px!important;height:46px!important;min-width:46px!important;border-radius:50%!important;background:#128c7e!important;color:#fff!important;border:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:22px!important;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 2px 5px #0002}
+.whatsapp-mic.voice-recording{background:#d93025!important;animation:whatsappMicPulse 1s infinite;transform:scale(1.06)}
+@keyframes whatsappMicPulse{0%,100%{box-shadow:0 0 0 0 #d9302555}50%{box-shadow:0 0 0 8px #d9302520}}
+.message-chat-composer .whatsapp-mic{flex-shrink:0}
+</style>
 function messageRecipients(){if(user.role==='admin')return [...(S.students||[]).map(s=>({u:s.id,n:s.name,r:'student'})),...(S.teachers||[]).map(t=>({u:t.username,n:t.name,r:'teacher'}))];if(user.role==='teacher')return [{u:'ahruf',n:'Academy Administrator',r:'admin'},...(S.students||[]).filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))];const student=currentStudent();return student&&student.teacher?[{u:student.teacher,n:teacherName(student.teacher),r:'teacher'},...(S.students||[]).filter(s=>String(s.id||'').toLowerCase()!==String(student.id||'').toLowerCase()&&String(s.teacher||'').trim().toLowerCase()===String(student.teacher||'').trim().toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))]:[];}
-let recordedAudioAttachment=null,activeMessageRecorder=null,activeMessageChunks=[];
-async function startMessageRecording(){
- if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){toast('Audio recording is not supported by this browser. You can attach an audio file instead.');return}
+let recordedAudioAttachment=null,activeMessageRecorder=null,activeMessageChunks=[],activeVoiceForm=null,voicePermissionPending=false,voiceReleasedWhilePending=false;
+async function startWhatsAppVoiceNote(event,button){
+ if(event){event.preventDefault();event.stopPropagation()}
+ if(activeMessageRecorder&&activeMessageRecorder.state==='recording')return;
+ if(voicePermissionPending)return;
+ if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){toast('Voice recording is not supported by this browser. Please attach an audio file instead.');return}
+ activeVoiceForm=button?.closest('form')||null;voicePermissionPending=true;voiceReleasedWhilePending=false;
+ button?.classList.add('voice-recording');if(button)button.setAttribute('aria-label','Recording voice message — release to send');
+ document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Recording… release the microphone button to send.');
  try{
-  const stream=await navigator.mediaDevices.getUserMedia({audio:true});activeMessageChunks=[];
-  activeMessageRecorder=new MediaRecorder(stream);
-  activeMessageRecorder.ondataavailable=e=>{if(e.data&&e.data.size)activeMessageChunks.push(e.data)};
-  activeMessageRecorder.onstop=()=>{
-   const recorder=activeMessageRecorder,blob=new Blob(activeMessageChunks,{type:recorder?.mimeType||'audio/webm'});stream.getTracks().forEach(t=>t.stop());
-   if(blob.size>10*1024*1024){recordedAudioAttachment=null;toast('Recording is larger than 10 MB. Please record a shorter message.');return}
-   const reader=new FileReader();reader.onload=()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Voice message ready to send.')};reader.readAsDataURL(blob)
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  const recorder=new MediaRecorder(stream);activeMessageRecorder=recorder;activeMessageChunks=[];
+  recorder.ondataavailable=e=>{if(e.data&&e.data.size)activeMessageChunks.push(e.data)};
+  recorder.onstop=()=>{
+   const blob=new Blob(activeMessageChunks,{type:recorder.mimeType||'audio/webm'});
+   stream.getTracks().forEach(t=>t.stop());
+   document.querySelectorAll('.recordAudioBtn').forEach(b=>{b.classList.remove('voice-recording');b.disabled=false;b.setAttribute('aria-label','Hold to record and release to send voice message')});
+   document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Sending voice message…');
+   activeMessageRecorder=null;voicePermissionPending=false;
+   if(blob.size>10*1024*1024){activeVoiceForm=null;toast('Voice message is larger than 10 MB. Please record a shorter message.');return}
+   if(blob.size<700){activeVoiceForm=null;document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Hold the microphone and speak before releasing.');return}
+   const form=activeVoiceForm;activeVoiceForm=null;
+   const reader=new FileReader();
+   reader.onload=async()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};if(form)await sendPlatformMessage(form);else toast('Voice message is ready. Open the discussion again to send it.');};
+   reader.onerror=()=>toast('Could not prepare the voice message. Please try again.');
+   reader.readAsDataURL(blob);
   };
-  activeMessageRecorder.start();document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Recording… press Stop recording when finished.');
-  document.querySelectorAll('.recordAudioBtn').forEach(start=>start.disabled=true);document.querySelectorAll('.stopAudioBtn').forEach(stop=>stop.disabled=false)
- }catch(e){toast('Microphone permission was not granted. You can attach an audio file instead.')}
+  recorder.start();voicePermissionPending=false;
+  if(voiceReleasedWhilePending){voiceReleasedWhilePending=false;recorder.stop()}
+ }catch(e){
+  voicePermissionPending=false;activeVoiceForm=null;
+  document.querySelectorAll('.recordAudioBtn').forEach(b=>{b.classList.remove('voice-recording');b.setAttribute('aria-label','Hold to record and release to send voice message')});
+  document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Attach any file type or hold the microphone to record a voice message · Max 10 MB');
+  toast('Microphone permission was not granted. You can attach an audio file instead.');
+ }
 }
-function stopMessageRecording(){if(activeMessageRecorder&&activeMessageRecorder.state!=='inactive'){activeMessageRecorder.stop();document.querySelectorAll('.recordAudioBtn').forEach(start=>start.disabled=false);document.querySelectorAll('.stopAudioBtn').forEach(stop=>stop.disabled=true)}}
+function finishWhatsAppVoiceNote(event,button){
+ if(event){event.preventDefault();event.stopPropagation()}
+ if(voicePermissionPending){voiceReleasedWhilePending=true;return}
+ if(activeMessageRecorder&&activeMessageRecorder.state==='recording')activeMessageRecorder.stop();
+ if(button)button.blur();
+}
 async function sendPlatformMessage(f){
  const fileInput=f.attachment,file=fileInput?.files?.[0];
  const d={to:f.to.value,subject:'',category:'general',message:f.message.value.trim(),replyToId:String(f.replyToId?.value||'').trim()};
@@ -2138,7 +2169,7 @@ function composeMessage(to,replyToId){
  const opts=recipients.map(x=>'<option value="'+esc(x.u)+'" '+(String(x.u).toLowerCase()===String(to||'').toLowerCase()?'selected':'')+'>'+esc(x.n)+' — '+esc(x.r)+'</option>').join('');
  const recipientField=to?'<input type="hidden" name="to" value="'+esc(to)+'"><p class="mute" style="margin:0 0 12px">To: <b>'+esc(selected?.n||to)+'</b></p>':'<label>Recipient</label><select name="to" required>'+opts+'</select>';
  const replyField=replyToId?'<input type="hidden" name="replyToId" value="'+esc(replyToId)+'">':'';
-  modal(replyToId?'Reply':to?'Message '+(selected?.n||to):'New message',replyField+recipientField+'<label>Message (optional when attaching a file or voice message)</label><textarea name="message" rows="5" placeholder="Write a message..."></textarea><label>Attach any file type</label><input type="file" name="attachment" accept="*/*" style="padding:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn ghost sm recordAudioBtn" type="button" onclick="startMessageRecording()">🎙 Record voice</button><button class="btn ghost sm stopAudioBtn" type="button" onclick="stopMessageRecording()" disabled>■ Stop recording</button></div><p class="recordingStatus mute">Any file type is accepted. Maximum file size: 10 MB.</p>',sendPlatformMessage,'Send message')
+  modal(replyToId?'Reply':to?'Message '+(selected?.n||to):'New message',replyField+recipientField+'<label>Message (optional when attaching a file or voice message)</label><textarea name="message" rows="5" placeholder="Write a message..."></textarea><label>Attach any file type</label><input type="file" name="attachment" accept="*/*" style="padding:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn recordAudioBtn whatsapp-mic" type="button" aria-label="Hold to record and release to send voice message" title="Hold to record, release to send" onpointerdown="startWhatsAppVoiceNote(event,this)" onpointerup="finishWhatsAppVoiceNote(event,this)" onpointercancel="finishWhatsAppVoiceNote(event,this)">🎙</button></div><p class="recordingStatus mute">Any file type is accepted. Maximum file size: 10 MB.</p>',sendPlatformMessage,'Send message')
 }
 function replyMessage(to){composeMessage(to)}
 function replyToPlatformMessage(id){
@@ -2290,7 +2321,7 @@ function messages(){
  if(user.role==='admin'&&!participants.some(x=>String(x).toLowerCase()===me))heading=(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
  const last=items[items.length-1],target=String(last.from||'').toLowerCase()===me?last.to:last.from;
  const canReply=target&&!String(target).startsWith('group:')&&(user.role==='admin'||participants.some(x=>String(x).toLowerCase()===me));
-  const replyForm=canReply?'<form class="message-chat-composer" onsubmit="return sendThreadReply(event,this)"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(last.id)+'"><div class="message-send-row"><textarea name="message" rows="1" placeholder="Type a message" aria-label="Type a message" style="flex:1;min-width:0;width:100%;box-sizing:border-box"></textarea><button class="btn message-send" type="submit" aria-label="Send message" title="Send message">➤</button></div><div class="message-tools"><input type="file" name="attachment" accept="*/*" aria-label="Attach any file"><button class="btn ghost sm recordAudioBtn" type="button" onclick="startMessageRecording()">🎙 Voice</button><button class="btn ghost sm stopAudioBtn" type="button" onclick="stopMessageRecording()" disabled>■ Stop</button></div><span class="recordingStatus">Attach any file type or record a voice message · Max 10 MB</span></form>':'';
+  const replyForm=canReply?'<form class="message-chat-composer" onsubmit="return sendThreadReply(event,this)"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(last.id)+'"><div class="message-send-row"><textarea name="message" rows="1" placeholder="Type a message" aria-label="Type a message" style="flex:1;min-width:0;width:100%;box-sizing:border-box"></textarea><button class="btn message-send" type="submit" aria-label="Send message" title="Send message">➤</button></div><div class="message-tools"><input type="file" name="attachment" accept="*/*" aria-label="Attach any file"><button class="btn recordAudioBtn whatsapp-mic" type="button" aria-label="Hold to record and release to send voice message" title="Hold to record, release to send" onpointerdown="startWhatsAppVoiceNote(event,this)" onpointerup="finishWhatsAppVoiceNote(event,this)" onpointercancel="finishWhatsAppVoiceNote(event,this)">🎙</button></div><span class="recordingStatus">Attach any file type or record a voice message · Max 10 MB</span></form>':'';
  return header+'<section class="card message-chat-shell"><div class="message-chat-header"><button class="btn ghost sm" onclick="activeMessageConversationKey=null;render()" aria-label="Back to discussions" title="Back to discussions">←</button><span class="message-chat-avatar">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div style="font-size:.76rem;color:#667781">Discussion · '+items.length+' message'+(items.length===1?'':'s')+'</div></div></div><div class="message-thread">'+renderThreadMessages(items,me)+'</div>'+replyForm+'</section>';
 }
 let liveMessagePollBusy=false,lastLiveMessagePoll=0;
