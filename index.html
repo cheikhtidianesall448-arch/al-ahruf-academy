@@ -2594,7 +2594,19 @@ async function pollLiveMessages(){
 async function forwardVoiceMessage(id){
  const original=(S.messages||[]).find(x=>String(x.id)===String(id));
  if(!original||!original.attachment||!String(original.attachment.type||'').toLowerCase().startsWith('audio/'))return toast('Voice message not found.');
- const recipients=messageRecipients().filter(x=>String(x.u).toLowerCase()!==String(user.username||user.id||'').toLowerCase());
+ const allRecipients=[
+  {u:'ahruf',n:'Academy Administrator',r:'admin'},
+  ...(S.students||[]).map(x=>({u:x.id,n:x.name,r:'student'})),
+  ...(S.teachers||[]).map(x=>({u:x.username,n:x.name,r:'teacher'})),
+  ...(S.messagePeers||[]).map(x=>({u:x.id||x.username,n:x.name||x.username,r:x.role||'user'}))
+ ];
+ const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
+ const seen=new Set();
+ const recipients=allRecipients.filter(x=>{
+  const key=String(x.u||'').trim().toLowerCase();
+  if(!key||key===me||seen.has(key))return false;
+  seen.add(key);return true;
+ });
  if(!recipients.length)return toast('No available recipients to forward this voice message.');
  const opts=recipients.map(x=>'<option value="'+esc(x.u)+'">'+esc(x.n)+' — '+esc(x.r)+'</option>').join('');
  modal('Forward voice message','<p class="mute">Choose who should receive this voice message.</p><label>Recipient</label><select name="to" required>'+opts+'</select><div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><audio controls preload="metadata" src="'+esc(original.attachment.data||original.attachment.url||'')+'"></audio></div><label>Message (optional)</label><textarea name="message" rows="2" placeholder="Add a message…"></textarea>',async f=>{
