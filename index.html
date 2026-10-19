@@ -1224,6 +1224,15 @@ body:has(.hero) .hero>.card form .btn{
 .message-longpress-menu button{display:block;width:100%;min-height:42px;padding:9px 12px;text-align:left;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:.9rem;cursor:pointer}
 .message-longpress-menu button:hover,.message-longpress-menu button:focus-visible{background:var(--soft,#edf3ef);outline:2px solid var(--gold,#c99a3d);outline-offset:-2px}
 .message-longpress-menu button.danger{color:#b42318}
+
+/* WhatsApp-inspired waveform above each sent or received voice note. */
+.message-thread-item .whatsapp-voice-content{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1 1 auto;width:clamp(180px,38vw,270px);max-width:100%}
+.message-thread-item .whatsapp-voice-waveform{height:27px;display:flex;align-items:center;justify-content:space-between;gap:2px;width:100%;overflow:hidden;padding:0 2px;color:#128c7e}
+.message-thread-item .whatsapp-voice-waveform i{display:block;flex:1 1 2px;min-width:2px;max-width:4px;border-radius:3px;background:currentColor;opacity:.82}
+.message-thread-item.own .whatsapp-voice-waveform{color:#168879}
+.message-thread-item.incoming .whatsapp-voice-waveform{color:#7b8b90}
+.message-thread-item .whatsapp-voice-content audio{display:block;width:100%;max-width:100%;height:32px}
+@media(max-width:480px){.message-thread-item .whatsapp-voice-content{width:clamp(150px,48vw,240px)}.message-thread-item .whatsapp-voice-waveform{height:24px;gap:1px}}
 </style>
 
 <style>
@@ -2315,6 +2324,20 @@ async function downloadMessageAttachment(src,name){
   toast('If the file opens instead of downloading, use your browser’s Save option or enable “Ask where to save each file before downloading” in browser settings.');
  }
 }
+function voiceWaveformBars(message){
+ const seed=String(message?.id||message?.attachment?.name||'voice');
+ let value=2166136261;
+ for(let i=0;i<seed.length;i++){value^=seed.charCodeAt(i);value=Math.imul(value,16777619)}
+ const bars=[];
+ for(let i=0;i<44;i++){
+  value^=value<<13;value^=value>>>17;value^=value<<5;
+  const random=(value>>>0)/4294967295;
+  const envelope=0.35+0.65*Math.pow(Math.sin(Math.PI*(i+1)/45),0.7);
+  const height=Math.round(4+random*19*envelope);
+  bars.push('<i style="height:'+height+'px"></i>');
+ }
+ return bars.join('');
+}
 function messageThreadItem(m,me){
  const from=String(m.from||'').toLowerCase(),to=String(m.to||'').toLowerCase(),who=String(me||'').toLowerCase();
  const own=from===who,readBy=Array.isArray(m.readBy)?m.readBy:[];
@@ -2324,7 +2347,7 @@ function messageThreadItem(m,me){
  if(m.attachment){
   const a=m.attachment,src=a.data||a.url||'',type=String(a.type||'').toLowerCase(),name=String(a.name||'attachment');
   const isImage=type.startsWith('image/')||/\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(name),isVideo=type.startsWith('video/')||/\.(mp4|webm|mov|m4v|ogv)$/i.test(name);
-  if(type.startsWith('audio/')) attachmentHtml='<div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><audio controls preload="metadata" src="'+esc(src)+'" aria-label="Voice message"></audio></div>';
+  if(type.startsWith('audio/')) attachmentHtml='<div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><div class="whatsapp-voice-content"><div class="whatsapp-voice-waveform" aria-label="Voice waveform" role="img">'+voiceWaveformBars(m)+'</div><audio controls preload="metadata" src="'+esc(src)+'" aria-label="Voice message"></audio></div></div>';
   else if(isImage&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'image\')" rel="noopener noreferrer" aria-label="Picture: '+esc(name)+'" style="display:inline-block;max-width:100%"><img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" style="display:block;width:auto;height:auto;max-width:100%;max-height:55vh;object-fit:contain;border-radius:8px"></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else if(isVideo&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'video\')" rel="noopener noreferrer" aria-label="Video: '+esc(name)+'" style="display:block;position:relative;max-width:520px;text-decoration:none"><video muted playsinline preload="metadata" src="'+esc(src)+'" style="display:block;width:100%;max-height:240px;object-fit:contain;background:#111;border-radius:8px;pointer-events:none"></video><span style="display:inline-block;margin-top:5px;padding:5px 10px;border-radius:6px;background:#128c7e;color:#fff;font-weight:600">▶ Open video</span></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else attachmentHtml='<p style="margin-top:5px!important">📎 '+esc(name)+'</p>';
