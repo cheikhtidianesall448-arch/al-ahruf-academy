@@ -2393,7 +2393,7 @@ function messageThreadItem(m,me){
  const time=new Date(m.createdAt||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
  let attachmentHtml='';
  if(m.attachment){
-  const a=m.attachment,src=a.data||a.url||'',type=String(a.type||'').toLowerCase(),name=String(a.name||'attachment');
+  const a=m.attachment,src=a.data||a.url||'',type=String(a.type||'').toLowerCase(),name=String(a.name||t('Attachment'));
   const isImage=type.startsWith('image/')||/\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(name),isVideo=type.startsWith('video/')||/\.(mp4|webm|mov|m4v|ogv)$/i.test(name);
   if(type.startsWith('audio/')) attachmentHtml=(a.forwarded?'<div class="voice-forwarded-label">'+esc(t('Forwarded'))+'</div>':'')+'<div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><div class="whatsapp-voice-content"><div class="whatsapp-voice-waveform" aria-label="Voice waveform" role="img">'+voiceWaveformBars(m)+'<span class="whatsapp-voice-playhead" aria-hidden="true"></span></div><audio controls preload="metadata" src="'+esc(src)+'" aria-label="'+esc(t('Voice message'))+'"></audio></div></div>';
   else if(isImage&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'image\')" rel="noopener noreferrer" aria-label="'+esc(t('Picture:'))+' '+esc(name)+'" style="display:inline-block;max-width:100%"><img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" style="display:block;width:auto;height:auto;max-width:100%;max-height:55vh;object-fit:contain;border-radius:8px"></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
