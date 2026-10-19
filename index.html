@@ -2690,10 +2690,26 @@ async function ahrufBroadcastToUser(call,target,payload){
  const channel=call.client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{broadcast:{self:false}}});
  try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Invite channel timeout')),6000);channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Invite channel unavailable'))}})});await channel.send({type:'broadcast',event:'call_invite',payload});}finally{setTimeout(()=>{try{call.client.removeChannel(channel)}catch(_){}},1500)}
 }
+function ahrufDirectConversationId(target){
+ const me=ahrufMe(),peer=String(target||'').trim().toLowerCase();
+ const pair=[me,peer].sort().join('|');
+ const previous=(S.messages||[]).filter(m=>{
+  const from=String(m.from||'').trim().toLowerCase(),to=String(m.to||'').trim().toLowerCase();
+  return !from.startsWith('group:')&&!to.startsWith('group:')&&[from,to].sort().join('|')===pair;
+ }).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))[0];
+ return String(previous?.conversationId||pair);
+}
 async function ahrufAppendCallInviteMessage(call,target){
  const body=AHRUF_CALL_INVITE_PREFIX+[call.room,call.kind,ahrufMe(),encodeURIComponent(String(user?.name||user?.username||ahrufMe()))].join('|');
- if(ONLINE){const result=await onlineApi('send_message',{to:target,subject:'',category:'general',message:body});if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages}
- else{const pair=[ahrufMe(),String(target).toLowerCase()].sort().join('|');S.messages.push({id:'call-invite-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),conversationId:pair,from:user?.username||user?.id,fromName:user?.name,fromRole:user?.role,to:target,toName:target,toRole:'user',subject:'',category:'general',body,status:'open',createdAt:new Date().toISOString(),readBy:[user?.username||user?.id]});save()}
+ if(ONLINE){
+  // The API reuses the existing direct conversation ID for this sender/recipient pair.
+  const result=await onlineApi('send_message',{to:target,subject:'',category:'general',message:body});
+  if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages;
+ }else{
+  const conversationId=ahrufDirectConversationId(target);
+  S.messages.push({id:'call-invite-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),conversationId,from:user?.username||user?.id,fromName:user?.name,fromRole:user?.role,to:target,toName:target,toRole:'user',subject:'',category:'general',body,status:'open',createdAt:new Date().toISOString(),readBy:[user?.username||user?.id]});
+  save();
+ }
 }
 function ahrufStopRingback(call){
  if(!call)return;
