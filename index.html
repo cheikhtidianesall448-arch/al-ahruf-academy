@@ -2726,23 +2726,27 @@ function ensureAhrufCallInbox(){
   ahrufCallInbox.subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('Call inbox signalling status:',status)});
  }).catch(e=>console.warn('Call inbox unavailable:',e.message));
 }
+let ahrufRingtoneContext=null;
+function ahrufUnlockRingtone(){
+ try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!ahrufRingtoneContext)ahrufRingtoneContext=new AC();if(ahrufRingtoneContext.state==='suspended')ahrufRingtoneContext.resume().catch(()=>{})}catch(_){}
+}
+document.addEventListener('pointerdown',ahrufUnlockRingtone,{passive:true});
+document.addEventListener('keydown',ahrufUnlockRingtone);
 function ahrufShowIncomingCall(invite){
  if(ahrufActiveCall||!invite?.room)return;
  if(document.querySelector('.ahruf-incoming-overlay'))return;
  const overlay=document.createElement('div');overlay.className='ahruf-call-overlay ahruf-incoming-overlay';overlay.innerHTML='<section class="ahruf-call-panel ahruf-incoming-panel" role="alertdialog" aria-modal="true" aria-label="Incoming call"><div class="ahruf-ring-pulse"><div class="ahruf-ring-icon">'+(invite.kind==='video'?'📹':'☎')+'</div></div><div class="ahruf-incoming-label">INCOMING '+(invite.kind==='video'?'VIDEO':'VOICE')+' CALL</div><h1 class="ahruf-incoming-name">'+esc(invite.fromName||invite.from||'An academy user')+'</h1><div class="ahruf-incoming-subtitle">Al-Ahruf International Academy</div><div class="ahruf-call-status ahruf-ringing-status">Calling you…</div><div class="ahruf-incoming-actions"><button type="button" class="ahruf-call-decline"><span>✕</span><b>Decline</b></button><button type="button" class="ahruf-call-answer"><span>☎</span><b>Answer</b></button></div><div class="ahruf-incoming-hint">Tap Answer to start talking live</div></section>';document.body.appendChild(overlay);
- let handled=false,ringAudioCtx=null,ringOscillators=[],ringInterval=null,vibrateInterval=null;
- const stopRing=()=>{if(ringInterval)clearInterval(ringInterval);if(vibrateInterval)clearInterval(vibrateInterval);try{navigator.vibrate?.(0)}catch(_){}try{ringOscillators.forEach(o=>{try{o.stop()}catch(_){}});ringOscillators=[];ringAudioCtx?.close()}catch(_){}ringAudioCtx=null};
- const soundOnce=()=>{try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!ringAudioCtx)ringAudioCtx=new AC();if(ringAudioCtx.state==='suspended')ringAudioCtx.resume().catch(()=>{});const now=ringAudioCtx.currentTime;[0,0.28].forEach(offset=>{const osc=ringAudioCtx.createOscillator(),gain=ringAudioCtx.createGain();osc.type='sine';osc.frequency.value=offset?660:880;gain.gain.setValueAtTime(0.0001,now+offset);gain.gain.exponentialRampToValueAtTime(0.18,now+offset+0.025);gain.gain.setValueAtTime(0.18,now+offset+0.16);gain.gain.exponentialRampToValueAtTime(0.0001,now+offset+0.24);osc.connect(gain);gain.connect(ringAudioCtx.destination);osc.start(now+offset);osc.stop(now+offset+0.25);ringOscillators.push(osc)})}catch(e){console.warn('Ringing sound unavailable:',e)}};
- const startRing=()=>{soundOnce();ringInterval=setInterval(soundOnce,1800);const vibrate=()=>{try{navigator.vibrate?.([450,180,450,500])}catch(_){}};vibrate();vibrateInterval=setInterval(vibrate,1800)};
+ let handled=false,ringAudioCtx=null,ringOscillators=[],ringInterval=null,vibrateInterval=null,timeout=null;
+ const stopRing=()=>{if(ringInterval)clearInterval(ringInterval);if(vibrateInterval)clearInterval(vibrateInterval);if(timeout)clearTimeout(timeout);try{navigator.vibrate?.(0)}catch(_){}ringOscillators.forEach(o=>{try{o.stop()}catch(_){}});ringOscillators=[]};
+ const soundOnce=()=>{try{ahrufUnlockRingtone();ringAudioCtx=ahrufRingtoneContext;if(!ringAudioCtx)return;const now=ringAudioCtx.currentTime;[[0,880],[0.26,660],[0.52,880]].forEach(([offset,hz])=>{const osc=ringAudioCtx.createOscillator(),gain=ringAudioCtx.createGain();osc.type='sine';osc.frequency.value=hz;gain.gain.setValueAtTime(0.0001,now+offset);gain.gain.exponentialRampToValueAtTime(0.22,now+offset+0.025);gain.gain.setValueAtTime(0.22,now+offset+0.17);gain.gain.exponentialRampToValueAtTime(0.0001,now+offset+0.24);osc.connect(gain);gain.connect(ringAudioCtx.destination);osc.start(now+offset);osc.stop(now+offset+0.25);ringOscillators.push(osc)})}catch(e){console.warn('Ringing sound unavailable:',e)}};
+ const vibrate=()=>{try{if('vibrate' in navigator)navigator.vibrate([450,180,450,500])}catch(_){}};
+ const startRing=()=>{soundOnce();ringInterval=setInterval(soundOnce,1900);vibrate();vibrateInterval=setInterval(vibrate,1900)};
  const finish=()=>{if(handled)return false;handled=true;stopRing();overlay.remove();return true};
  overlay.querySelector('.ahruf-call-decline').onclick=()=>{if(!finish())return;ahrufSendInboxSignal(invite.from,{type:'declined',room:invite.room,from:ahrufMe()}).catch(()=>{})};
  overlay.querySelector('.ahruf-call-answer').onclick=async()=>{if(!finish())return;await ahrufJoinCall(invite)};
- overlay.addEventListener('pointerdown',()=>{if(ringAudioCtx?.state==='suspended')ringAudioCtx.resume().catch(()=>{})},{once:true});
+ overlay.addEventListener('pointerdown',()=>{ahrufUnlockRingtone();if(ringAudioCtx?.state==='suspended')ringAudioCtx.resume().catch(()=>{})},{once:true});
+ timeout=setTimeout(()=>{if(finish())ahrufSendInboxSignal(invite.from,{type:'missed',room:invite.room,from:ahrufMe()}).catch(()=>{})},60000);
  startRing();
- const timeout=setTimeout(()=>{if(finish())ahrufSendInboxSignal(invite.from,{type:'missed',room:invite.room,from:ahrufMe()}).catch(()=>{})},60000);
- const originalFinish=finish;
- // Keep the timeout from leaving an active ringtone after the caller has stopped waiting.
- overlay.addEventListener('remove',()=>clearTimeout(timeout));
 }
 async function ahrufSendInboxSignal(target,payload){
  const client=await ahrufCallClient(),channel=client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{broadcast:{self:false}}});
