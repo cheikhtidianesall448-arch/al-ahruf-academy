@@ -1942,7 +1942,7 @@ async function login(role,u,p){
        throw new Error('Account role does not match the selected login.');
      }
      user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
-     toast('Signed in securely');render();openCurtains();
+     toast('Signed in securely');render();openCurtains();window.dispatchEvent(new Event('academy-signed-in'));
    }catch(e){console.error('Al-Ahruf login failed:',e);toast('Sign-in failed. Check your credentials or contact the administrator.');}
    finally{onlineBusy=false}
    return;
@@ -3584,47 +3584,64 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 setInterval(pollLiveMessages,3000);
 </script>
 
-<div id="app-install-notice" role="status" aria-live="polite"><button type="button" id="app-install-notice-close" aria-label="Close">×</button><span id="app-install-notice-text">Al-Ahruf Academy is available in your Apps after installation. Use your browser menu and choose “Install app” or “Add to Home Screen”.</span></div>
+<div id="app-install-notice" role="dialog" aria-live="polite" aria-labelledby="app-install-notice-text">
+ <span id="app-install-notice-text">Would you like to install Al-Ahruf Academy as an app for easier access?</span>
+ <div class="app-install-actions">
+  <button type="button" id="app-install-later">Not now</button>
+  <button type="button" id="app-install-now">Install app</button>
+ </div>
+</div>
 <script>
 (()=>{
- let deferredInstall=null,noticeTimer=null;
- const standalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+ let deferredInstall=null,noticeTimer=null,repeatTimer=null,hasSignedIn=false,showingInstructions=false;
  const notice=document.getElementById('app-install-notice');
  const noticeText=document.getElementById('app-install-notice-text');
+ const installButton=document.getElementById('app-install-now');
+ const laterButton=document.getElementById('app-install-later');
  const language=()=>String(document.documentElement.lang||'en').toLowerCase().slice(0,2);
- const instructions=()=>{
+ const standalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+ const installed=()=>standalone()||(()=>{try{return localStorage.getItem('ahruf-app-installed')==='yes'}catch(e){return false}})();
+ const copy=()=>{
   const lang=language(),ua=navigator.userAgent||'',ios=/iphone|ipad|ipod/i.test(ua),android=/android/i.test(ua);
-  if(lang==='fr')return ios?'Pour installer l’application sur iPhone/iPad : touchez Partager dans Safari, puis « Sur l’écran d’accueil ».':android?'Pour installer l’application : ouvrez le menu ⋮ de Chrome, puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».':'Pour installer l’application, ouvrez le menu de votre navigateur et choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».';
-  if(lang==='ar')return ios?'لتثبيت التطبيق على iPhone أو iPad: اضغط «مشاركة» في Safari ثم «إضافة إلى الشاشة الرئيسية».':android?'لتثبيت التطبيق: افتح قائمة Chrome ⋮ ثم اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».':'لتثبيت التطبيق، افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».';
-  return ios?'To install on iPhone/iPad: open this page in Safari, tap Share, then “Add to Home Screen”.':android?'To install on Android: open Chrome’s ⋮ menu, then choose “Install app” or “Add to Home screen”.':'To install the app, open your browser menu and choose “Install app” or “Add to Home Screen”.';
+  if(lang==='fr')return {question:'Voulez-vous installer Al-Ahruf Academy comme application pour y accéder plus facilement ?',install:'Installer',later:'Pas maintenant',instructions:ios?'Pour installer sur iPhone/iPad : ouvrez cette page dans Safari, touchez Partager, puis « Sur l’écran d’accueil ».':android?'Pour installer : ouvrez le menu ⋮ de Chrome, puis choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».':'Pour installer, ouvrez le menu du navigateur et choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».',got:'Compris'};
+  if(lang==='ar')return {question:'هل تريد تثبيت أكاديمية الأحرف كتطبيق لتسهيل الوصول إليها؟',install:'تثبيت التطبيق',later:'ليس الآن',instructions:ios?'للتثبيت على iPhone أو iPad: افتح الصفحة في Safari، واضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».':android?'للتثبيت: افتح قائمة Chrome ⋮ ثم اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».':'للتثبيت، افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».',got:'حسنًا'};
+  return {question:'Would you like to install Al-Ahruf Academy as an app for easier access?',install:'Install app',later:'Not now',instructions:ios?'To install on iPhone/iPad: open this page in Safari, tap Share, then “Add to Home Screen”.':android?'To install: open Chrome’s ⋮ menu, then choose “Install app” or “Add to Home screen”.':'To install, open your browser menu and choose “Install app” or “Add to Home Screen”.',got:'Got it'};
  };
- const showNotice=(message)=>{
-  if(standalone())return;
-  noticeText.textContent=message||instructions();
-  notice.style.display='block';
-  clearTimeout(noticeTimer);
+ const hide=()=>{notice.style.display='none';clearTimeout(noticeTimer)};
+ const scheduleRepeat=()=>{clearTimeout(repeatTimer);if(hasSignedIn&&!installed())repeatTimer=setTimeout(()=>showQuestion(),300000)};
+ const showQuestion=()=>{
+  if(!hasSignedIn||installed())return;
+  showingInstructions=false;const c=copy();noticeText.textContent=c.question;installButton.textContent=c.install;laterButton.textContent=c.later;installButton.style.display='';notice.style.display='block';
  };
- document.getElementById('app-install-notice-close').addEventListener('click',()=>{notice.style.display='none';clearTimeout(noticeTimer)});
- window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault();deferredInstall=e;
-  // Launch the browser's native install prompt directly, without an extra website dialog.
-  setTimeout(async()=>{
-   if(!deferredInstall||standalone())return;
-   const promptEvent=deferredInstall;deferredInstall=null;
+ const showInstructions=()=>{
+  const c=copy();showingInstructions=true;noticeText.textContent=c.instructions;installButton.textContent=c.got;laterButton.textContent=c.later;installButton.style.display='';
+ };
+ laterButton.addEventListener('click',()=>{hide();scheduleRepeat()});
+ installButton.addEventListener('click',async()=>{
+  if(showingInstructions){hide();scheduleRepeat();return}
+  if(installed()){hide();return}
+  if(deferredInstall){
+   const event=deferredInstall;deferredInstall=null;
    try{
-    await promptEvent.prompt();
-    const choice=await promptEvent.userChoice;
-    if(choice&&choice.outcome==='accepted')showNotice('Al-Ahruf Academy is being added to your Apps.');
-    else showNotice();
-   }catch(err){showNotice();}
-  },1200);
+    await event.prompt();
+    const choice=await event.userChoice;
+    if(choice&&choice.outcome==='accepted'){hide();return}
+    hide();scheduleRepeat();return;
+   }catch(err){showInstructions();return}
+  }
+  showInstructions();
  });
+ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e});
  window.addEventListener('appinstalled',()=>{
-  deferredInstall=null;
-  showNotice('Al-Ahruf Academy is now installed. You can find it in your Apps.');
+  deferredInstall=null;clearTimeout(repeatTimer);hide();
+  try{localStorage.setItem('ahruf-app-installed','yes')}catch(e){}
  });
+ window.addEventListener('academy-signed-in',()=>{
+  hasSignedIn=true;
+  if(!installed())setTimeout(showQuestion,1800);
+ });
+ if(installed()){try{localStorage.setItem('ahruf-app-installed','yes')}catch(e){}}
  if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('App installation support unavailable:',e)));}
- window.addEventListener('load',()=>setTimeout(()=>{if(!standalone()&&!deferredInstall)showNotice()},2500));
 })();
 </script>
 </body>
