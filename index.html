@@ -2173,10 +2173,15 @@ function openMessageConversation(key){
  }
  render();
 }
+function messageConversationKey(m){
+ const from=String(m.from||'').toLowerCase(),to=String(m.to||'').toLowerCase();
+ if(from&&to&&!from.startsWith('group:')&&!to.startsWith('group:'))return [from,to].sort().join('|');
+ return String(m.conversationId||'').trim()||[from,to].sort().join('|');
+}
 function messages(){
  const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
  const allMessages=[...(S.messages||[])];
- const threadKey=m=>String(m.conversationId||'').trim()||[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|');
+ const threadKey=messageConversationKey;
  const myThreadKeys=new Set(allMessages.filter(m=>String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me).map(threadKey));
  const visible=allMessages.filter(m=>user.role==='admin'||String(m.from||'').toLowerCase()===me||String(m.to||'').toLowerCase()===me||myThreadKeys.has(threadKey(m)));
  const groups=new Map();
@@ -2231,7 +2236,7 @@ async function pollLiveMessages(){
   if(Array.isArray(data.state.notifications))S.notifications=data.state.notifications;
   if(!messagesChanged){if(tab!=='messages'||!activeMessageConversationKey){const y=window.scrollY;render();window.scrollTo(0,y)}return;}
   if(tab==='messages'&&activeMessageConversationKey){
-   const key=activeMessageConversationKey,keyOf=m=>String(m.conversationId||'').trim()||[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|');
+   const key=activeMessageConversationKey,keyOf=messageConversationKey;
    const items=fresh.filter(m=>keyOf(m)===key).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
    const thread=document.querySelector('.message-thread');
    if(thread&&items.length){
