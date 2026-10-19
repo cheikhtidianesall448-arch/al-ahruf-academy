@@ -1253,6 +1253,7 @@ body.message-conversation-open .message-chat-composer textarea{max-height:22dvh!
 .message-chat-composer .message-tools{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .message-chat-composer input[type=file]{font-size:.78rem;max-width:100%;min-width:0;flex:1;color:#54656f}
 .message-chat-composer .recordingStatus{color:#54656f;font-size:.75rem}
+.voice-recording-status{display:inline-flex;align-items:center;gap:9px;min-height:25px;color:#075e54;font-size:.82rem;font-weight:700}.voice-recording-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#d93025;animation:whatsappMicPulse 1s infinite}.voice-recording-time{font-variant-numeric:tabular-nums;min-width:42px}.voice-wave{height:22px;display:inline-flex;align-items:center;gap:3px}.voice-wave i{display:block;width:3px;height:5px;border-radius:3px;background:#128c7e;animation:voiceWave .65s ease-in-out infinite alternate}.voice-wave i:nth-child(2n){animation-delay:.16s}.voice-wave i:nth-child(3n){animation-delay:.32s}.voice-wave i:nth-child(4n){animation-delay:.24s}@keyframes voiceWave{from{height:4px}to{height:20px}}
 .message-list-card{border-radius:12px!important;overflow:hidden}
 /* Voice-note controls belong in the document stylesheet, not in the JavaScript body. */
 .whatsapp-mic{width:46px!important;height:46px!important;min-width:46px!important;border-radius:50%!important;background:#128c7e!important;color:#fff!important;border:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:22px!important;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 2px 5px #0002}
@@ -2123,6 +2124,9 @@ function classGroupChat(){
 
 function messageRecipients(){if(user.role==='admin')return [...(S.students||[]).map(s=>({u:s.id,n:s.name,r:'student'})),...(S.teachers||[]).map(t=>({u:t.username,n:t.name,r:'teacher'}))];if(user.role==='teacher')return [{u:'ahruf',n:'Academy Administrator',r:'admin'},...(S.students||[]).filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))];const student=currentStudent();return student&&student.teacher?[{u:student.teacher,n:teacherName(student.teacher),r:'teacher'},...(S.students||[]).filter(s=>String(s.id||'').toLowerCase()!==String(student.id||'').toLowerCase()&&String(s.teacher||'').trim().toLowerCase()===String(student.teacher||'').trim().toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))]:[];}
 let recordedAudioAttachment=null,activeMessageRecorder=null,activeMessageChunks=[],activeVoiceForm=null,voicePermissionPending=false,voiceReleasedWhilePending=false;
+let voiceRecordingStartedAt=0,voiceRecordingTimer=null;
+function updateVoiceRecordingStatus(){const elapsed=Math.max(0,Math.floor((Date.now()-voiceRecordingStartedAt)/1000));const mm=String(Math.floor(elapsed/60)).padStart(2,'0'),ss=String(elapsed%60).padStart(2,'0');document.querySelectorAll('.recordingStatus').forEach(status=>{status.innerHTML='<span class="voice-recording-status"><span class="voice-recording-dot"></span><span>Recording</span><span class="voice-wave" aria-hidden="true">'+Array.from({length:12},()=>'<i></i>').join('')+'</span><span class="voice-recording-time">'+mm+':'+ss+'</span></span>'})}
+function clearVoiceRecordingIndicator(message){if(voiceRecordingTimer){clearInterval(voiceRecordingTimer);voiceRecordingTimer=null}document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent=message)}
 async function startWhatsAppVoiceNote(event,button){
  if(event){event.preventDefault();event.stopPropagation()}
  if(activeMessageRecorder&&activeMessageRecorder.state==='recording')return;
@@ -2130,7 +2134,7 @@ async function startWhatsAppVoiceNote(event,button){
  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){toast('Voice recording is not supported by this browser. Please attach an audio file instead.');return}
  activeVoiceForm=button?.closest('form')||null;voicePermissionPending=true;voiceReleasedWhilePending=false;
  button?.classList.add('voice-recording');if(button)button.setAttribute('aria-label','Recording voice message — release to send');
- document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Recording… release the microphone button to send.');
+ voiceRecordingStartedAt=Date.now();updateVoiceRecordingStatus();if(voiceRecordingTimer)clearInterval(voiceRecordingTimer);voiceRecordingTimer=setInterval(updateVoiceRecordingStatus,250);
  try{
   const stream=await navigator.mediaDevices.getUserMedia({audio:true});
   const recorder=new MediaRecorder(stream);activeMessageRecorder=recorder;activeMessageChunks=[];
@@ -2139,7 +2143,7 @@ async function startWhatsAppVoiceNote(event,button){
    const blob=new Blob(activeMessageChunks,{type:recorder.mimeType||'audio/webm'});
    stream.getTracks().forEach(t=>t.stop());
    document.querySelectorAll('.recordAudioBtn').forEach(b=>{b.classList.remove('voice-recording');b.disabled=false;b.setAttribute('aria-label','Hold to record and release to send voice message')});
-   document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Sending voice message…');
+   clearVoiceRecordingIndicator('Sending voice message…');
    activeMessageRecorder=null;voicePermissionPending=false;
    if(blob.size>10*1024*1024){activeVoiceForm=null;toast('Voice message is larger than 10 MB. Please record a shorter message.');return}
    if(blob.size<700){activeVoiceForm=null;document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Hold the microphone and speak before releasing.');return}
@@ -2154,7 +2158,7 @@ async function startWhatsAppVoiceNote(event,button){
  }catch(e){
   voicePermissionPending=false;activeVoiceForm=null;
   document.querySelectorAll('.recordAudioBtn').forEach(b=>{b.classList.remove('voice-recording');b.setAttribute('aria-label','Hold to record and release to send voice message')});
-  document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Attach any file type or hold the microphone to record a voice message · Max 10 MB');
+  clearVoiceRecordingIndicator('Attach any file type or hold the microphone to record a voice message · Max 10 MB');
   toast('Microphone permission was not granted. You can attach an audio file instead.');
  }
 }
