@@ -2551,129 +2551,214 @@ function showMessageThreadMenu(event,key){event.preventDefault();event.stopPropa
 document.addEventListener('pointerdown',e=>{if(messageThreadMenuElement&&!messageThreadMenuElement.contains(e.target)&&!e.target.closest('[data-message-thread-menu]'))hideMessageThreadMenu()});
 
 const AHRUF_CALL_HISTORY_PREFIX='[[AHRUF_CALL_HISTORY]]|';
-let ahrufActiveCall=null;
+const AHRUF_CALL_INVITE_PREFIX='[[AHRUF_CALL_INVITE]]|';
+let ahrufActiveCall=null,ahrufCallClientPromise=null,ahrufCallInbox=null,ahrufCallInboxUser='';
+function ahrufMe(){return String(user?.username||user?.studentId||user?.student_id||user?.id||'').trim().toLowerCase()}
+function ahrufCallClient(){
+ if(ahrufCallClientPromise)return ahrufCallClientPromise;
+ ahrufCallClientPromise=(async()=>{
+  if(!window.supabase?.createClient){
+   await new Promise((resolve,reject)=>{
+    const existing=document.querySelector('script[data-ahruf-supabase-call]');
+    if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}
+    const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';script.async=true;script.dataset.ahrufSupabaseCall='1';script.onload=resolve;script.onerror=reject;document.head.appendChild(script);
+   });
+  }
+  const cfg=window.AHRUF_SUPABASE;
+  if(!cfg?.url||!cfg?.key||!window.supabase?.createClient)throw new Error('Supabase Realtime is not configured.');
+  return window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:20}}});
+ })();
+ return ahrufCallClientPromise;
+}
 function ahrufCallPeer(key){
- const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
- const items=(S.messages||[]).filter(m=>messageConversationKey(m)===String(key||''));
- for(let i=items.length-1;i>=0;i--){
-  const m=items[i],from=String(m.from||'').toLowerCase(),to=String(m.to||'').toLowerCase();
-  const peer=from===me?to:to===me?from:'';
-  if(peer&&!peer.startsWith('group:'))return peer;
- }
- const parts=String(key||'').split('|');
- return parts.find(x=>x&&x.toLowerCase()!==me&&!x.startsWith('group:'))||'';
+ const me=ahrufMe(),items=(S.messages||[]).filter(m=>messageConversationKey(m)===String(key||''));
+ for(let i=items.length-1;i>=0;i--){const m=items[i],from=String(m.from||'').toLowerCase(),to=String(m.to||'').toLowerCase(),peer=from===me?to:to===me?from:'';if(peer&&!peer.startsWith('group:'))return peer}
+ return String(key||'').split('|').find(x=>x&&x.toLowerCase()!==me&&!x.startsWith('group:'))||'';
 }
 function ahrufCallHistoryMarkup(body){
- const parts=String(body||'').slice(AHRUF_CALL_HISTORY_PREFIX.length).split('|');
- const kind=parts[0]==='video'?'Video call':'Voice call',status=parts[1]==='answered'?'Completed':parts[1]==='missed'?'No answer':'Ended';
- const seconds=Math.max(0,Number(parts[2])||0),duration=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
- const people=Math.max(2,Number(parts[3])||2);
- return '<div class="ahruf-call-history"><span class="ahruf-call-history-icon">'+(parts[0]==='video'?'▣':'☎')+'</span><div><b>'+esc(kind)+'</b><small>'+esc(status)+' · '+esc(duration)+(parts[1]==='answered'?' · '+people+' participants':'')+'</small></div></div>';
+ const p=String(body||'').slice(AHRUF_CALL_HISTORY_PREFIX.length).split('|'),kind=p[0]==='video'?'Video call':'Voice call',status=p[1]==='answered'?'Completed':p[1]==='missed'?'No answer':'Ended',sec=Math.max(0,Number(p[2])||0),duration=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'),people=Math.max(1,Number(p[3])||1);
+ return '<div class="ahruf-call-history"><span class="ahruf-call-history-icon">'+(p[0]==='video'?'▣':'☎')+'</span><div><b>'+esc(kind)+'</b><small>'+esc(status)+' · '+esc(duration)+' · '+people+' participant'+(people===1?'':'s')+'</small></div></div>';
 }
-async function ahrufSendCallInvite(call){
- const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
- const message=(call.kind==='video'?'📹 Incoming video call. ':'☎ Incoming voice call. ')+'Join now: https://meet.jit.si/'+call.room;
- call.inviteBody=message;
- try{
-  if(ONLINE){
-   const result=await onlineApi('send_message',{to:call.peer,subject:'',category:'general',message});
-   if(result.state&&Array.isArray(result.state.messages)){
-    S.messages=result.state.messages;
-    const sent=S.messages.slice().reverse().find(m=>String(m.from||'').toLowerCase()===me&&String(m.to||'').toLowerCase()===String(call.peer).toLowerCase()&&String(m.body||'')===message);
-    if(sent)call.inviteMessageId=sent.id;
-   }
-  }else{
-   const pair=[me,String(call.peer).toLowerCase()].sort().join('|');
-   const existing=(S.messages||[]).slice().reverse().find(m=>[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|')===pair);
-   const item={id:'call-invite-'+Date.now(),conversationId:existing?.conversationId||pair,from:user.username||user.id,fromName:user.name,fromRole:user.role,to:call.peer,toName:call.peer,toRole:'user',subject:'',category:'general',body:message,status:'open',createdAt:new Date().toISOString(),readBy:[user.username||user.id]};
-   S.messages.push(item);call.inviteMessageId=item.id;save();
-  }
- }catch(e){console.warn('Could not send call invitation:',e);toast('Call started, but the chat invitation could not be sent. You can still use Invite inside the call.');}
+function ahrufCallPeople(){
+ const all=[
+  ...(S.students||[]).map(x=>({id:x.id||x.studentId||x.student_id,name:x.name||x.id,role:'student'})),
+  ...(S.teachers||[]).map(x=>({id:x.username||x.id,name:x.name||x.username,role:'teacher'})),
+  ...(S.messagePeers||[]).map(x=>({id:x.id||x.username,name:x.name||x.username,role:x.role||'user'})),
+  {id:'ahruf',name:'Academy Administrator',role:'admin'}
+ ];
+ const me=ahrufMe(),seen=new Set();
+ return all.filter(p=>{const id=String(p.id||'').trim().toLowerCase();if(!id||id===me||seen.has(id))return false;seen.add(id);return true});
 }
-async function ahrufSaveCallHistory(peer,key,kind,seconds,answered,people,inviteMessageId){
- if(!peer)return;
- const message=AHRUF_CALL_HISTORY_PREFIX+[kind,answered?'answered':'missed',Math.max(0,Math.round(seconds)),Math.max(1,people||1)].join('|');
- try{
-  if(ONLINE){
-   let result;
-   if(inviteMessageId)result=await onlineApi('edit_message',{id:inviteMessageId,message});
-   else result=await onlineApi('send_message',{to:peer,subject:'',category:'general',message});
-   if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages;
-  }else{
-   const existing=inviteMessageId?(S.messages||[]).find(m=>String(m.id)===String(inviteMessageId)):null;
-   if(existing){existing.body=message;existing.editedAt=new Date().toISOString();}
-   else{
-    const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
-    const pair=[me,String(peer).toLowerCase()].sort().join('|');
-    const prior=(S.messages||[]).slice().reverse().find(m=>[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|')===pair);
-    S.messages.push({id:'call-'+Date.now(),conversationId:prior?.conversationId||pair,from:user.username||user.id,fromName:user.name,fromRole:user.role,to:peer,toName:peer,toRole:'user',subject:'',category:'general',body:message,status:'open',createdAt:new Date().toISOString(),readBy:[user.username||user.id]});
-   }
-   save();
-  }
- }catch(e){console.warn('Could not save call history:',e);toast('Call ended, but its history could not be saved.');}
- if(activeMessageConversationKey===key)render();
+function ahrufCallToast(text){if(typeof toast==='function')toast(text);else console.info(text)}
+function ahrufCallInviteModal(kind,initialPeer){
+ const people=ahrufCallPeople();
+ if(!people.length){ahrufCallToast('No other academy users are available to invite.');return}
+ const checked=initialPeer?String(initialPeer).toLowerCase():'';
+ const body='<p class="mute">Choose one or more academy users. Everyone joins the same in-platform call.</p><div class="ahruf-call-invite-list">'+people.map(p=>'<label><input type="checkbox" name="invitee" value="'+esc(p.id)+'" '+(String(p.id).toLowerCase()===checked?'checked':'')+'><span><b>'+esc(p.name)+'</b><small>'+esc(p.role)+' · '+esc(p.id)+'</small></span></label>').join('')+'</div>';
+ modal('Start a '+(kind==='video'?'video':'voice')+' call',body,async form=>{
+  const ids=[...form.querySelectorAll('input[name="invitee"]:checked')].map(x=>String(x.value).trim()).filter(Boolean);
+  if(!ids.length){ahrufCallToast('Choose at least one participant.');return}
+  await ahrufCreateCall(kind,ids);
+ },'Start call');
 }
-function closeAhrufCall(log=true){
- const call=ahrufActiveCall;if(!call)return;
- ahrufActiveCall=null;
- const elapsed=Math.max(0,Math.floor((Date.now()-call.startedAt)/1000));
- try{call.api?.dispose()}catch(_){}
- call.overlay?.remove();
- if(log)ahrufSaveCallHistory(call.peer,call.key,call.kind,elapsed,call.remoteJoined,call.remoteJoined?call.participants.size+1:1,call.inviteMessageId);
-}
-async function startAhrufCall(kind){
- if(ahrufActiveCall)return toast('A call is already open.');
- const key=String(activeMessageConversationKey||'');
- const peer=ahrufCallPeer(key);
- if(!peer)return toast('Open a one-to-one discussion before starting a call.');
- if(!navigator.mediaDevices?.getUserMedia)return toast('Calls need a browser with microphone/camera support. Please use HTTPS and allow permissions.');
- const room='AhrufAcademy'+Date.now().toString(36)+Math.random().toString(36).slice(2,14);
- const overlay=document.createElement('div');overlay.className='ahruf-call-overlay';overlay.innerHTML='<section class="ahruf-call-panel" role="dialog" aria-modal="true" aria-label="'+(kind==='video'?'Video call':'Voice call')+'"><header><div><b>'+(kind==='video'?'📹 Video call':'☎ Voice call')+'</b><small>Calls are not recorded by Al-Ahruf Academy. The calling service may process connection data.</small></div><button type="button" class="ahruf-call-close" aria-label="End call">✕</button></header><div class="ahruf-call-stage"><div class="ahruf-call-loading">Connecting…</div></div><footer><span>Use the participants/invite control in the call to add people.</span><button type="button" class="ahruf-call-end">End call</button></footer></section>';
- document.body.appendChild(overlay);
- const stage=overlay.querySelector('.ahruf-call-stage');
- const call={key,peer,kind,room,overlay,api:null,startedAt:Date.now(),remoteJoined:false,participants:new Set()};
+async function ahrufCreateCall(kind,invitees){
+ if(ahrufActiveCall)return ahrufCallToast('A call is already open.');
+ if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)return ahrufCallToast('Calls require a modern browser, HTTPS, and microphone/camera permission.');
+ const room='ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),key=String(activeMessageConversationKey||''),peer=invitees[0]||ahrufCallPeer(key);
+ const call={room,key,peer,kind,invitees:[...new Set(invitees.map(x=>String(x).toLowerCase()))],participants:new Map(),pcs:new Map(),streams:new Map(),localStream:null,client:null,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:false,ended:false,inviteMessageId:null};
  ahrufActiveCall=call;
- const end=()=>closeAhrufCall(true);
- overlay.querySelector('.ahruf-call-close').addEventListener('click',end);
- overlay.querySelector('.ahruf-call-end').addEventListener('click',end);
- const loadApi=()=>new Promise((resolve,reject)=>{
-  if(window.JitsiMeetExternalAPI)return resolve();
-  let script=document.querySelector('script[data-ahruf-jitsi]');
-  if(script){script.addEventListener('load',resolve,{once:true});script.addEventListener('error',reject,{once:true});return}
-  script=document.createElement('script');script.src='https://meet.jit.si/external_api.js';script.async=true;script.dataset.ahrufJitsi='1';script.onload=resolve;script.onerror=reject;document.head.appendChild(script);
- });
  try{
-  await ahrufSendCallInvite(call);
-  if(ahrufActiveCall!==call)return;
-  await loadApi();
-  if(ahrufActiveCall!==call)return;
-  stage.innerHTML='';
-  const api=new window.JitsiMeetExternalAPI('meet.jit.si',{
-   roomName:room,parentNode:stage,width:'100%',height:'100%',
-   userInfo:{displayName:String(user?.name||user?.username||'Al-Ahruf user')},
-   configOverwrite:{prejoinPageEnabled:true,disableDeepLinking:true,enableWelcomePage:false,enableClosePage:false,disableInviteFunctions:false,startWithAudioMuted:false,startWithVideoMuted:kind!=='video',startAudioOnly:kind==='audio',fileRecordingsEnabled:false,liveStreamingEnabled:false,localRecording:{enabled:false},toolbarButtons:[]},
-   interfaceConfigOverwrite:{TOOLBAR_BUTTONS:kind==='audio'?['microphone','chat','participants-pane','invite','hangup','settings','fullscreen']:['microphone','camera','chat','participants-pane','invite','hangup','settings','fullscreen'],SHOW_JITSI_WATERMARK:false,SHOW_BRAND_WATERMARK:false,MOBILE_APP_PROMO:false}
+  call.client=await ahrufCallClient();
+  call.localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:kind==='video'});
+  ahrufBuildCallOverlay(call);
+  call.channel=call.client.channel('ahruf-call-'+room,{config:{broadcast:{self:false}}});
+  ahrufAttachRoomEvents(call);
+  await new Promise((resolve,reject)=>{
+   const timeout=setTimeout(()=>reject(new Error('Signalling channel timed out.')),12000);
+   call.channel.subscribe(status=>{if(status==='SUBSCRIBED'){clearTimeout(timeout);resolve()}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){clearTimeout(timeout);reject(new Error('Could not connect to the call signalling service.'))}});
   });
-  call.api=api;
-  api.addEventListener('participantJoined',event=>{if(event?.id){call.participants.add(event.id);call.remoteJoined=true}});
-  api.addEventListener('participantLeft',event=>{if(event?.id)call.participants.delete(event.id)});
-  api.addEventListener('readyToClose',()=>{if(ahrufActiveCall===call)closeAhrufCall(true)});
-  api.addEventListener('videoConferenceLeft',()=>{if(ahrufActiveCall===call)closeAhrufCall(true)});
+  await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||user?.username||ahrufMe(),kind});
+  for(const id of call.invitees){
+   await ahrufBroadcastToUser(call,id,{type:'invite',room,kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),createdAt:Date.now()});
+   ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn('Call invite message could not be saved:',e));
+  }
+  ahrufRenderCallTiles(call);
+  ahrufSetCallStatus(call,'Calling '+call.invitees.length+' participant'+(call.invitees.length===1?'':'s')+'…');
  }catch(e){
-  console.error('Call setup failed:',e);
-  if(ahrufActiveCall===call){ahrufActiveCall=null;overlay.remove()}
-  ahrufSaveCallHistory(call.peer,call.key,call.kind,0,false,1,call.inviteMessageId);
-  toast('Could not start the call. Check your internet connection and browser permissions.');
+  console.error('In-platform call setup failed:',e);
+  await ahrufDisposeCall(call,false);
+  ahrufCallToast('Could not start the in-platform call: '+(e?.message||'connection error'));
  }
 }
+function ahrufBuildCallOverlay(call){
+ const overlay=document.createElement('div');overlay.className='ahruf-call-overlay';
+ overlay.innerHTML='<section class="ahruf-call-panel" role="dialog" aria-modal="true" aria-label="'+(call.kind==='video'?'Video call':'Voice call')+'"><header><div><b>'+(call.kind==='video'?'📹 Video call':'☎ Voice call')+' · Al-Ahruf</b><small>In-platform WebRTC call. Audio/video is not recorded by the academy.</small></div><button type="button" class="ahruf-call-close" aria-label="End call">✕</button></header><div class="ahruf-call-status" aria-live="polite">Preparing secure connection…</div><div class="ahruf-call-stage"><div class="ahruf-call-tiles"></div></div><footer><div class="ahruf-call-controls"><button type="button" data-control="mic" aria-pressed="true">🎙 Mute</button>'+(call.kind==='video'?'<button type="button" data-control="camera" aria-pressed="true">📷 Camera off</button>':'')+'<button type="button" data-control="invite">＋ Invite</button><button type="button" data-control="end" class="ahruf-call-end">End call</button></div></footer></section>';
+ document.body.appendChild(overlay);call.overlay=overlay;
+ overlay.querySelector('.ahruf-call-close').addEventListener('click',()=>closeAhrufCall(true));
+ overlay.querySelector('[data-control="end"]').addEventListener('click',()=>closeAhrufCall(true));
+ overlay.querySelector('[data-control="mic"]').addEventListener('click',e=>{const track=call.localStream?.getAudioTracks()[0];if(!track)return;track.enabled=!track.enabled;e.currentTarget.setAttribute('aria-pressed',String(track.enabled));e.currentTarget.textContent=track.enabled?'🎙 Mute':'🔇 Unmute'});
+ const cam=overlay.querySelector('[data-control="camera"]');if(cam)cam.addEventListener('click',e=>{const track=call.localStream?.getVideoTracks()[0];if(!track)return;track.enabled=!track.enabled;e.currentTarget.setAttribute('aria-pressed',String(track.enabled));e.currentTarget.textContent=track.enabled?'📷 Camera off':'📷 Camera on'});
+ overlay.querySelector('[data-control="invite"]').addEventListener('click',()=>ahrufInviteDuringCall(call));
+}
+function ahrufSetCallStatus(call,text){if(call?.overlay){const el=call.overlay.querySelector('.ahruf-call-status');if(el)el.textContent=text}}
+function ahrufRenderCallTiles(call){
+ if(!call?.overlay)return;
+ const root=call.overlay.querySelector('.ahruf-call-tiles');if(!root)return;root.innerHTML='';
+ const local=document.createElement('div');local.className='ahruf-call-tile local';local.dataset.peer=ahrufMe();
+ if(call.kind==='video'){const v=document.createElement('video');v.autoplay=true;v.muted=true;v.playsInline=true;v.srcObject=call.localStream;local.appendChild(v)}
+ const label=document.createElement('span');label.textContent=(user?.name||user?.username||ahrufMe())+' (You)';local.appendChild(label);root.appendChild(local);
+ for(const [id,stream] of call.streams){const tile=document.createElement('div');tile.className='ahruf-call-tile';tile.dataset.peer=id;if(call.kind==='video'){const v=document.createElement('video');v.autoplay=true;v.playsInline=true;v.srcObject=stream;tile.appendChild(v)}const n=document.createElement('span');n.textContent=call.participants.get(id)?.name||id;tile.appendChild(n);root.appendChild(tile)}
+}
+async function ahrufBroadcast(call,event,payload){if(!call?.channel)return;return call.channel.send({type:'broadcast',event,payload:{...payload,from:ahrufMe(),room:call.room}})}
+async function ahrufBroadcastToUser(call,target,payload){
+ const channel=call.client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{broadcast:{self:false}}});
+ try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Invite channel timeout')),6000);channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Invite channel unavailable'))}})});await channel.send({type:'broadcast',event:'call_invite',payload});}finally{setTimeout(()=>{try{call.client.removeChannel(channel)}catch(_){}},1500)}
+}
+async function ahrufAppendCallInviteMessage(call,target){
+ const body=AHRUF_CALL_INVITE_PREFIX+[call.room,call.kind,ahrufMe(),encodeURIComponent(String(user?.name||user?.username||ahrufMe()))].join('|');
+ if(ONLINE){const result=await onlineApi('send_message',{to:target,subject:'',category:'general',message:body});if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages}
+ else{const pair=[ahrufMe(),String(target).toLowerCase()].sort().join('|');S.messages.push({id:'call-invite-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),conversationId:pair,from:user?.username||user?.id,fromName:user?.name,fromRole:user?.role,to:target,toName:target,toRole:'user',subject:'',category:'general',body,status:'open',createdAt:new Date().toISOString(),readBy:[user?.username||user?.id]});save()}
+}
+function ahrufAttachRoomEvents(call){
+ call.channel.on('broadcast',{event:'peer_join'},async({payload:p})=>{
+  if(!p?.id||p.id===ahrufMe()||call.ended)return;
+  call.participants.set(p.id,{name:p.name||p.id,kind:p.kind||'audio'});call.remoteJoined=true;ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Connected · '+call.participants.size+' participant'+(call.participants.size===1?'':'s'));
+  // Existing participants offer to the newly arrived participant; the newcomer only answers.
+  await ahrufMakePeer(call,p.id,true);
+ });
+ call.channel.on('broadcast',{event:'signal'},async({payload:p})=>{
+  if(!p||p.to!==ahrufMe()||p.from===ahrufMe()||call.ended)return;
+  try{
+   let pc=call.pcs.get(p.from);
+   if(!pc&&p.description?.type==='offer')pc=await ahrufMakePeer(call,p.from,false);
+   if(!pc)return;
+   if(p.description){await pc.setRemoteDescription(p.description);if(p.description.type==='offer'){const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await ahrufBroadcast(call,'signal',{to:p.from,description:pc.localDescription})}}
+   if(p.candidate)try{await pc.addIceCandidate(p.candidate)}catch(e){console.warn('ICE candidate skipped:',e.message)}
+  }catch(e){console.warn('Call negotiation failed:',e)}
+ });
+ call.channel.on('broadcast',{event:'peer_leave'},({payload:p})=>{if(p?.id){const pc=call.pcs.get(p.id);if(pc)pc.close();call.pcs.delete(p.id);call.streams.delete(p.id);call.participants.delete(p.id);ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Participant left · '+call.participants.size+' connected')}});
+ call.channel.on('broadcast',{event:'call_end'},({payload:p})=>{if(p?.id&&p.id!==ahrufMe()){ahrufCallToast((p.name||'A participant')+' ended the call.');closeAhrufCall(true)}});
+}
+async function ahrufMakePeer(call,id,shouldOffer){
+ if(call.pcs.has(id))return call.pcs.get(id);
+ const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]});call.pcs.set(id,pc);
+ for(const track of call.localStream.getTracks())pc.addTrack(track,call.localStream);
+ pc.onicecandidate=e=>{if(e.candidate)ahrufBroadcast(call,'signal',{to:id,candidate:e.candidate.toJSON()}).catch(err=>console.warn('ICE send failed:',err))};
+ pc.ontrack=e=>{let stream=call.streams.get(id);if(!stream){stream=e.streams?.[0]||new MediaStream();call.streams.set(id,stream);call.participants.set(id,call.participants.get(id)||{name:id});}if(!e.streams?.[0]&&!stream.getTracks().some(t=>t.id===e.track.id))stream.addTrack(e.track);ahrufRenderCallTiles(call)};
+ pc.onconnectionstatechange=()=>{if(['failed','closed','disconnected'].includes(pc.connectionState)){if(pc.connectionState==='failed')ahrufSetCallStatus(call,'Connection problem with '+id+'. Check the network and try again.')}};
+ if(shouldOffer){const offer=await pc.createOffer();await pc.setLocalDescription(offer);await ahrufBroadcast(call,'signal',{to:id,description:pc.localDescription})}
+ return pc;
+}
+async function ahrufInviteDuringCall(call){
+ const available=ahrufCallPeople().filter(p=>!call.invitees.includes(String(p.id).toLowerCase())&&!call.participants.has(String(p.id).toLowerCase()));
+ if(!available.length)return ahrufCallToast('No additional participants are available.');
+ const body='<p class="mute">Select academy users to invite to this active call.</p><div class="ahruf-call-invite-list">'+available.map(p=>'<label><input type="checkbox" name="invitee" value="'+esc(p.id)+'"><span><b>'+esc(p.name)+'</b><small>'+esc(p.role)+'</small></span></label>').join('')+'</div>';
+ modal('Invite participants',body,async form=>{const ids=[...form.querySelectorAll('input[name="invitee"]:checked')].map(x=>x.value);if(!ids.length)return ahrufCallToast('Choose at least one participant.');for(const id of ids){call.invitees.push(String(id).toLowerCase());await ahrufBroadcastToUser(call,id,{type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||ahrufMe(),createdAt:Date.now()});ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn(e))}ahrufSetCallStatus(call,'Invitation sent to '+ids.length+' participant'+(ids.length===1?'':'s'));},'Send invitations');
+}
+function ensureAhrufCallInbox(){
+ const me=ahrufMe();if(!me||!window.supabase?.createClient&&ahrufCallClientPromise===null)return;
+ if(ahrufCallInbox&&ahrufCallInboxUser===me)return;
+ ahrufCallClient().then(client=>{
+  if(ahrufCallInbox&&ahrufCallInboxUser===me)return;
+  if(ahrufCallInbox)try{client.removeChannel(ahrufCallInbox)}catch(_){}
+  const topic='ahruf-user-'+me.replace(/[^a-z0-9_-]/g,'_');
+  ahrufCallInbox=client.channel(topic,{config:{broadcast:{self:false}}});
+  ahrufCallInboxUser=me;
+  ahrufCallInbox.on('broadcast',{event:'call_invite'},({payload})=>{if(payload?.type==='invite')ahrufShowIncomingCall(payload)});
+  ahrufCallInbox.subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('Call inbox signalling status:',status)});
+ }).catch(e=>console.warn('Call inbox unavailable:',e.message));
+}
+function ahrufShowIncomingCall(invite){
+ if(ahrufActiveCall||!invite?.room)return;
+ const overlay=document.createElement('div');overlay.className='ahruf-call-overlay';overlay.innerHTML='<section class="ahruf-call-panel ahruf-incoming-panel" role="dialog" aria-modal="true"><header><div><b>'+ (invite.kind==='video'?'📹 Incoming video call':'☎ Incoming voice call')+'</b><small>Al-Ahruf International Academy</small></div></header><div class="ahruf-call-status">'+esc(invite.fromName||invite.from||'An academy user')+' is calling you.</div><footer><button type="button" class="ahruf-call-decline">Decline</button><button type="button" class="ahruf-call-answer">Answer</button></footer></section>';document.body.appendChild(overlay);
+ let handled=false;const remove=()=>{if(!handled){handled=true;overlay.remove()}};
+ overlay.querySelector('.ahruf-call-decline').onclick=()=>{remove();ahrufSendInboxSignal(invite.from,{type:'declined',room:invite.room,from:ahrufMe()}).catch(()=>{})};
+ overlay.querySelector('.ahruf-call-answer').onclick=async()=>{if(handled)return;handled=true;overlay.remove();await ahrufJoinCall(invite)};
+ setTimeout(()=>{if(!handled)remove()},45000);
+}
+async function ahrufSendInboxSignal(target,payload){
+ const client=await ahrufCallClient(),channel=client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{broadcast:{self:false}}});
+ try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Signalling timeout')),5000);channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Unavailable'))}})});await channel.send({type:'broadcast',event:'call_response',payload})}finally{setTimeout(()=>{try{client.removeChannel(channel)}catch(_){}},1000)}
+}
+async function ahrufJoinCall(invite){
+ if(ahrufActiveCall)return ahrufCallToast('You are already in a call.');
+ try{
+  const client=await ahrufCallClient(),localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:invite.kind==='video'});
+  const call={room:invite.room,key:String(activeMessageConversationKey||''),peer:invite.from,kind:invite.kind||'audio',invitees:[],participants:new Map(),pcs:new Map(),streams:new Map(),localStream,client,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:true,ended:false,inviteMessageId:null};ahrufActiveCall=call;ahrufBuildCallOverlay(call);
+  call.channel=client.channel('ahruf-call-'+call.room,{config:{broadcast:{self:false}}});ahrufAttachRoomEvents(call);
+  await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Call room timed out')),12000);call.channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Could not join call room'))}})});
+  call.participants.set(invite.from,{name:invite.fromName||invite.from});await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||ahrufMe(),kind:call.kind});ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Joining '+(invite.fromName||invite.from)+'…');
+ }catch(e){console.error('Could not join call:',e);await ahrufDisposeCall(ahrufActiveCall,false);ahrufCallToast('Could not join the call. Check permissions and internet connection.')}
+}
+async function ahrufDisposeCall(call,sendSignal){
+ if(!call||call.ended)return;call.ended=true;
+ if(sendSignal&&call.channel){try{await ahrufBroadcast(call,'peer_leave',{id:ahrufMe()});await ahrufBroadcast(call,'call_end',{id:ahrufMe(),name:user?.name||ahrufMe()})}catch(_){}}
+ for(const pc of call.pcs?.values?.()||[])try{pc.ontrack=null;pc.close()}catch(_){}
+ for(const track of call.localStream?.getTracks?.()||[])try{track.stop()}catch(_){}
+ try{if(call.channel)await call.client.removeChannel(call.channel)}catch(_){}
+ call.overlay?.remove();if(ahrufActiveCall===call)ahrufActiveCall=null;
+ const elapsed=Math.max(0,Math.floor((Date.now()-call.startedAt)/1000));
+ if(sendSignal&&call.key)ahrufSaveCallHistory(call.peer,call.key,call.kind,elapsed,call.remoteJoined,call.participants.size+1,call.inviteMessageId);
+}
+function closeAhrufCall(log=true){const call=ahrufActiveCall;if(!call)return;ahrufDisposeCall(call,log).catch(e=>console.warn('Call cleanup error:',e))}
+async function ahrufSaveCallHistory(peer,key,kind,seconds,answered,people,inviteMessageId){
+ if(!peer||!key)return;
+ const message=AHRUF_CALL_HISTORY_PREFIX+[kind,answered?'answered':'missed',Math.max(0,Math.round(seconds)),Math.max(1,people||1)].join('|');
+ try{
+  if(ONLINE){let result;if(inviteMessageId)result=await onlineApi('edit_message',{id:inviteMessageId,message});else result=await onlineApi('send_message',{to:peer,subject:'',category:'general',message});if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages}
+  else{const me=ahrufMe(),pair=[me,String(peer).toLowerCase()].sort().join('|'),prior=(S.messages||[]).slice().reverse().find(m=>[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|')===pair);S.messages.push({id:'call-'+Date.now(),conversationId:prior?.conversationId||pair,from:user?.username||user?.id,fromName:user?.name,fromRole:user?.role,to:peer,toName:peer,toRole:'user',subject:'',category:'general',body:message,status:'open',createdAt:new Date().toISOString(),readBy:[user?.username||user?.id]});save()}
+ }catch(e){console.warn('Could not save call history:',e);ahrufCallToast('Call ended, but its history could not be saved.')}
+ if(activeMessageConversationKey===key)render();
+}
+async function startAhrufCall(kind){ahrufCallInviteModal(kind,ahrufCallPeer(activeMessageConversationKey))}
 (function installAhrufCallStyles(){
  if(document.getElementById('ahrufCallStyles'))return;
  const st=document.createElement('style');st.id='ahrufCallStyles';
- st.textContent='.message-call-actions{display:flex;align-items:center;gap:5px;flex:0 0 auto}.message-call-button{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line,#d6e1dc);border-radius:50%;background:var(--soft,#edf4f0);color:var(--pri,#087e70);font-size:19px;line-height:1;cursor:pointer}.message-call-button:hover,.message-call-button:focus-visible{background:var(--pri,#087e70);color:#fff;outline:2px solid var(--gold,#b99b52);outline-offset:1px}.ahruf-call-overlay{position:fixed;inset:0;z-index:10020;background:rgba(8,22,20,.78);display:flex;align-items:center;justify-content:center;padding:10px}.ahruf-call-panel{width:min(1100px,100%);height:min(850px,96dvh);background:var(--card,#fff);color:var(--ink,#173c37);border:1px solid var(--line,#d6e1dc);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 70px #0006}.ahruf-call-panel>header,.ahruf-call-panel>footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;background:var(--soft,#edf4f0);flex:0 0 auto}.ahruf-call-panel header b{display:block;font-size:14px}.ahruf-call-panel header small,.ahruf-call-panel footer span{display:block;font-size:11px;color:var(--mute,#526b67);margin-top:3px}.ahruf-call-close,.ahruf-call-end{border:0;border-radius:8px;padding:9px 12px;cursor:pointer;background:#b42318;color:#fff;font-weight:700}.ahruf-call-stage{position:relative;flex:1;min-height:0;background:#101918}.ahruf-call-stage iframe{border:0!important}.ahruf-call-loading{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:14px}.ahruf-call-history{display:flex;align-items:center;gap:10px;min-width:180px;padding:9px 12px;border-radius:10px;background:var(--soft,#edf4f0);border:1px solid var(--line,#d6e1dc)}.ahruf-call-history-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:var(--card,#fff);color:var(--pri,#087e70);font-size:18px}.ahruf-call-history b,.ahruf-call-history small{display:block}.ahruf-call-history b{font-size:13px}.ahruf-call-history small{font-size:11px;color:var(--mute,#526b67);margin-top:3px}@media(max-width:560px){.message-chat-header{gap:6px!important;padding-left:8px!important;padding-right:8px!important}.message-call-actions{gap:3px}.message-call-button{width:30px;height:30px;font-size:17px}.ahruf-call-overlay{padding:0}.ahruf-call-panel{width:100%;height:100dvh;border-radius:0}.ahruf-call-panel>footer{align-items:flex-start;flex-direction:column}}';
+ st.textContent='.message-call-actions{display:flex;align-items:center;gap:5px;flex:0 0 auto}.message-call-button{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line,#d6e1dc);border-radius:50%;background:var(--soft,#edf4f0);color:var(--pri,#087e70);font-size:19px;line-height:1;cursor:pointer}.message-call-button:hover,.message-call-button:focus-visible{background:var(--pri,#087e70);color:#fff;outline:2px solid var(--gold,#b99b52);outline-offset:1px}.ahruf-call-overlay{position:fixed;inset:0;z-index:10020;background:rgba(8,22,20,.86);display:flex;align-items:center;justify-content:center;padding:10px}.ahruf-call-panel{width:min(1100px,100%);height:min(850px,96dvh);background:var(--card,#fff);color:var(--ink,#173c37);border:1px solid var(--line,#d6e1dc);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 70px #0006}.ahruf-call-panel>header,.ahruf-call-panel>footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;background:var(--soft,#edf4f0);flex:0 0 auto}.ahruf-call-panel header b{display:block;font-size:14px}.ahruf-call-panel header small{display:block;font-size:11px;color:var(--mute,#526b67);margin-top:3px}.ahruf-call-close,.ahruf-call-end,.ahruf-call-decline,.ahruf-call-answer{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;background:#b42318;color:#fff;font-weight:700}.ahruf-call-answer{background:#087e62}.ahruf-call-status{padding:8px 14px;background:var(--card,#fff);font-size:13px;color:var(--mute,#526b67)}.ahruf-call-stage{position:relative;flex:1;min-height:0;background:#101918;overflow:auto}.ahruf-call-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;padding:8px;min-height:100%;align-content:center}.ahruf-call-tile{position:relative;min-height:180px;background:#20332f;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:white}.ahruf-call-tile video{width:100%;height:100%;min-height:180px;object-fit:contain;background:#101918}.ahruf-call-tile span{position:absolute;bottom:8px;left:8px;background:#0009;color:white;padding:5px 8px;border-radius:6px;font-size:12px}.ahruf-call-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.ahruf-call-controls button{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--card);color:var(--ink);font-weight:700;cursor:pointer}.ahruf-call-controls .ahruf-call-end{background:#b42318;color:#fff;border:0}.ahruf-call-invite-list{max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:10px}.ahruf-call-invite-list label{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0;border-bottom:1px solid var(--line);cursor:pointer}.ahruf-call-invite-list input{width:18px;height:18px;flex:0 0 18px}.ahruf-call-invite-list span{display:flex;flex-direction:column}.ahruf-call-invite-list small{font-size:11px;color:var(--mute)}.ahruf-call-history{display:flex;align-items:center;gap:10px;min-width:180px;padding:9px 12px;border-radius:10px;background:var(--soft,#edf4f0);border:1px solid var(--line,#d6e1dc)}.ahruf-call-history-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:var(--card,#fff);color:var(--pri,#087e70);font-size:18px}.ahruf-call-history b,.ahruf-call-history small{display:block}.ahruf-call-history b{font-size:13px}.ahruf-call-history small{font-size:11px;color:var(--mute,#526b67);margin-top:3px}@media(max-width:560px){.message-chat-header{gap:6px!important;padding-left:8px!important;padding-right:8px!important}.message-call-actions{gap:3px}.message-call-button{width:30px;height:30px;font-size:17px}.ahruf-call-overlay{padding:0}.ahruf-call-panel{width:100%;height:100dvh;border-radius:0}.ahruf-call-panel>footer{align-items:flex-start;flex-direction:column}}';
  document.head.appendChild(st);
 })();
-
 function openMessageConversation(key){
+ ensureAhrufCallInbox();
  activeMessageConversationKey=String(key||'');
  const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
  if(ONLINE){
