@@ -2368,6 +2368,7 @@ function messageThreadItem(m,me){
   else if(isImage&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'image\')" rel="noopener noreferrer" aria-label="Picture: '+esc(name)+'" style="display:inline-block;max-width:100%"><img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" style="display:block;width:auto;height:auto;max-width:100%;max-height:55vh;object-fit:contain;border-radius:8px"></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else if(isVideo&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'video\')" rel="noopener noreferrer" aria-label="Video: '+esc(name)+'" style="display:block;position:relative;max-width:520px;text-decoration:none"><video muted playsinline preload="metadata" src="'+esc(src)+'" style="display:block;width:100%;max-height:240px;object-fit:contain;background:#111;border-radius:8px;pointer-events:none"></video><span style="display:inline-block;margin-top:5px;padding:5px 10px;border-radius:6px;background:#128c7e;color:#fff;font-weight:600">▶ Open video</span></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else attachmentHtml='<p style="margin-top:5px!important">📎 '+esc(name)+'</p>';
+  if(!type.startsWith('audio/'))attachmentHtml='<div class="message-attachment-options" style="position:relative;padding-right:42px;min-height:38px">'+attachmentHtml+'<button type="button" class="voice-message-options" aria-label="File options" title="File options" onclick="showVoiceMessageOptions(event,\''+esc(String(m.id||''))+'\')" style="position:absolute;right:0;top:4px;z-index:2">⋮</button></div>';
  }
  const sender=!own?'<div class="message-sender">'+esc(m.fromName||m.from)+'</div>':'';
  const unreadHtml=unread?'<span class="message-unread">Unread</span>':'';
@@ -2410,6 +2411,7 @@ function showMessageActionMenu(id,x,y){
  const isAudio=!!(m.attachment&&String(m.attachment.type||'').toLowerCase().startsWith('audio/'));
  const options=[];
  if(canManage&&String(m.body||'').trim())options.push('<button type="button" data-action="edit">✏️ Edit</button>');
+ if(m.attachment)options.push('<button type="button" data-action="download">⬇ Download file</button>');
  if(isAudio)options.push('<button type="button" data-action="forward">↪ Forward</button>');
  if(canManage)options.push('<button type="button" data-action="delete" class="danger">🗑 Delete</button>');
  if(!options.length)return;
@@ -2427,6 +2429,7 @@ function showMessageActionMenu(id,x,y){
   hideMessageActionMenu();
   if(action==='edit')editPlatformMessage(id);
   else if(action==='forward')forwardVoiceMessage(id);
+  else if(action==='download'&&m.attachment)downloadMessageAttachment(m.attachment.data||m.attachment.url||'',m.attachment.name||'attachment');
   else if(action==='delete')deletePlatformMessage(id);
  });
  document.body.appendChild(menu);
