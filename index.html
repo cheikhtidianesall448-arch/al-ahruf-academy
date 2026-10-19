@@ -2138,8 +2138,20 @@ function classmates(){
  ): [];
  const list=(peers.length?peers:fallback).filter(p=>String(p.id||'').trim().toLowerCase()!==sid);
  if(!me&&!peers.length)return '<div class="card"><h3>Classmates</h3><p class="mute">Your class list is loading or your teacher has not been assigned yet. Please refresh or contact the administrator.</p></div>';
- const rows=list.map(p=>`<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);gap:12px"><div><b>${esc(p.name||'Student')}</b><div class="mute">${esc(p.sex||'Classmate')}</div></div><button class="btn sm" type="button" onclick="composeMessage('${esc(p.id)}')">Message</button></div>`).join('');
+ const rows=list.map(p=>`<div class="row between" style="padding:12px 0;border-bottom:1px solid var(--line);gap:12px"><div><b>${esc(p.name||'Student')}</b><div class="mute">${esc(p.sex||'Classmate')}</div></div><button class="btn sm" type="button" onclick="openClassmateDiscussion('${esc(p.id)}')">Message</button></div>`).join('');
  return `<div class="row between" style="margin-bottom:12px"><div><h3>Classmates</h3><span class="mute">Students assigned to the same teacher as you.</span></div></div><div class="card">${rows||'<p class="mute">No classmates have been assigned to your teacher yet.'+(me&&me.teacher?'':' Your teacher assignment may need to be checked by the administrator.')+'</p>'}</div>`;
+}
+function openClassmateDiscussion(to){
+ const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').trim().toLowerCase();
+ const peer=String(to||'').trim().toLowerCase();
+ if(!peer||peer===me)return;
+ const matching=(S.messages||[]).filter(m=>{
+  const from=String(m.from||'').trim().toLowerCase(),dest=String(m.to||'').trim().toLowerCase();
+  return (from===me&&dest===peer)||(from===peer&&dest===me);
+ }).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+ activeMessageConversationKey=matching.length?messageConversationKey(matching[0]):[me,peer].sort().join('|');
+ document.body.classList.add('message-conversation-open');
+ render();
 }
 async function sendClassGroupChat(f){
  if(user.role!=='student')return toast('Only students can use the classmates group chat.');
@@ -2225,7 +2237,7 @@ function cancelRecordedVoiceNote(){
 }
 async function sendPlatformMessage(f){
  const fileInput=f.attachment,file=fileInput?.files?.[0];
- const d={to:f.to.value,subject:'',category:'general',message:f.message.value.trim(),replyToId:String(f.replyToId?.value||'').trim()};
+ const d={to:f.to.value,subject:'',category:'general',message:f.message.value.trim(),replyToId:String(f.replyToId?.value||'').trim(),conversationId:String(f.conversationId?.value||'').trim()};
  if(f.group?.checked)d.to='group:'+String(currentStudent()?.teacher||'');
  if(!d.to||(!d.message&&!file&&!recordedAudioAttachment))return false;
  if(!file&&recordedAudioAttachment)d.attachment=recordedAudioAttachment;
@@ -2237,7 +2249,7 @@ async function sendPlatformMessage(f){
  if(ONLINE){const result=await onlineApi('send_message',d);if(result.state){S.messages=result.state.messages||S.messages;S.notifications=result.state.notifications||S.notifications}}
  else{
   const rec=messageRecipients().find(x=>x.u===d.to)||{n:d.to.startsWith('group:')?'Class group':d.to,r:'user'};
-  const item={id:String(Date.now()),conversationId:d.replyToId?((S.messages||[]).find(m=>String(m.id)===String(d.replyToId))?.conversationId||[String((S.messages||[]).find(m=>String(m.id)===String(d.replyToId))?.from||'').toLowerCase(),String((S.messages||[]).find(m=>String(m.id)===String(d.replyToId))?.to||'').toLowerCase()].sort().join('|')):String(Date.now()),replyToId:d.replyToId||null,from:user.id,fromName:user.name,fromRole:user.role,to:d.to,toName:rec.n,toRole:rec.r,subject:'',category:'general',body:d.message,attachment:d.attachment||null,status:'open',createdAt:new Date().toISOString(),readBy:[user.id]};
+  const item={id:String(Date.now()),conversationId:d.conversationId||(d.replyToId?((S.messages||[]).find(m=>String(m.id)===String(d.replyToId))?.conversationId||[String((S.messages||[]).find(m=>String(m.id)===String(d.replyToId))?.from||'').toLowerCase(),String((S.messages||[]).find(m=>String(m.id)===String(d.replyToId))?.to||'').toLowerCase()].sort().join('|')):[String(user.username||user.id||'').toLowerCase(),String(d.to||'').toLowerCase()].sort().join('|')),replyToId:d.replyToId||null,from:user.id,fromName:user.name,fromRole:user.role,to:d.to,toName:rec.n,toRole:rec.r,subject:'',category:'general',body:d.message,attachment:d.attachment||null,status:'open',createdAt:new Date().toISOString(),readBy:[user.id]};
   S.messages.push(item);save()
  }
  recordedAudioAttachment=null;activeMessageRecorder=null;activeMessageChunks=[];toast('Message sent');render()
@@ -2570,20 +2582,23 @@ function messages(){
   return header+'<div class="card message-list-card" style="padding:0;overflow:hidden">'+(inbox||'<p class="mute" style="padding:16px">No discussions yet. Start a new message.</p>')+'</div>';
  }
  const thread=threads.find(x=>x.key===activeMessageConversationKey);
- if(!thread){activeMessageConversationKey=null;return messages()}
- const items=thread.items;
- const participants=[...new Set(items.flatMap(m=>[m.from,m.to]).filter(x=>x&&!String(x).startsWith('group:')))];
+ const pair=String(activeMessageConversationKey||'').split('|');
+ const isNewPair=!thread&&pair.length===2&&pair.every(Boolean)&&pair.includes(me);
+ if(!thread&&!isNewPair){activeMessageConversationKey=null;return messages()}
+ const items=thread?thread.items:[];
+ const participants=thread?[...new Set(items.flatMap(m=>[m.from,m.to]).filter(x=>x&&!String(x).startsWith('group:')))]:pair;
  const other=participants.find(x=>String(x).toLowerCase()!==me);
  const otherMessage=items.find(m=>String(m.from||'').toLowerCase()===String(other||'').toLowerCase());
- let heading=other?(otherMessage?.fromName||otherMessage?.from||items.find(m=>String(m.to||'').toLowerCase()===String(other).toLowerCase())?.toName||other):(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
- if(user.role==='admin'&&!participants.some(x=>String(x).toLowerCase()===me))heading=(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
- const last=items[items.length-1],target=String(last.from||'').toLowerCase()===me?last.to:last.from;
- const targetRole=String(items.find(m=>String(m.from||'').toLowerCase()===String(target||'').toLowerCase())?.fromRole||items.find(m=>String(m.to||'').toLowerCase()===String(target||'').toLowerCase())?.toRole||'').toLowerCase();
+ const peerRecord=(S.messagePeers||[]).find(x=>String(x.id||x.username||'').toLowerCase()===String(other||'').toLowerCase())||(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(other||'').toLowerCase())||(S.teachers||[]).find(x=>String(x.username||'').toLowerCase()===String(other||'').toLowerCase());
+ let heading=other?(otherMessage?.fromName||otherMessage?.from||items.find(m=>String(m.to||'').toLowerCase()===String(other).toLowerCase())?.toName||peerRecord?.name||other):(items[0]?.fromName||items[0]?.from||'Discussion')+' ↔ '+(items[0]?.toName||items[0]?.to||'');
+ if(user.role==='admin'&&items.length&&!participants.some(x=>String(x).toLowerCase()===me))heading=(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
+ const last=items[items.length-1]||null,target=last?(String(last.from||'').toLowerCase()===me?last.to:last.from):other;
+ const targetRole=String(items.find(m=>String(m.from||'').toLowerCase()===String(target||'').toLowerCase())?.fromRole||items.find(m=>String(m.to||'').toLowerCase()===String(target||'').toLowerCase())?.toRole||peerRecord?.role||(peerRecord&&((S.students||[]).some(x=>String(x.id||'').toLowerCase()===String(peerRecord.id||'').toLowerCase()))?'student':'')).toLowerCase();
  const replyPlaceholder=user.role==='admin'&&targetRole==='student'?'Reply to the student...':user.role==='admin'&&targetRole==='teacher'?'Answer the teacher...':'Type a message';
  const canReply=!!target&&!String(target).startsWith('group:')&&(user.role==='admin'||participants.some(x=>String(x).toLowerCase()===me));
   const replyForm=canReply?'<form class="message-chat-composer" onsubmit="return sendThreadReply(event,this)"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(last.id)+'"><div class="message-send-row"><textarea name="message" rows="1" placeholder="'+esc(replyPlaceholder)+'" aria-label="'+esc(replyPlaceholder)+'" style="flex:1;min-width:0;width:100%;box-sizing:border-box"></textarea><button class="btn message-send" type="submit" aria-label="Send message" title="Send message">➤</button></div><div class="message-tools"><input type="file" name="attachment" accept="*/*" aria-label="Attach any file"><button class="btn recordAudioBtn whatsapp-mic" type="button" aria-label="Record voice message" title="Click to start recording; click pause to review" onclick="startWhatsAppVoiceNote(event,this)"><svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true" focusable="false" style="display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="2.5" width="6" height="12" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"></path></svg></button></div><span class="recordingStatus">Attach any file type or record a voice message · Max 10 MB</span></form>':'';
  document.body.classList.add("message-conversation-open");
-  return header+'<section class="card message-chat-shell"><div class="message-chat-header"><button class="btn ghost sm" onclick="document.body.classList.remove(&quot;message-conversation-open&quot;);activeMessageConversationKey=null;render()" aria-label="Back to discussions" title="Back to discussions">←</button><span class="message-chat-avatar">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div style="font-size:.76rem;color:#667781">Discussion · '+items.length+' message'+(items.length===1?'':'s')+(isMessageThreadPinned(activeMessageConversationKey)?' · 📌 Pinned':'')+'</div></div><button type="button" class="btn ghost sm" data-message-thread-menu onclick="showMessageThreadMenu(event,\''+esc(activeMessageConversationKey)+'\')" aria-label="Discussion options" title="Discussion options" style="margin-left:auto;flex:0 0 42px;width:42px;height:42px;min-width:42px;padding:0;display:grid;place-items:center;background:#0b5b50!important;color:#fff!important;border:2px solid #d3ad55!important;border-radius:50%;font-size:1.45rem;font-weight:900;box-shadow:0 2px 6px #0003" >⋮</button></div><div class="message-thread">'+renderThreadMessages(items,me)+'</div>'+replyForm+'</section>';
+  return header+'<section class="card message-chat-shell"><div class="message-chat-header"><button class="btn ghost sm" onclick="document.body.classList.remove(&quot;message-conversation-open&quot;);activeMessageConversationKey=null;render()" aria-label="Back to discussions" title="Back to discussions">←</button><span class="message-chat-avatar">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div style="font-size:.76rem;color:#667781">Discussion · '+items.length+' message'+(items.length===1?'':'s')+(isMessageThreadPinned(activeMessageConversationKey)?' · 📌 Pinned':'')+'</div></div><button type="button" class="btn ghost sm" data-message-thread-menu onclick="showMessageThreadMenu(event,\''+esc(activeMessageConversationKey)+'\')" aria-label="Discussion options" title="Discussion options" style="margin-left:auto;flex:0 0 42px;width:42px;height:42px;min-width:42px;padding:0;display:grid;place-items:center;background:#0b5b50!important;color:#fff!important;border:2px solid #d3ad55!important;border-radius:50%;font-size:1.45rem;font-weight:900;box-shadow:0 2px 6px #0003" >⋮</button></div><div class="message-thread">'+(items.length?renderThreadMessages(items,me):'<div class="mute" style="text-align:center;padding:32px 12px">Start your discussion by sending a message below.</div>')+'</div>'+replyForm+'</section>';
 }
 /* Return to the discussion list with a reliable left-swipe gesture on touch devices. */
 (function(){
