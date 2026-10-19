@@ -332,6 +332,26 @@ async function editMessage(ctx: any, body: any) {
   return { ok: true, state: { messages: visibleMessages(state, profile), notifications: buildNotifications(state, profile) } };
 }
 
+async function clearConversation(ctx: any, body: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  const me = lower(profile.username);
+  const conversationId = text(body.conversationId);
+  if (!conversationId) throw new Error("Conversation ID is required.");
+  const state = ensureMessageState(await getAcademyState(ctx));
+  const threadKey = (m: any) => text(m?.conversationId) || [lower(m?.from), lower(m?.to)].sort().join("|");
+  const thread = state.messages.filter((m: any) => threadKey(m) === conversationId);
+  if (!thread.length) return { ok: true, cleared: 0, state: { messages: visibleMessages(state, profile), notifications: buildNotifications(state, profile) } };
+  const isParticipant = thread.some((m: any) => lower(m?.from) === me || lower(m?.to) === me);
+  if (!isParticipant && normalizedRole(profile.role) !== "admin") throw new Error("You are not a participant in this discussion.");
+  const cleared = thread.length;
+  state.messages = state.messages.filter((m: any) => threadKey(m) !== conversationId);
+  const { error } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) throw error;
+  return { ok: true, cleared, state: { messages: visibleMessages(state, profile), notifications: buildNotifications(state, profile) } };
+}
+
 async function deleteMessage(ctx: any, body: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
@@ -1334,6 +1354,10 @@ export default {
 
         if (action === "delete_message") {
           return json(await deleteMessage(ctx, body));
+        }
+
+        if (action === "clear_conversation") {
+          return json(await clearConversation(ctx, body));
         }
 
         if (action === "send_payment_reminders") {
