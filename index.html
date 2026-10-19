@@ -2899,6 +2899,51 @@ function editTimetable(id){
  },x.id?'Save changes':'Add course')
 }
 function deleteTimetable(id,b){const isAdmin=user.role==='admin',isTeacher=user.role==='teacher';const x=(S.timetable||[]).find(a=>String(a.id)===String(id));if(!x||(!isAdmin&&!(isTeacher&&(String(x.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()||String(x.teacher||'')===String(user.id||'')))))return;if(!b.dataset.s){b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red');return}S.timetable=(S.timetable||[]).filter(x=>String(x.id)!==String(id));save();toast('Timetable entry removed');render()}
+Object.assign(I18N.fr,{'Profile picture':'Photo de profil','Choose photo':'Choisir une photo','Replace photo':'Remplacer la photo','Your profile photo':'Votre photo de profil','Profile photo updated':'Photo de profil mise à jour','Could not update profile photo':'Impossible de mettre à jour la photo de profil'});
+Object.assign(I18N.ar,{'Profile picture':'الصورة الشخصية','Choose photo':'اختيار صورة','Replace photo':'استبدال الصورة','Your profile photo':'صورتك الشخصية','Profile photo updated':'تم تحديث الصورة الشخصية','Could not update profile photo':'تعذر تحديث الصورة الشخصية'});
+function currentProfileRecord(){
+ const role=String(user&&user.role||'').toLowerCase();
+ const key=String(user&&(user.username||user.studentId||user.student_id||user.id)||'').trim().toLowerCase();
+ if(role==='student'){
+  const student=typeof currentStudent==='function'?currentStudent():null;
+  if(student)return student;
+  return (S.students||[]).find(x=>[x.id,x.username,x.studentId,x.student_id,x.userId,x.user_id].some(v=>String(v||'').trim().toLowerCase()===key))||null;
+ }
+ if(role==='teacher')return (S.teachers||[]).find(x=>[x.username,x.id,x.userId,x.user_id].some(v=>String(v||'').trim().toLowerCase()===key))||null;
+ return null;
+}
+function currentProfilePicture(){
+ const role=String(user&&user.role||'').toLowerCase(),key=String(user&&(user.username||user.studentId||user.student_id||user.id)||'').trim().toLowerCase();
+ const record=currentProfileRecord();
+ return String(record&&record.picture||user&&user.picture||S.profilePictures&&S.profilePictures[role+':'+key]||'');
+}
+function profilePhotoControls(){
+ const picture=currentProfilePicture();
+ const initials=String(user&&user.name||'').trim().charAt(0).toUpperCase()||'👤';
+ return '<div class="ahruf-profile-photo-area"><div class="ahruf-profile-avatar">'+(picture?'<img src="'+esc(picture)+'" alt="'+esc(t('Profile picture'))+'">':'<span>'+esc(initials)+'</span>')+'</div><label class="btn ghost sm ahruf-profile-photo-button" for="ahrufProfilePhotoInput">'+esc(t(picture?'Replace photo':'Choose photo'))+'</label><input id="ahrufProfilePhotoInput" class="ahruf-profile-photo-input" type="file" accept="image/*" onchange="updateCurrentProfilePicture(this.files&&this.files[0])"><span class="mute ahruf-profile-photo-hint">'+esc(t('Your profile photo'))+'</span></div>';
+}
+async function updateCurrentProfilePicture(file){
+ if(!file)return;
+ try{
+  const picture=await readTeacherPicture(file);
+  const role=String(user&&user.role||'').toLowerCase(),key=String(user&&(user.username||user.studentId||user.student_id||user.id)||'').trim().toLowerCase();
+  const record=currentProfileRecord();
+  if(record)record.picture=picture;
+  if(!S.profilePictures||typeof S.profilePictures!=='object')S.profilePictures={};
+  S.profilePictures[role+':'+key]=picture;
+  if(user)user.picture=picture;
+  save();
+  render();
+  toast(t('Profile photo updated'));
+ }catch(error){toast(String(error&&error.message||t('Could not update profile photo')),6000);}
+}
+(function installAhrufProfilePhotoStyles(){
+ if(document.getElementById('ahrufProfilePhotoStyles'))return;
+ const st=document.createElement('style');st.id='ahrufProfilePhotoStyles';
+ st.textContent='.ahruf-profile-photo-area{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}.ahruf-profile-avatar{width:68px;height:68px;flex:0 0 68px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--soft,#edf2ed);border:2px solid var(--gold,#b99b52);color:var(--text,#17332d);font-size:25px;font-weight:700}.ahruf-profile-avatar img{display:block;width:100%;height:100%;object-fit:cover}.ahruf-profile-photo-input{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.ahruf-profile-photo-button{cursor:pointer!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:34px!important}.ahruf-profile-photo-hint{font-size:.78rem;flex-basis:100%;margin-left:78px;margin-top:-6px}@media(max-width:480px){.ahruf-profile-avatar{width:56px;height:56px;flex-basis:56px}.ahruf-profile-photo-area{gap:8px}.ahruf-profile-photo-hint{margin-left:64px}}';
+ document.head.appendChild(st);
+})();
+
 function viewStaff(){
  const admin=user.role==='admin';
  const items=admin
@@ -2907,7 +2952,7 @@ function viewStaff(){
  const allowed=items.map(x=>x[0]);
  if(!allowed.includes(tab))tab=admin?'overview':'students';
  const pages={overview,students,teachers,attendance,payments,messages,notifications,timetable,klass,myclass,surahs:adminSurahs};
- return `<div class="row between"><h2>Welcome, ${esc(user.name)}</h2><span class="badge">${admin?'Administrator':'Teacher'}</span></div><div class="card" style="margin:10px 0 16px"><div class="row between" style="align-items:center"><div><span class="mute">${t('Account ID')}</span><div style="font-weight:800;margin-top:4px">${esc(user.username||user.id||'—')}</div></div><button class="btn ghost sm" type="button" onclick="copyAccountId('${esc(user.username||user.id||'')}')">${t('Copy ID')}</button></div></div>`+nav(items)+pages[tab==='class'?'klass':tab]()
+ return '<div class="row between"><h2>Welcome, '+esc(user.name)+'</h2><span class="badge">'+(admin?'Administrator':'Teacher')+'</span></div><div class="card" style="margin:10px 0 16px"><div class="row between" style="align-items:center;gap:14px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+profilePhotoControls()+'<div><span class="mute">'+t('Account ID')+'</span><div style="font-weight:800;margin-top:4px">'+esc(user.username||user.id||'—')+'</div></div></div><button class="btn ghost sm" type="button" onclick="copyAccountId(\''+esc(user.username||user.id||'')+'\')">'+t('Copy ID')+'</button></div></div>'+nav(items)+pages[tab==='class'?'klass':tab]()
 }
 function teacherName(v){const x=(S.teachers||[]).find(t=>String(t.username).toLowerCase()===String(v||'').toLowerCase());return x?.name||v||'Unassigned'}
 function teacherOptions(selected=''){return `<option value="">Unassigned</option>`+(S.teachers||[]).map(t=>`<option value="${esc(t.username)}" ${String(t.username).toLowerCase()===String(selected||'').toLowerCase()?'selected':''}>${esc(t.name)} — ${esc(t.username)}</option>`).join('')}
@@ -3950,7 +3995,7 @@ function adminSurahs(){
  const gapAhead=ahead?Math.max(0,Number(ahead.surahCount||0)-s.sur.length):0;
  const gapBehind=behind?Math.max(0,s.sur.length-Number(behind.surahCount||0)):0;
  const myInvoices=(S.pay||[]).map((p,i)=>({p,i})).filter(x=>String(x.p.sid||'').trim().toLowerCase()===String(s.id||'').trim().toLowerCase()).reverse();
- return `<h2>${t('As-salamu alaykum,')} ${esc(s.name)}</h2><div class="card" style="margin:10px 0 16px;border-color:var(--gold)"><div class="row between" style="align-items:center"><div><span class="mute">${t('Student ID')}</span><div style="font-size:1.2rem;font-weight:800;letter-spacing:.04em;margin-top:4px">${esc(s.id||'—')}</div></div><button class="btn ghost sm" type="button" onclick="copyAccountId('${esc(s.id||'')}')">${t('Copy ID')}</button></div></div>`+nav([['home','My progress'],['myclass','MyClass'],['timetable','My Timetable'],['attendance','Attendance'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]])+
+ return '<h2>'+t('As-salamu alaykum,')+' '+esc(s.name)+'</h2><div class="card" style="margin:10px 0 16px;border-color:var(--gold)"><div class="row between" style="align-items:center;gap:14px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+profilePhotoControls()+'<div><span class="mute">'+t('Student ID')+'</span><div style="font-size:1.2rem;font-weight:800;letter-spacing:.04em;margin-top:4px">'+esc(s.id||'—')+'</div></div></div><button class="btn ghost sm" type="button" onclick="copyAccountId(\''+esc(s.id||'')+'\')">'+t('Copy ID')+'</button></div></div>'+nav([['home','My progress'],['myclass','MyClass'],['timetable','My Timetable'],['attendance','Attendance'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]])+,['myclass','MyClass'],['timetable','My Timetable'],['attendance','Attendance'],['surahs','All surahs'],['myteacher','My Teacher'],['classmates','Classmates'],['messages','Messages'+(unreadCount()?' ('+unreadCount()+')':'')]])+
  (tab==='myclass'?myclass():tab==='class'?studentLiveClass():tab==='attendance'?studentAttendance():tab==='messages'?messages():tab==='myteacher'?myTeacher():tab==='classmates'?classmates():tab==='notifications'?notifications():tab==='timetable'?timetable():tab==='join'?`<div class="card"><h3>Join your class</h3><p class="mute">Paste the code or invite link from your teacher.</p><form onsubmit="event.preventDefault();doJoin2(this)"><input name="c" required placeholder="Class code or invite link"><br><br><button class="btn">Continue</button></form>${joinInfo?`<br><a class="btn gold" target="_blank" rel="noopener" href="${esc(joinUrl(joinInfo.c,s.name))}">Enter classroom</a>`:''}</div>`
  :tab==='surahs'?`<div class="card"><h3>${t('Quran reader')} · ${t('All 114 Surahs')}</h3><p class="mute">${s.sur.length} of 114 ${t('surahs memorized')}</p><div class="quran-actions" style="margin:14px 0"><button class="btn ghost" type="button" onclick="changeQuranMode('page')">${t('Mushaf page view')}</button></div><div id="quranSurahControls" class="quran-tools"><div><label for="quranSurahSelect">${t('Choose a surah')}</label><select id="quranSurahSelect" onchange="openSurahInMushaf()">${quranSurahOptions()}</select></div></div><div id="quranPageControls" class="quran-page-controls" style="display:none"><label>${t('Start at Mushaf page')} <select id="quranPageSelect" onchange="loadQuranPage(this.value)">${Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')}</select> / 604</label><label class="quran-translation-control" for="quranTranslationSelect">${t('Translation')} <select id="quranTranslationSelect" onchange="quranSetTranslation(this.value)"><option value="off">Off</option><option value="en">English</option><option value="fr">Français</option><option value="ar">العربية (Tafsir)</option><option value="translit">Transliteration</option></select></label><button class="btn ghost sm" type="button" id="quranTransliterationButton" onclick="quranToggleTransliteration()">Transliteration</button><span class="mute">${t('Scroll up and down inside the Mushaf box to continue reading.')}</span></div><div id="quranReaderContent" class="quran-reading" onpointerdown="quranSwipeStart(event)" onpointerup="quranSwipeEnd(event)" onpointercancel="quranSwipeCancel()"><div class="quran-loading">${t('Choose a surah or Mushaf page to begin reading.')}</div></div><p class="quran-source">${t('For recitation and memorization, compare with a trusted printed Mushaf and your teacher.')}</p></div>`
  :`<div class="stats"><div class="card"><b>${s.sur.length}</b><span>${t('Surahs memorized')}</span></div><div class="card"><b>${lvl(s)}%</b><span>${t('Of the Quran')}</span></div><div class="card"><b>${rankText}</b><span>${t('Your ranking')}</span></div><div class="card"><b class="badge ${s.pay}" style="font-size:1rem;display:inline-block;margin-bottom:6px">${s.pay}</b><span style="display:block">${t('Payment')}</span></div></div>
