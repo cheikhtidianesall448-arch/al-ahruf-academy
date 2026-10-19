@@ -2772,6 +2772,18 @@ function ensureAhrufCallInbox(){
   ahrufCallInbox=client.channel(topic,{config:{broadcast:{self:false}}});
   ahrufCallInboxUser=me;
   ahrufCallInbox.on('broadcast',{event:'call_invite'},({payload})=>{if(payload?.type==='invite')ahrufShowIncomingCall(payload)});
+  ahrufCallInbox.on('broadcast',{event:'call_response'},({payload})=>{
+   const call=ahrufActiveCall;
+   if(!call||call.ended||!payload||payload.room!==call.room)return;
+   const responder=String(payload.from||'').toLowerCase();
+   if(!call.invitees.includes(responder))return;
+   if(payload.type==='declined'||payload.type==='missed'){
+    ahrufStopRingback(call);
+    ahrufSetCallStatus(call,payload.type==='declined'?'Call declined':'No answer');
+    ahrufCallToast(payload.type==='declined'?'The recipient declined the call.':'The recipient did not answer.');
+    ahrufDisposeCall(call,true).catch(e=>console.warn('Could not close declined call:',e));
+   }
+  });
   ahrufCallInbox.subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('Call inbox signalling status:',status)});
  }).catch(e=>console.warn('Call inbox unavailable:',e.message));
 }
