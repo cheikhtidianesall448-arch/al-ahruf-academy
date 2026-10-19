@@ -18,3 +18,13 @@ self.addEventListener("fetch", event => {
     }).catch(async () => (await caches.match(request)) || (await caches.match(APP_SHELL))));
   }
 });
+self.addEventListener("push", event => {
+ let data={};try{data=event.data?event.data.json():{}}catch(_){}
+ if(data.type!=="ahruf-incoming-call")return;
+ event.waitUntil(self.registration.showNotification(data.title||"Incoming call",{body:data.body||"Someone is calling you",icon:new URL("./app-icon.svg",self.location.href).href,badge:new URL("./app-icon.svg",self.location.href).href,tag:data.tag||"ahruf-incoming-call",renotify:true,requireInteraction:true,vibrate:[500,250,500,250,900],data:{url:data.url||"./",room:data.room||"",kind:data.kind||"audio",from:data.from||"",fromName:data.fromName||""}}));
+});
+self.addEventListener("notificationclick", event => {
+ event.notification.close();const call=event.notification.data||{},target=new URL(call.url||"./",self.location.href);
+ if(call.room){target.searchParams.set("incomingCall",call.room);target.searchParams.set("kind",call.kind||"audio");target.searchParams.set("from",call.from||"");target.searchParams.set("fromName",call.fromName||"")}
+ event.waitUntil((async()=>{const windows=await self.clients.matchAll({type:"window",includeUncontrolled:true});for(const client of windows){if(new URL(client.url).origin===target.origin){await client.focus();client.postMessage({type:"AHRUF_INCOMING_CALL",call:{room:call.room,kind:call.kind||"audio",from:call.from||"",fromName:call.fromName||""}});return}}await self.clients.openWindow(target.href)})());
+});
