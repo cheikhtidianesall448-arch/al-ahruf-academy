@@ -276,10 +276,17 @@ async function sendMessage(ctx: any, body: any) {
   if (!allowed) throw new Error("You can only message the academy, your assigned teacher, a classmate assigned to the same teacher, or continue a conversation you are part of.");
 
   const messageId = crypto.randomUUID();
+  const directPairKey = [lower(profile.username), lower(target.username)].sort().join("|");
+  const previousDirectMessage = !originalMessage
+    ? [...state.messages].reverse().find((m: any) =>
+        [lower(m?.from), lower(m?.to)].sort().join("|") === directPairKey &&
+        !lower(m?.from).startsWith("group:") && !lower(m?.to).startsWith("group:")
+      )
+    : null;
   const conversationId = originalMessage
     ? (text(originalMessage.conversationId) ||
       [lower(originalMessage.from), lower(originalMessage.to)].sort().join("|"))
-    : messageId;
+    : (text(previousDirectMessage?.conversationId) || directPairKey || messageId);
   const item = {
     id: messageId,
     conversationId,
@@ -383,7 +390,8 @@ async function markMessagesRead(ctx: any, body: any = {}) {
   let changed = false;
   for (const message of state.messages) {
     const messageConversationId = text(message?.conversationId) || [lower(message?.from), lower(message?.to)].sort().join("|");
-    if (messageConversationId !== conversationId || lower(message?.to) !== me) continue;
+    const directPairKey = [lower(message?.from), lower(message?.to)].sort().join("|");
+    if ((messageConversationId !== conversationId && directPairKey !== conversationId) || lower(message?.to) !== me) continue;
     const readBy = Array.isArray(message.readBy) ? message.readBy : [];
     if (!readBy.some((id: any) => lower(id) === me)) {
       message.readBy = [...readBy, profile.username];
