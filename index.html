@@ -2726,7 +2726,7 @@ async function ahrufJoinCall(invite){
  if(ahrufActiveCall)return ahrufCallToast('You are already in a call.');
  try{
   const client=await ahrufCallClient(),localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:invite.kind==='video'});
-  const call={room:invite.room,key:String(activeMessageConversationKey||''),peer:invite.from,kind:invite.kind||'audio',invitees:[],participants:new Map(),pcs:new Map(),streams:new Map(),localStream,client,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:true,ended:false,inviteMessageId:null};ahrufActiveCall=call;ahrufBuildCallOverlay(call);
+  const call={room:invite.room,key:String(activeMessageConversationKey||''),peer:invite.from,kind:invite.kind||'audio',invitees:[],participants:new Map(),pcs:new Map(),streams:new Map(),pendingIce:new Map(),localStream,client,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:true,ended:false,inviteMessageId:null};ahrufActiveCall=call;ahrufBuildCallOverlay(call);
   call.channel=client.channel('ahruf-call-'+call.room,{config:{broadcast:{self:false}}});ahrufAttachRoomEvents(call);
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Call room timed out')),12000);call.channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Could not join call room'))}})});
   call.participants.set(invite.from,{name:invite.fromName||invite.from});await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||ahrufMe(),kind:call.kind});ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Joining '+(invite.fromName||invite.from)+'…');
