@@ -1263,6 +1263,12 @@ body.message-conversation-open .message-chat-composer textarea{max-height:22dvh!
 .whatsapp-voice-bubble{display:flex;align-items:center;gap:10px;max-width:min(340px,100%);padding:10px 12px;border-radius:12px;background:#d9fdd3;color:#173c37;margin:7px 0}
 .whatsapp-voice-icon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:50%;background:#128c7e;color:#fff;font-size:18px}
 .whatsapp-voice-bubble audio{width:100%;min-width:0;max-width:270px;height:38px}
+.message-thread-item .whatsapp-voice-bubble{max-width:100%;margin:2px 0;padding:2px 0;background:transparent;border-radius:0;gap:7px}
+.message-thread-item .whatsapp-voice-bubble audio{width:clamp(180px,38vw,270px);max-width:100%}
+.message-thread-item>p{width:fit-content;max-width:100%;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.message-thread-item:has(.whatsapp-voice-bubble){width:fit-content;max-width:min(88%,420px)}
+.message-thread-item .message-file-save{display:none!important}
+
 .message-file-save{display:inline-flex;align-items:center;gap:5px;margin:5px 0 2px;padding:5px 10px;border:1px solid #128c7e;border-radius:7px;color:#075e54;background:transparent;font-size:.78rem;text-decoration:none;cursor:pointer}
 .message-file-save:hover{background:#d9fdd3}
 
@@ -2164,7 +2170,7 @@ async function startWhatsAppVoiceNote(event,button){
    if(blob.size<700){activeVoiceForm=null;document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Click the microphone to record, then press pause to review.');return}
    const form=activeVoiceForm;activeVoiceForm=null;
    const reader=new FileReader();
-   reader.onload=()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};document.querySelectorAll('.recordingStatus').forEach(status=>{status.innerHTML='<span class="voice-ready-label">Voice message ready — listen, then press Send</span><div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><audio controls preload="metadata" src="'+reader.result+'"></audio></div><button type="button" class="btn sm voice-cancel-btn" onclick="cancelRecordedVoiceNote()" style="margin-top:6px">✕ Cancel voice message</button>'});if(!form)toast('Voice message ready. Press Send when you are ready.');};
+   reader.onload=()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};document.querySelectorAll('.recordingStatus').forEach(status=>{status.innerHTML='<div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><audio controls preload="metadata" src="'+reader.result+'"></audio></div><button type="button" class="btn sm voice-cancel-btn" onclick="cancelRecordedVoiceNote()" aria-label="Cancel voice message" title="Cancel voice message">✕ Cancel</button>'});};
    reader.onerror=()=>toast('Could not prepare the voice message. Please try again.');
    reader.readAsDataURL(blob);
   };
@@ -2306,10 +2312,10 @@ function messageThreadItem(m,me){
  if(m.attachment){
   const a=m.attachment,src=a.data||a.url||'',type=String(a.type||'').toLowerCase(),name=String(a.name||'attachment');
   const isImage=type.startsWith('image/')||/\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(name),isVideo=type.startsWith('video/')||/\.(mp4|webm|mov|m4v|ogv)$/i.test(name);
-  if(type.startsWith('audio/')) attachmentHtml='<div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><audio controls preload="metadata" src="'+esc(src)+'" aria-label="Voice message"></audio></div><button type="button" class="message-file-save" data-src="'+esc(src)+'" data-name="'+esc(name)+'" onclick="downloadMessageAttachment(this.dataset.src,this.dataset.name)">⬇ Save voice message</button>';
-  else if(isImage&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'image\')" rel="noopener noreferrer" aria-label="Picture: '+esc(name)+'" style="display:inline-block;max-width:100%"><img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" style="display:block;width:auto;height:auto;max-width:100%;max-height:55vh;object-fit:contain;border-radius:8px"></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div><button type="button" class="message-file-save" data-src="'+esc(src)+'" data-name="'+esc(name)+'" onclick="downloadMessageAttachment(this.dataset.src,this.dataset.name)">⬇ Save file</button></div>';
-  else if(isVideo&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'video\')" rel="noopener noreferrer" aria-label="Video: '+esc(name)+'" style="display:block;position:relative;max-width:520px;text-decoration:none"><video muted playsinline preload="metadata" src="'+esc(src)+'" style="display:block;width:100%;max-height:240px;object-fit:contain;background:#111;border-radius:8px;pointer-events:none"></video><span style="display:inline-block;margin-top:5px;padding:5px 10px;border-radius:6px;background:#128c7e;color:#fff;font-weight:600">▶ Open video</span></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div><button type="button" class="message-file-save" data-src="'+esc(src)+'" data-name="'+esc(name)+'" onclick="downloadMessageAttachment(this.dataset.src,this.dataset.name)">⬇ Save file</button></div>';
-  else attachmentHtml='<p style="margin-top:5px!important">📎 '+esc(name)+'</p><button type="button" class="message-file-save" data-src="'+esc(src)+'" data-name="'+esc(name)+'" onclick="downloadMessageAttachment(this.dataset.src,this.dataset.name)">⬇ Save file</button>';
+  if(type.startsWith('audio/')) attachmentHtml='<div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><audio controls preload="metadata" src="'+esc(src)+'" aria-label="Voice message"></audio></div>';
+  else if(isImage&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'image\')" rel="noopener noreferrer" aria-label="Picture: '+esc(name)+'" style="display:inline-block;max-width:100%"><img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" style="display:block;width:auto;height:auto;max-width:100%;max-height:55vh;object-fit:contain;border-radius:8px"></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
+  else if(isVideo&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'video\')" rel="noopener noreferrer" aria-label="Video: '+esc(name)+'" style="display:block;position:relative;max-width:520px;text-decoration:none"><video muted playsinline preload="metadata" src="'+esc(src)+'" style="display:block;width:100%;max-height:240px;object-fit:contain;background:#111;border-radius:8px;pointer-events:none"></video><span style="display:inline-block;margin-top:5px;padding:5px 10px;border-radius:6px;background:#128c7e;color:#fff;font-weight:600">▶ Open video</span></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
+  else attachmentHtml='<p style="margin-top:5px!important">📎 '+esc(name)+'</p>';
  }
  const sender=!own?'<div class="message-sender">'+esc(m.fromName||m.from)+'</div>':'';
  const unreadHtml=unread?'<span class="message-unread">Unread</span>':'';
