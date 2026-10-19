@@ -2368,14 +2368,14 @@ function messageThreadItem(m,me){
   else if(isImage&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'image\')" rel="noopener noreferrer" aria-label="Picture: '+esc(name)+'" style="display:inline-block;max-width:100%"><img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" style="display:block;width:auto;height:auto;max-width:100%;max-height:55vh;object-fit:contain;border-radius:8px"></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else if(isVideo&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'video\')" rel="noopener noreferrer" aria-label="Video: '+esc(name)+'" style="display:block;position:relative;max-width:520px;text-decoration:none"><video muted playsinline preload="metadata" src="'+esc(src)+'" style="display:block;width:100%;max-height:240px;object-fit:contain;background:#111;border-radius:8px;pointer-events:none"></video><span style="display:inline-block;margin-top:5px;padding:5px 10px;border-radius:6px;background:#128c7e;color:#fff;font-weight:600">▶ Open video</span></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else attachmentHtml='<p style="margin-top:5px!important">📎 '+esc(name)+'</p>';
-  if(!type.startsWith('audio/'))attachmentHtml='<div class="message-attachment-options" style="position:relative;padding-right:42px;min-height:38px">'+attachmentHtml+'<button type="button" class="voice-message-options" aria-label="File options" title="File options" onclick="showVoiceMessageOptions(event,\''+esc(String(m.id||''))+'\')" style="position:absolute;right:0;top:4px;z-index:2">⋮</button></div>';
- }
+   }
  const sender=!own?'<div class="message-sender">'+esc(m.fromName||m.from)+'</div>':'';
  const unreadHtml=unread?'<span class="message-unread">Unread</span>':'';
  const status=own?'<span title="Message status">'+(readBy.length?'✓✓':'✓')+'</span>':'';
  const actions='';
 
- return '<div class="message-thread-item '+(own?'own':'incoming')+'" data-message-id="'+esc(m.id)+'">'+sender+unreadHtml+(m.body?'<p>'+formatMessageBody(m.body)+'</p>':'')+attachmentHtml+'<div class="message-meta"><span>'+time+'</span>'+status+'</div>'+actions+'</div>';
+ const optionsButton='<button type="button" class="voice-message-options" aria-label="Message options" title="Message options" onclick="showVoiceMessageOptions(event,\\''+esc(String(m.id||''))+'\\')" style="position:absolute;right:6px;top:6px;z-index:2">⋮</button>';
+  return '<div class="message-thread-item '+(own?'own':'incoming')+'" data-message-id="'+esc(m.id)+'" style="position:relative;padding-right:42px">'+optionsButton+sender+unreadHtml+(m.body?'<p>'+formatMessageBody(m.body)+'</p>':'')+attachmentHtml+'<div class="message-meta"><span>'+time+'</span>'+status+'</div>'+actions+'</div>';
 }
 
 /* Message actions appear only after a one-second long press. */
@@ -2401,6 +2401,17 @@ function showVoiceMessageOptions(event,id){
  const rect=event.currentTarget.getBoundingClientRect();
  showMessageActionMenu(id,rect.right,rect.bottom+4);
 }
+function replyToThreadMessage(id){
+ const m=(S.messages||[]).find(item=>String(item.id)===String(id));if(!m)return;
+ const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
+ const from=String(m.from||''),to=String(m.to||'');
+ const target=user?.role==='admin'&&from.toLowerCase()!==me&&to.toLowerCase()!==me?from:(from.toLowerCase()===me?to:from);
+ const form=document.querySelector('.message-chat-composer');if(!form)return toast('Open the discussion to reply to this message.');
+ if(form.elements.replyToId)form.elements.replyToId.value=String(m.id||'');
+ if(form.elements.to&&target)form.elements.to.value=target;
+ const box=form.querySelector('textarea[name="message"]');if(box){box.focus();box.placeholder='Reply to '+String(m.fromName||m.from||'message sender')+'...';}
+ form.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
 function showMessageActionMenu(id,x,y){
  const m=(S.messages||[]).find(item=>String(item.id)===String(id));
  if(!m)return;
@@ -2410,6 +2421,7 @@ function showMessageActionMenu(id,x,y){
  const canManage=user?.role==='admin'||own;
  const isAudio=!!(m.attachment&&String(m.attachment.type||'').toLowerCase().startsWith('audio/'));
  const options=[];
+ options.push('<button type="button" data-action="reply">↩ Reply</button>');
  if(canManage&&String(m.body||'').trim())options.push('<button type="button" data-action="edit">✏️ Edit</button>');
  if(m.attachment)options.push('<button type="button" data-action="download">⬇ Download file</button>');
  if(isAudio)options.push('<button type="button" data-action="forward">↪ Forward</button>');
@@ -2427,7 +2439,8 @@ function showMessageActionMenu(id,x,y){
   if(!button)return;
   const action=button.dataset.action;
   hideMessageActionMenu();
-  if(action==='edit')editPlatformMessage(id);
+  if(action==='reply')replyToThreadMessage(id);
+  else if(action==='edit')editPlatformMessage(id);
   else if(action==='forward')forwardVoiceMessage(id);
   else if(action==='download'&&m.attachment)downloadMessageAttachment(m.attachment.data||m.attachment.url||'',m.attachment.name||'attachment');
   else if(action==='delete')deletePlatformMessage(id);
