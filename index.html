@@ -1987,16 +1987,28 @@ function unreadCount(){
   }catch(e){}
   const baseTitle='Al-Ahruf International Academy';
   document.title=count>0?'('+count+') '+baseTitle:baseTitle;
-  // Show unread-message count directly on the browser tab favicon.
+  // Use the exact logo displayed in the website header as the browser-tab icon.
+  // When unread messages exist, overlay a small red count badge on that same logo.
   try{
    const favicon=document.getElementById('academy-favicon');
-   if(favicon){
+   const logo=document.querySelector('.bar img[alt="Al-Ahruf logo"]');
+   if(favicon&&logo&&logo.complete&&logo.naturalWidth){
     if(count>0){
-     const label=count>99?'99+':String(count);
-     const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="13" fill="#176b45"/><text x="32" y="43" font-size="36" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-weight="700">أ</text><circle cx="49" cy="15" r="15" fill="#e53935" stroke="#fff" stroke-width="2"/><text x="49" y="20" font-size="'+(label.length>2?'10':label.length>1?'12':'15')+'" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-weight="700">'+label+'</text></svg>';
-     favicon.href='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+     const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;
+     const ctx=canvas.getContext('2d');
+     if(ctx){
+      ctx.clearRect(0,0,64,64);ctx.save();
+      ctx.beginPath();ctx.arc(32,32,31,0,Math.PI*2);ctx.clip();
+      ctx.drawImage(logo,0,0,64,64);ctx.restore();
+      const label=count>99?'99+':String(count);
+      const r=label.length>2?15:label.length>1?13:12;
+      ctx.beginPath();ctx.arc(50,14,r,0,Math.PI*2);ctx.fillStyle='#e53935';ctx.fill();
+      ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='bold '+(label.length>2?9:label.length>1?11:13)+'px Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,50,14);
+      favicon.href=canvas.toDataURL('image/png');
+     }
     }else{
-     favicon.href='./app-icon.svg';
+     favicon.href=logo.src;
     }
    }
   }catch(e){}
