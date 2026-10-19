@@ -2400,6 +2400,7 @@ function messageThreadItem(m,me){
   else if(isVideo&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'video\')" rel="noopener noreferrer" aria-label="'+esc(t('Video:'))+' '+esc(name)+'" style="display:block;position:relative;max-width:520px;text-decoration:none"><video muted playsinline preload="metadata" src="'+esc(src)+'" style="display:block;width:100%;max-height:240px;object-fit:contain;background:#111;border-radius:8px;pointer-events:none"></video><span style="display:inline-block;margin-top:5px;padding:5px 10px;border-radius:6px;background:#128c7e;color:#fff;font-weight:600">▶ '+esc(t('Open video'))+'</span></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else attachmentHtml='<p style="margin-top:5px!important">📎 '+esc(name)+'</p>';
    }
+ if(String(m.body||'').startsWith(AHRUF_CALL_HISTORY_PREFIX))return '<div class="message-thread-item '+(own?'own':'incoming')+'" data-message-id="'+esc(m.id)+'">'+(own?'':'<div class="message-sender">'+esc(m.fromName||m.from)+'</div>')+ahrufCallHistoryMarkup(m.body)+'<div class="message-meta"><span>'+new Date(m.createdAt||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</span></div></div>';
  const sender=!own?'<div class="message-sender">'+esc(m.fromName||m.from)+'</div>':'';
  const unreadHtml=unread?'<span class="message-unread">'+esc(t('Unread'))+'</span>':'';
  const status=own?'<span title="'+esc(t('Message status'))+'">'+(readBy.length?'✓✓':'✓')+'</span>':'';
@@ -2548,6 +2549,101 @@ let messageThreadMenuElement=null;
 function hideMessageThreadMenu(){if(messageThreadMenuElement){messageThreadMenuElement.remove();messageThreadMenuElement=null}}
 function showMessageThreadMenu(event,key){event.preventDefault();event.stopPropagation();hideMessageThreadMenu();const rect=event.currentTarget.getBoundingClientRect(),menu=document.createElement('div');menu.className='message-longpress-menu';menu.setAttribute('role','menu');menu.style.left=Math.max(8,Math.min(rect.right-190,window.innerWidth-198))+'px';menu.style.top=Math.max(8,Math.min(rect.bottom+4,window.innerHeight-110))+'px';menu.innerHTML='<button type="button" data-thread-action="clear">🧹 Clear chat</button><button type="button" data-thread-action="pin">'+(isMessageThreadPinned(key)?'📌 Unpin discussion':'📌 Pin discussion')+'</button>';menu.addEventListener('click',e=>{const b=e.target.closest('[data-thread-action]');if(!b)return;if(b.dataset.threadAction==='clear')clearMessageThreadForMe(key);else toggleMessageThreadPin(key)});menu.addEventListener('pointerdown',e=>e.stopPropagation());document.body.appendChild(menu);messageThreadMenuElement=menu}
 document.addEventListener('pointerdown',e=>{if(messageThreadMenuElement&&!messageThreadMenuElement.contains(e.target)&&!e.target.closest('[data-message-thread-menu]'))hideMessageThreadMenu()});
+
+const AHRUF_CALL_HISTORY_PREFIX='[[AHRUF_CALL_HISTORY]]|';
+let ahrufActiveCall=null;
+function ahrufCallPeer(key){
+ const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
+ const items=(S.messages||[]).filter(m=>messageConversationKey(m)===String(key||''));
+ for(let i=items.length-1;i>=0;i--){
+  const m=items[i],from=String(m.from||'').toLowerCase(),to=String(m.to||'').toLowerCase();
+  const peer=from===me?to:to===me?from:'';
+  if(peer&&!peer.startsWith('group:'))return peer;
+ }
+ const parts=String(key||'').split('|');
+ return parts.find(x=>x&&x.toLowerCase()!==me&&!x.startsWith('group:'))||'';
+}
+function ahrufCallHistoryMarkup(body){
+ const parts=String(body||'').slice(AHRUF_CALL_HISTORY_PREFIX.length).split('|');
+ const kind=parts[0]==='video'?'Video call':'Voice call',status=parts[1]==='answered'?'Completed':parts[1]==='missed'?'No answer':'Ended';
+ const seconds=Math.max(0,Number(parts[2])||0),duration=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+ const people=Math.max(2,Number(parts[3])||2);
+ return '<div class="ahruf-call-history"><span class="ahruf-call-history-icon">'+(parts[0]==='video'?'▣':'☎')+'</span><div><b>'+esc(kind)+'</b><small>'+esc(status)+' · '+esc(duration)+(parts[1]==='answered'?' · '+people+' participants':'')+'</small></div></div>';
+}
+async function ahrufSaveCallHistory(peer,key,kind,seconds,answered,people){
+ if(!peer)return;
+ const message=AHRUF_CALL_HISTORY_PREFIX+[kind,answered?'answered':'missed',Math.max(0,Math.round(seconds)),Math.max(1,people||1)].join('|');
+ try{
+  if(ONLINE){
+   const result=await onlineApi('send_message',{to:peer,subject:'',category:'general',message,conversationId:String(key||'')});
+   if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages;
+  }else{
+   const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
+   const pair=[me,String(peer).toLowerCase()].sort().join('|');
+   const existing=(S.messages||[]).slice().reverse().find(m=>[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|')===pair);
+   S.messages.push({id:'call-'+Date.now(),conversationId:existing?.conversationId||pair,from:user.username||user.id,fromName:user.name,fromRole:user.role,to:peer,toName:peer,toRole:'user',subject:'',category:'general',body:message,status:'open',createdAt:new Date().toISOString(),readBy:[user.username||user.id]});
+   save();
+  }
+ }catch(e){console.warn('Could not save call history:',e);toast('Call ended, but its history could not be saved.');}
+ if(activeMessageConversationKey===key)render();
+}
+function closeAhrufCall(log=true){
+ const call=ahrufActiveCall;if(!call)return;
+ ahrufActiveCall=null;
+ const elapsed=Math.max(0,Math.floor((Date.now()-call.startedAt)/1000));
+ try{call.api?.dispose()}catch(_){}
+ call.overlay?.remove();
+ if(log)ahrufSaveCallHistory(call.peer,call.key,call.kind,elapsed,call.remoteJoined,call.remoteJoined?call.participants.size+1:1);
+}
+async function startAhrufCall(kind){
+ if(ahrufActiveCall)return toast('A call is already open.');
+ const key=String(activeMessageConversationKey||'');
+ const peer=ahrufCallPeer(key);
+ if(!peer)return toast('Open a one-to-one discussion before starting a call.');
+ if(!navigator.mediaDevices?.getUserMedia)return toast('Calls need a browser with microphone/camera support. Please use HTTPS and allow permissions.');
+ const room='AhrufAcademy'+Date.now().toString(36)+Math.random().toString(36).slice(2,14);
+ const overlay=document.createElement('div');overlay.className='ahruf-call-overlay';overlay.innerHTML='<section class="ahruf-call-panel" role="dialog" aria-modal="true" aria-label="'+(kind==='video'?'Video call':'Voice call')+'"><header><div><b>'+(kind==='video'?'📹 Video call':'☎ Voice call')+'</b><small>Calls are not recorded by Al-Ahruf Academy. The calling service may process connection data.</small></div><button type="button" class="ahruf-call-close" aria-label="End call">✕</button></header><div class="ahruf-call-stage"><div class="ahruf-call-loading">Connecting securely…</div></div><footer><span>Use the participants/invite control in the call to add people.</span><button type="button" class="ahruf-call-end">End call</button></footer></section>';
+ document.body.appendChild(overlay);
+ const stage=overlay.querySelector('.ahruf-call-stage');
+ const call={key,peer,kind,room,overlay,api:null,startedAt:Date.now(),remoteJoined:false,participants:new Set()};
+ ahrufActiveCall=call;
+ const end=()=>closeAhrufCall(true);
+ overlay.querySelector('.ahruf-call-close').addEventListener('click',end);
+ overlay.querySelector('.ahruf-call-end').addEventListener('click',end);
+ const loadApi=()=>new Promise((resolve,reject)=>{
+  if(window.JitsiMeetExternalAPI)return resolve();
+  let script=document.querySelector('script[data-ahruf-jitsi]');
+  if(script){script.addEventListener('load',resolve,{once:true});script.addEventListener('error',reject,{once:true});return}
+  script=document.createElement('script');script.src='https://meet.jit.si/external_api.js';script.async=true;script.dataset.ahrufJitsi='1';script.onload=resolve;script.onerror=reject;document.head.appendChild(script);
+ });
+ try{
+  await loadApi();
+  if(ahrufActiveCall!==call)return;
+  stage.innerHTML='';
+  const api=new window.JitsiMeetExternalAPI('meet.jit.si',{
+   roomName:room,parentNode:stage,width:'100%',height:'100%',
+   userInfo:{displayName:String(user?.name||user?.username||'Al-Ahruf user')},
+   configOverwrite:{prejoinPageEnabled:true,disableDeepLinking:true,enableWelcomePage:false,enableClosePage:false,disableInviteFunctions:false,startWithAudioMuted:false,startWithVideoMuted:kind!=='video',startAudioOnly:kind==='audio',fileRecordingsEnabled:false,liveStreamingEnabled:false,localRecording:{enabled:false},toolbarButtons:[]},
+   interfaceConfigOverwrite:{TOOLBAR_BUTTONS:kind==='audio'?['microphone','chat','participants-pane','invite','hangup','settings','fullscreen']:['microphone','camera','chat','participants-pane','invite','hangup','settings','fullscreen'],SHOW_JITSI_WATERMARK:false,SHOW_BRAND_WATERMARK:false,MOBILE_APP_PROMO:false}
+  });
+  call.api=api;
+  api.addEventListener('participantJoined',event=>{if(event?.id){call.participants.add(event.id);call.remoteJoined=true}});
+  api.addEventListener('participantLeft',event=>{if(event?.id)call.participants.delete(event.id)});
+  api.addEventListener('readyToClose',()=>{if(ahrufActiveCall===call)closeAhrufCall(true)});
+  api.addEventListener('videoConferenceLeft',()=>{if(ahrufActiveCall===call)closeAhrufCall(true)});
+ }catch(e){
+  console.error('Call setup failed:',e);
+  if(ahrufActiveCall===call){ahrufActiveCall=null;overlay.remove()}
+  toast('Could not start the call. Check your internet connection and browser permissions.');
+ }
+}
+(function installAhrufCallStyles(){
+ if(document.getElementById('ahrufCallStyles'))return;
+ const st=document.createElement('style');st.id='ahrufCallStyles';
+ st.textContent='.message-call-actions{display:flex;align-items:center;gap:5px;flex:0 0 auto}.message-call-button{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line,#d6e1dc);border-radius:50%;background:var(--soft,#edf4f0);color:var(--pri,#087e70);font-size:19px;line-height:1;cursor:pointer}.message-call-button:hover,.message-call-button:focus-visible{background:var(--pri,#087e70);color:#fff;outline:2px solid var(--gold,#b99b52);outline-offset:1px}.ahruf-call-overlay{position:fixed;inset:0;z-index:10020;background:rgba(8,22,20,.78);display:flex;align-items:center;justify-content:center;padding:10px}.ahruf-call-panel{width:min(1100px,100%);height:min(850px,96dvh);background:var(--card,#fff);color:var(--ink,#173c37);border:1px solid var(--line,#d6e1dc);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 70px #0006}.ahruf-call-panel>header,.ahruf-call-panel>footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;background:var(--soft,#edf4f0);flex:0 0 auto}.ahruf-call-panel header b{display:block;font-size:14px}.ahruf-call-panel header small,.ahruf-call-panel footer span{display:block;font-size:11px;color:var(--mute,#526b67);margin-top:3px}.ahruf-call-close,.ahruf-call-end{border:0;border-radius:8px;padding:9px 12px;cursor:pointer;background:#b42318;color:#fff;font-weight:700}.ahruf-call-stage{position:relative;flex:1;min-height:0;background:#101918}.ahruf-call-stage iframe{border:0!important}.ahruf-call-loading{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:14px}.ahruf-call-history{display:flex;align-items:center;gap:10px;min-width:180px;padding:9px 12px;border-radius:10px;background:var(--soft,#edf4f0);border:1px solid var(--line,#d6e1dc)}.ahruf-call-history-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:var(--card,#fff);color:var(--pri,#087e70);font-size:18px}.ahruf-call-history b,.ahruf-call-history small{display:block}.ahruf-call-history b{font-size:13px}.ahruf-call-history small{font-size:11px;color:var(--mute,#526b67);margin-top:3px}@media(max-width:560px){.message-chat-header{gap:6px!important;padding-left:8px!important;padding-right:8px!important}.message-call-actions{gap:3px}.message-call-button{width:30px;height:30px;font-size:17px}.ahruf-call-overlay{padding:0}.ahruf-call-panel{width:100%;height:100dvh;border-radius:0}.ahruf-call-panel>footer{align-items:flex-start;flex-direction:column}}';
+ document.head.appendChild(st);
+})();
+
 function openMessageConversation(key){
  activeMessageConversationKey=String(key||'');
  const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
@@ -2619,7 +2715,7 @@ function messages(){
  const canReply=!!target&&!String(target).startsWith('group:')&&(user.role==='admin'||participants.some(x=>String(x).toLowerCase()===me));
   const replyForm=canReply?'<form class="message-chat-composer" onsubmit="return sendThreadReply(event,this)"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(last?.id||'')+'"><input type="hidden" name="conversationId" value="'+esc(activeMessageConversationKey)+'"><div class="message-send-row"><textarea name="message" rows="1" placeholder="'+esc(replyPlaceholder)+'" aria-label="'+esc(replyPlaceholder)+'" style="flex:1;min-width:0;width:100%;box-sizing:border-box"></textarea><button class="btn message-send" type="submit" aria-label="Send message" title="Send message">➤</button></div><div class="message-tools"><input type="file" name="attachment" accept="*/*" aria-label="Attach any file"><button class="btn recordAudioBtn whatsapp-mic" type="button" aria-label="Record voice message" title="Click to start recording; click pause to review" onclick="startWhatsAppVoiceNote(event,this)"><svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true" focusable="false" style="display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="2.5" width="6" height="12" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"></path></svg></button></div><span class="recordingStatus">Attach any file type or record a voice message · Max 10 MB</span></form>':'';
  document.body.classList.add("message-conversation-open");
-  return header+'<section class="card message-chat-shell"><div class="message-chat-header"><button class="btn ghost sm" onclick="document.body.classList.remove(&quot;message-conversation-open&quot;);activeMessageConversationKey=null;render()" aria-label="Back to discussions" title="Back to discussions">←</button><span class="message-chat-avatar">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div style="font-size:.76rem;color:#667781">Discussion · '+items.length+' message'+(items.length===1?'':'s')+(isMessageThreadPinned(activeMessageConversationKey)?' · 📌 Pinned':'')+'</div></div><button type="button" class="btn ghost sm" data-message-thread-menu onclick="showMessageThreadMenu(event,\''+esc(activeMessageConversationKey)+'\')" aria-label="Discussion options" title="Discussion options" style="margin-left:auto;flex:0 0 42px;width:42px;height:42px;min-width:42px;padding:0;display:grid;place-items:center;background:#0b5b50!important;color:#fff!important;border:2px solid #d3ad55!important;border-radius:50%;font-size:1.45rem;font-weight:900;box-shadow:0 2px 6px #0003" >⋮</button></div><div class="message-privacy-note" role="note"><span class="message-privacy-lock" aria-hidden="true">🔒</span><span><b>'+esc(t('Keep this discussion private'))+'</b><small>'+esc(t('Please share messages only with people in this chat.'))+'</small></span></div><div class="message-thread">'+(items.length?renderThreadMessages(items,me):'<div class="mute" style="text-align:center;padding:32px 12px">Start your discussion by sending a message below.</div>')+'</div>'+replyForm+'</section>';
+  return header+'<section class="card message-chat-shell"><div class="message-chat-header"><button class="btn ghost sm" onclick="document.body.classList.remove(&quot;message-conversation-open&quot;);activeMessageConversationKey=null;render()" aria-label="Back to discussions" title="Back to discussions">←</button><span class="message-chat-avatar">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div style="font-size:.76rem;color:#667781">Discussion · '+items.length+' message'+(items.length===1?'':'s')+(isMessageThreadPinned(activeMessageConversationKey)?' · 📌 Pinned':'')+'</div></div><div class="message-call-actions"><button type="button" class="message-call-button" onclick="startAhrufCall('audio')" aria-label="Start voice call" title="Voice call">☎</button><button type="button" class="message-call-button" onclick="startAhrufCall('video')" aria-label="Start video call" title="Video call">▣</button></div><button type="button" class="btn ghost sm" data-message-thread-menu onclick="showMessageThreadMenu(event,\''+esc(activeMessageConversationKey)+'\')" aria-label="Discussion options" title="Discussion options" style="margin-left:auto;flex:0 0 42px;width:42px;height:42px;min-width:42px;padding:0;display:grid;place-items:center;background:#0b5b50!important;color:#fff!important;border:2px solid #d3ad55!important;border-radius:50%;font-size:1.45rem;font-weight:900;box-shadow:0 2px 6px #0003" >⋮</button></div><div class="message-privacy-note" role="note"><span class="message-privacy-lock" aria-hidden="true">🔒</span><span><b>'+esc(t('Keep this discussion private'))+'</b><small>'+esc(t('Please share messages only with people in this chat.'))+'</small></span></div><div class="message-thread">'+(items.length?renderThreadMessages(items,me):'<div class="mute" style="text-align:center;padding:32px 12px">Start your discussion by sending a message below.</div>')+'</div>'+replyForm+'</section>';
 }
 /* Return to the discussion list with a reliable left-swipe gesture on touch devices. */
 (function(){
