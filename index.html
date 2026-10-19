@@ -2759,7 +2759,6 @@ async function startAhrufCall(kind){ahrufCallInviteModal(kind,ahrufCallPeer(acti
  document.head.appendChild(st);
 })();
 function openMessageConversation(key){
- ensureAhrufCallInbox();
  activeMessageConversationKey=String(key||'');
  const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
  if(ONLINE){
