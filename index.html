@@ -1252,7 +1252,12 @@ body.message-conversation-open .message-chat-composer textarea{max-height:22dvh!
 .message-chat-composer .message-send{width:46px;min-width:46px;height:46px;min-height:46px;padding:0!important;border-radius:50%!important;background:#128c7e!important;color:#fff!important;border:0!important;font-size:1.2rem!important}
 .message-chat-composer .message-tools{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .message-chat-composer input[type=file]{font-size:.78rem;max-width:100%;min-width:0;flex:1;color:#54656f}
-.message-chat-composer .recordingStatus{color:#54656f;font-size:.75rem} .voice-ready-label{display:block;color:#075e54;font-weight:700;margin-bottom:5px}
+.message-chat-composer .recordingStatus{color:#54656f;font-size:.75rem}
+.voice-ready-label{display:block;color:#075e54;font-weight:700;margin-bottom:5px}
+.whatsapp-voice-bubble{display:flex;align-items:center;gap:10px;max-width:min(340px,100%);padding:10px 12px;border-radius:12px;background:#d9fdd3;color:#173c37;margin:7px 0}
+.whatsapp-voice-icon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:50%;background:#128c7e;color:#fff;font-size:18px}
+.whatsapp-voice-bubble audio{width:100%;min-width:0;max-width:270px;height:38px}
+.whatsapp-voice-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px} .voice-ready-label{display:block;color:#075e54;font-weight:700;margin-bottom:5px}
 .voice-recording-status{display:inline-flex;align-items:center;gap:9px;min-height:25px;color:#075e54;font-size:.82rem;font-weight:700}.voice-recording-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#d93025;animation:whatsappMicPulse 1s infinite}.voice-recording-time{font-variant-numeric:tabular-nums;min-width:42px}.voice-wave{height:22px;display:inline-flex;align-items:center;gap:3px}.voice-wave i{display:block;width:3px;height:5px;border-radius:3px;background:#128c7e;animation:voiceWave .65s ease-in-out infinite alternate}.voice-wave i:nth-child(2n){animation-delay:.16s}.voice-wave i:nth-child(3n){animation-delay:.32s}.voice-wave i:nth-child(4n){animation-delay:.24s}@keyframes voiceWave{from{height:4px}to{height:20px}}
 .message-list-card{border-radius:12px!important;overflow:hidden}
 /* Voice-note controls belong in the document stylesheet, not in the JavaScript body. */
@@ -2149,7 +2154,7 @@ async function startWhatsAppVoiceNote(event,button){
    if(blob.size<700){activeVoiceForm=null;document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Hold the microphone and speak before releasing.');return}
    const form=activeVoiceForm;activeVoiceForm=null;
    const reader=new FileReader();
-   reader.onload=()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};document.querySelectorAll('.recordingStatus').forEach(status=>{status.innerHTML='<span class="voice-ready-label">Voice message ready — listen, then press Send</span><audio controls preload="metadata" style="display:block;max-width:100%;width:260px;margin-top:7px" src="'+reader.result+'"></audio><button type="button" class="btn ghost sm" onclick="cancelRecordedVoiceNote()" style="margin-top:6px">Cancel voice message</button>'});if(!form)toast('Voice message ready. Press Send when you are ready.');};
+   reader.onload=()=>{recordedAudioAttachment={name:'voice-message.webm',type:blob.type||'audio/webm',size:blob.size,data:reader.result};document.querySelectorAll('.recordingStatus').forEach(status=>{status.innerHTML='<span class="voice-ready-label">Voice message ready — listen, then press Send</span><div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><audio controls preload="metadata" src="'+reader.result+'"></audio></div><button type="button" class="btn ghost sm" onclick="cancelRecordedVoiceNote()" style="margin-top:6px">Cancel voice message</button>'});if(!form)toast('Voice message ready. Press Send when you are ready.');};
    reader.onerror=()=>toast('Could not prepare the voice message. Please try again.');
    reader.readAsDataURL(blob);
   };
@@ -2275,7 +2280,7 @@ function messageThreadItem(m,me){
  if(m.attachment){
   const a=m.attachment,src=a.data||a.url||'',type=String(a.type||'').toLowerCase(),name=String(a.name||'attachment');
   const isImage=type.startsWith('image/')||/\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(name),isVideo=type.startsWith('video/')||/\.(mp4|webm|mov|m4v|ogv)$/i.test(name);
-  if(type.startsWith('audio/')) attachmentHtml='<div style="margin:7px 0">🎙 '+esc(name==='attachment'?'Voice message':name)+'<audio controls preload="metadata" style="display:block;width:min(270px,100%);max-width:100%;margin-top:5px" src="'+esc(src)+'"></audio></div>';
+  if(type.startsWith('audio/')) attachmentHtml='<div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><audio controls preload="metadata" src="'+esc(src)+'" aria-label="Voice message"></audio></div>';
   else if(isImage&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'image\')" rel="noopener noreferrer" aria-label="Picture: '+esc(name)+'" style="display:inline-block;max-width:100%"><img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" style="display:block;width:auto;height:auto;max-width:100%;max-height:55vh;object-fit:contain;border-radius:8px"></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else if(isVideo&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'video\')" rel="noopener noreferrer" aria-label="Video: '+esc(name)+'" style="display:block;position:relative;max-width:520px;text-decoration:none"><video muted playsinline preload="metadata" src="'+esc(src)+'" style="display:block;width:100%;max-height:240px;object-fit:contain;background:#111;border-radius:8px;pointer-events:none"></video><span style="display:inline-block;margin-top:5px;padding:5px 10px;border-radius:6px;background:#128c7e;color:#fff;font-weight:600">▶ Open video</span></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else attachmentHtml='<p style="margin-top:5px!important"><a href="'+esc(src||'#')+'" download="'+esc(name)+'" target="_blank" rel="noopener" style="color:#027eb5;text-decoration:none">📎 '+esc(name)+'</a></p>';
@@ -2283,8 +2288,8 @@ function messageThreadItem(m,me){
  const sender=!own?'<div class="message-sender">'+esc(m.fromName||m.from)+'</div>':'';
  const unreadHtml=unread?'<span class="message-unread">Unread</span>':'';
  const status=own?'<span title="Message status">'+(readBy.length?'✓✓':'✓')+'</span>':'';
- const actions=canEdit?'<div class="message-actions"><button class="btn ghost sm" onclick="editPlatformMessage(\''+esc(m.id)+'\')">Edit</button><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button></div>':'';
- return '<div class="message-thread-item '+(own?'own':'incoming')+'" data-message-id="'+esc(m.id)+'">'+sender+unreadHtml+(m.body?'<p>'+formatMessageBody(m.body)+'</p>':'')+attachmentHtml+(m.editedAt?'<span style="font-size:.65rem;color:#667781">edited · </span>':'')+'<div class="message-meta"><span>'+time+'</span>'+status+'</div>'+actions+'</div>';
+ const actions=(canEdit?'<div class="message-actions"><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button>':'')+(m.attachment&&String(m.attachment.type||'').toLowerCase().startsWith('audio/')?'<button class="btn ghost sm" onclick="forwardVoiceMessage(\''+esc(m.id)+'\')">Forward</button><button class="btn ghost sm" onclick="shareVoiceMessage(\''+esc(m.id)+'\')">Share</button>':'')+(canEdit||m.attachment&&String(m.attachment.type||'').toLowerCase().startsWith('audio/')?'</div>':'');
+ return '<div class="message-thread-item '+(own?'own':'incoming')+'" data-message-id="'+esc(m.id)+'">'+sender+unreadHtml+(m.body?'<p>'+formatMessageBody(m.body)+'</p>':'')+attachmentHtml+'<div class="message-meta"><span>'+time+'</span>'+status+'</div>'+actions+'</div>';
 }
 function renderThreadMessages(items,me){
  let previousDay='',out='';
@@ -2358,7 +2363,7 @@ function messages(){
  if(user.role==='admin'&&!participants.some(x=>String(x).toLowerCase()===me))heading=(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
  const last=items[items.length-1],target=String(last.from||'').toLowerCase()===me?last.to:last.from;
  const canReply=target&&!String(target).startsWith('group:')&&(user.role==='admin'||participants.some(x=>String(x).toLowerCase()===me));
-  const replyForm=canReply?'<form class="message-chat-composer" onsubmit="return sendThreadReply(event,this)"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(last.id)+'"><div class="message-send-row"><textarea name="message" rows="1" placeholder="Type a message" aria-label="Type a message" style="flex:1;min-width:0;width:100%;box-sizing:border-box"></textarea><button class="btn message-send" type="submit" aria-label="Send message" title="Send message">➤</button></div><div class="message-tools"><input type="file" name="attachment" accept="*/*" aria-label="Attach any file"><button class="btn recordAudioBtn whatsapp-mic" type="button" aria-label="Hold to record, release to review, then press Send" title="Hold to record, release to review" onpointerdown="startWhatsAppVoiceNote(event,this)" onpointerup="finishWhatsAppVoiceNote(event,this)" onpointercancel="finishWhatsAppVoiceNote(event,this)"><svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true" focusable="false" style="display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="2.5" width="6" height="12" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"></path></svg></button></div><span class="recordingStatus">Attach any file type or record a voice message · Max 10 MB</span></form>':'';
+  const replyForm=canReply?'<form class="message-chat-composer" onsubmit="return sendThreadReply(event,this)"><input type="hidden" name="to" value="'+esc(target)+'"><input type="hidden" name="replyToId" value="'+esc(last.id)+'"><div class="message-send-row"><textarea name="message" rows="1" placeholder="Type a message" aria-label="Type a message" style="flex:1;min-width:0;width:100%;box-sizing:border-box"></textarea><button class="btn message-send" type="submit" aria-label="Send message" title="Send message">➤</button></div><div class="message-tools"><input type="file" name="attachment" accept="*/*" aria-label="Attach any file"><button class="btn recordAudioBtn whatsapp-mic" type="button" aria-label="Hold to record, release to review, then press Send" title="Hold to record, release to review" onpointerdown="startWhatsAppVoiceNote(event,this)" onpointerup="finishWhatsAppVoiceNote(event,this)" onpointercancel="finishWhatsAppVoiceNote(event,this)"><svg viewBox="0 0 24 24" width="25" height="25" aria-hidden="true" focusable="false" style="display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="2.5" width="6" height="12" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"></path></svg></button><button type="button" class="btn ghost sm" onclick="cancelMessageDraft(this.form)" aria-label="Cancel unsent message" title="Clear unsent message">Cancel</button></div><span class="recordingStatus">Attach any file type or record a voice message · Max 10 MB</span></form>':'';
  document.body.classList.add("message-conversation-open");
   return header+'<section class="card message-chat-shell"><div class="message-chat-header"><button class="btn ghost sm" onclick="document.body.classList.remove(&quot;message-conversation-open&quot;);activeMessageConversationKey=null;render()" aria-label="Back to discussions" title="Back to discussions">←</button><span class="message-chat-avatar">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div style="font-size:.76rem;color:#667781">Discussion · '+items.length+' message'+(items.length===1?'':'s')+'</div></div></div><div class="message-thread">'+renderThreadMessages(items,me)+'</div>'+replyForm+'</section>';
 }
@@ -2401,15 +2406,35 @@ async function pollLiveMessages(){
  }catch(e){console.warn('Live discussion update skipped:',e.message)}
  finally{liveMessagePollBusy=false}
 }
-async function editPlatformMessage(id){
- const m=(S.messages||[]).find(x=>String(x.id)===String(id));if(!m)return toast('Message not found.');
- if(user.role!=='admin'&&String(m.from||'').toLowerCase()!==String(user.username||user.id||'').toLowerCase())return toast('You can edit only your own messages.');
- modal('Edit message','<label>Message</label><textarea name="message" rows="5">'+esc(m.body||'')+'</textarea><p class="mute">Attached files and voice recordings are kept as they are.</p>',async f=>{
-  const body=f.message.value.trim();if(!body&&!m.attachment)return toast('A message or attachment is required.');
-  if(ONLINE){const r=await onlineApi('edit_message',{id:m.id,message:body});if(r.state)S.messages=r.state.messages||S.messages}
-  else{m.body=body;m.editedAt=new Date().toISOString();save()}
-  toast('Message updated');render()
- },'Save changes')
+async function forwardVoiceMessage(id){
+ const original=(S.messages||[]).find(x=>String(x.id)===String(id));
+ if(!original||!original.attachment||!String(original.attachment.type||'').toLowerCase().startsWith('audio/'))return toast('Voice message not found.');
+ const recipients=messageRecipients().filter(x=>String(x.u).toLowerCase()!==String(user.username||user.id||'').toLowerCase());
+ if(!recipients.length)return toast('No available recipients to forward this voice message.');
+ const opts=recipients.map(x=>'<option value="'+esc(x.u)+'">'+esc(x.n)+' — '+esc(x.r)+'</option>').join('');
+ modal('Forward voice message','<p class="mute">Choose who should receive this voice message.</p><label>Recipient</label><select name="to" required>'+opts+'</select><div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><audio controls preload="metadata" src="'+esc(original.attachment.data||original.attachment.url||'')+'"></audio></div><label>Message (optional)</label><textarea name="message" rows="2" placeholder="Add a message…"></textarea>',async f=>{
+  recordedAudioAttachment=original.attachment;
+  await sendPlatformMessage(f);
+ },'Forward voice message');
+}
+async function shareVoiceMessage(id){
+ const m=(S.messages||[]).find(x=>String(x.id)===String(id)),a=m?.attachment;
+ if(!a||!String(a.type||'').toLowerCase().startsWith('audio/'))return toast('Voice message not found.');
+ try{
+  if(!navigator.share)throw new Error('sharing-unavailable');
+  const data=a.data||a.url||'';
+  if(data.startsWith('data:')&&navigator.canShare&&typeof File!=='undefined'){
+   const response=await fetch(data),blob=await response.blob(),file=new File([blob],a.name||'voice-message.webm',{type:a.type||blob.type||'audio/webm'});
+   if(navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Al-Ahruf voice message'});return}
+  }
+  await navigator.share({title:'Al-Ahruf voice message',text:'Voice message shared from Al-Ahruf International Academy.'});
+ }catch(e){if(e.name==='AbortError')return;toast('Sharing audio is not supported here. Use Forward to send it to another academy user.')}
+}
+function cancelMessageDraft(form){
+ if(!form)return;
+ const msg=form.elements.message;if(msg)msg.value='';
+ const file=form.elements.attachment;if(file)file.value='';
+ if(recordedAudioAttachment){recordedAudioAttachment=null;document.querySelectorAll('.recordingStatus').forEach(status=>status.textContent='Draft cancelled. You can record again or write a new message.')}
 }
 async function deletePlatformMessage(id){
  const m=(S.messages||[]).find(x=>String(x.id)===String(id));if(!m)return toast('Message not found.');
