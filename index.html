@@ -2550,7 +2550,7 @@ function clearMessageThreadForMe(key){if(!key)return;const cleared=readMessagePr
 async function clearMessageThreadForAll(key){
  if(!key)return;
  if(!ONLINE){toast('Clear for all requires the online academy connection.');return}
- if(!confirm('Clear this entire discussion for you and the other participant? This permanently removes all messages in this discussion for both sides.'))return;
+ 
  try{
   const result=await onlineApi('clear_conversation',{conversationId:key});
   if(Array.isArray(result.state?.messages))S.messages=result.state.messages;
@@ -2560,7 +2560,7 @@ async function clearMessageThreadForAll(key){
 }
 function chooseMessageClearMode(key){
  hideMessageThreadMenu();
- modal('Clear chat','<p>Choose where to clear this discussion:</p><div class="ahruf-clear-chat-options"><label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0"><input type="radio" name="clearMode" value="me" checked><span><b>For me</b><small style="display:block">Hide this discussion only from your chat view.</small></span></label><label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0"><input type="radio" name="clearMode" value="all"><span><b>For all (me and receiver)</b><small style="display:block">Permanently remove all messages in this discussion for both participants.</small></span></label></div>',form=>{const mode=Array.from(form).find(x=>x.name==='clearMode'&&x.checked)?.value||'me';if(mode==='all')clearMessageThreadForAll(key);else clearMessageThreadForMe(key)},'Continue');
+ modal('Delete','<div class="ahruf-clear-chat-options"><label style="display:flex;gap:10px;align-items:center;padding:10px 0"><input type="radio" name="clearMode" value="me" checked><span>For me</span></label><label style="display:flex;gap:10px;align-items:center;padding:10px 0"><input type="radio" name="clearMode" value="all"><span>For all</span></label></div>',form=>{const mode=Array.from(form).find(x=>x.name==='clearMode'&&x.checked)?.value||'me';if(mode==='all')clearMessageThreadForAll(key);else clearMessageThreadForMe(key)},'Delete');
 }
 let messageThreadMenuElement=null;
 function hideMessageThreadMenu(){if(messageThreadMenuElement){messageThreadMenuElement.remove();messageThreadMenuElement=null}}
