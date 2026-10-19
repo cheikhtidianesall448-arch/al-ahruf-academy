@@ -1135,41 +1135,6 @@ async function recordMissedTimetableClasses(ctx: any, state: any) {
   return state;
 }
 
-async function updateProfilePhoto(ctx: any, body: any) {
-  const profile = await getCurrentProfile(ctx);
-  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
-  if (normalizedRole(profile.role) !== "student") throw new Error("Only students can update their own profile picture.");
-
-  const contentType = text(body.contentType).toLowerCase();
-  if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) {
-    throw new Error("Choose a JPG, PNG, or WebP image.");
-  }
-  const encoded = text(body.imageData);
-  if (!encoded || encoded.length > 2800000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) {
-    throw new Error("The profile picture is empty or too large. Choose an image under 2 MB.");
-  }
-  let binary: string;
-  try { binary = atob(encoded); } catch { throw new Error("The image could not be read. Please choose another file."); }
-  if (binary.length > 2097152) throw new Error("The profile picture must be under 2 MB.");
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-
-  const { error: uploadError } = await ctx.supabaseAdmin.storage
-    .from("profile-photos")
-    .upload(`${profile.id}/avatar.jpg`, bytes, { contentType, upsert: true, cacheControl: "3600" });
-  if (uploadError) throw uploadError;
-
-  const { data: publicData } = ctx.supabaseAdmin.storage
-    .from("profile-photos")
-    .getPublicUrl(`${profile.id}/avatar.jpg`);
-  const photoUrl = `${publicData.publicUrl}?v=${Date.now()}`;
-  const { error: updateError } = await ctx.supabaseAdmin.from("profiles")
-    .update({ photo_url: photoUrl }).eq("id", profile.id);
-  if (updateError) throw updateError;
-
-  return { ok: true, photo_url: photoUrl };
-}
-
 async function getState(ctx: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile) throw new Error("Not authenticated.");
@@ -1192,7 +1157,6 @@ async function getState(ctx: any) {
       name: profileName(profile),
       full_name: profileName(profile),
       role: actualRole,
-      photo_url: profile.photo_url ?? "",
     },
     state: {...visibleState, messages: visibleMessages(state, profile), notifications: buildNotifications(state, profile)},
   };
@@ -1354,10 +1318,6 @@ export default {
 
         if (action === "get_state") {
           return json(await getState(ctx));
-        }
-
-        if (action === "update_profile_photo") {
-          return json(await updateProfilePhoto(ctx, body));
         }
 
         if (action === "save_state") {
