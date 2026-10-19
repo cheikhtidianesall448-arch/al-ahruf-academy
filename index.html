@@ -2825,7 +2825,7 @@ function ahrufPlayIncomingRingtone(ctx,level=0.2){
   return true;
  }catch(e){console.warn('Incoming ringtone unavailable:',e);return false}
 }
-document.addEventListener('pointerdown'n',()=>{ahrufUnlockRingtone()},{passive:true});
+document.addEventListener('pointerdown',()=>{ahrufUnlockRingtone()},{passive:true});
 document.addEventListener('keydown',()=>{ahrufUnlockRingtone()});
 function ahrufShowIncomingCall(invite){
  if(ahrufActiveCall||!invite?.room)return;
