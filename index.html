@@ -1246,6 +1246,19 @@ body:has(.hero) .hero>.card form .btn{
 .message-chat-composer input[type=file]{font-size:.78rem;max-width:100%;min-width:0;flex:1;color:#54656f}
 .message-chat-composer .recordingStatus{color:#54656f;font-size:.75rem}
 .message-list-card{border-radius:12px!important;overflow:hidden}
+/* Voice-note controls belong in the document stylesheet, not in the JavaScript body. */
+.whatsapp-mic{width:46px!important;height:46px!important;min-width:46px!important;border-radius:50%!important;background:#128c7e!important;color:#fff!important;border:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:22px!important;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 2px 5px #0002}
+.whatsapp-mic.voice-recording{background:#d93025!important;animation:whatsappMicPulse 1s infinite;transform:scale(1.06)}
+@keyframes whatsappMicPulse{0%,100%{box-shadow:0 0 0 0 #d9302555}50%{box-shadow:0 0 0 8px #d9302520}}
+.message-chat-composer .whatsapp-mic{flex-shrink:0}
+/* Improve contrast and tap targets for message actions and the back button. */
+.message-thread-item .message-actions{display:flex!important;gap:8px!important;justify-content:flex-end!important;flex-wrap:wrap!important;margin-top:9px!important;opacity:1!important}
+.message-thread-item .message-actions .btn{padding:6px 11px!important;min-height:34px!important;font-size:.8rem!important;font-weight:800!important;border:1.5px solid #52656b!important;box-shadow:0 1px 3px #0002!important}
+.message-thread-item .message-actions .btn.ghost{background:#fff!important;color:#173c37!important}
+.message-thread-item .message-actions .btn[onclick*="deletePlatformMessage"]{background:#fff0ef!important;color:#a51d1d!important;border-color:#c62828!important}
+.message-chat-header>button[aria-label="Back to discussions"]{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;flex:0 0 44px!important;background:#0b5b50!important;color:#fff!important;border:2px solid #d3ad55!important;border-radius:50%!important;font-size:1.45rem!important;font-weight:900!important;box-shadow:0 2px 6px #0003!important}
+.message-chat-header>button[aria-label="Back to discussions"]:focus-visible,.message-thread-item .message-actions .btn:focus-visible{outline:3px solid #d3ad55!important;outline-offset:2px!important}
+
 @media(max-width:640px){.message-thread{height:calc(100dvh - 330px);min-height:230px;padding:12px 9px}.message-thread-item{max-width:88%;min-width:72px}.message-chat-header{padding:9px 10px}.message-chat-composer{padding:8px}}
 </style>
 </head>
@@ -2099,12 +2112,7 @@ function classGroupChat(){
  '<div class="card" style="margin-bottom:12px"><div style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto">'+(groupMessages.map(m=>'<div style="align-self:'+(String(m.from||'').toLowerCase()===me?'flex-end':'stretch')+';max-width:92%;padding:10px 12px;border-radius:12px;background:var(--soft);border:1px solid var(--line)"><b>'+esc(m.fromName||m.from||'Classmate')+'</b><div style="white-space:pre-wrap;margin:5px 0">'+formatMessageBody(m.body||'')+'</div><div class="mute">'+esc(new Date(m.createdAt||Date.now()).toLocaleString())+'</div></div>').join('')||'<p class="mute">No messages yet. Start the discussion and say hello to your classmates!</p>')+'</div></div>'+
  '<div class="card"><form onsubmit="event.preventDefault();sendClassGroupChat(this)"><label for="classGroupMessage">Write a message</label><textarea id="classGroupMessage" name="message" rows="3" maxlength="3000" required placeholder="Ask a question or share what you are studying…"></textarea><div class="row end"><button class="btn" type="submit">Send message</button></div></form><p class="mute">Please be respectful and keep the discussion helpful for learning.</p></div>'
 }
-<style>
-.whatsapp-mic{width:46px!important;height:46px!important;min-width:46px!important;border-radius:50%!important;background:#128c7e!important;color:#fff!important;border:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:22px!important;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 2px 5px #0002}
-.whatsapp-mic.voice-recording{background:#d93025!important;animation:whatsappMicPulse 1s infinite;transform:scale(1.06)}
-@keyframes whatsappMicPulse{0%,100%{box-shadow:0 0 0 0 #d9302555}50%{box-shadow:0 0 0 8px #d9302520}}
-.message-chat-composer .whatsapp-mic{flex-shrink:0}
-</style>
+
 function messageRecipients(){if(user.role==='admin')return [...(S.students||[]).map(s=>({u:s.id,n:s.name,r:'student'})),...(S.teachers||[]).map(t=>({u:t.username,n:t.name,r:'teacher'}))];if(user.role==='teacher')return [{u:'ahruf',n:'Academy Administrator',r:'admin'},...(S.students||[]).filter(s=>String(s.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))];const student=currentStudent();return student&&student.teacher?[{u:student.teacher,n:teacherName(student.teacher),r:'teacher'},...(S.students||[]).filter(s=>String(s.id||'').toLowerCase()!==String(student.id||'').toLowerCase()&&String(s.teacher||'').trim().toLowerCase()===String(student.teacher||'').trim().toLowerCase()).map(s=>({u:s.id,n:s.name,r:'student'}))]:[];}
 let recordedAudioAttachment=null,activeMessageRecorder=null,activeMessageChunks=[],activeVoiceForm=null,voicePermissionPending=false,voiceReleasedWhilePending=false;
 async function startWhatsAppVoiceNote(event,button){
