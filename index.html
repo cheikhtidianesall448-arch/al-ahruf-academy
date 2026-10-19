@@ -2418,6 +2418,7 @@ function messageThreadItem(m,me){
   else if(isVideo&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'video\')" rel="noopener noreferrer" aria-label="'+esc(t('Video:'))+' '+esc(name)+'" style="display:block;position:relative;max-width:520px;text-decoration:none"><video muted playsinline preload="metadata" src="'+esc(src)+'" style="display:block;width:100%;max-height:240px;object-fit:contain;background:#111;border-radius:8px;pointer-events:none"></video><span style="display:inline-block;margin-top:5px;padding:5px 10px;border-radius:6px;background:#128c7e;color:#fff;font-weight:600">▶ '+esc(t('Open video'))+'</span></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else attachmentHtml='<p style="margin-top:5px!important">📎 '+esc(name)+'</p>';
    }
+ if(String(m.body||'').startsWith(AHRUF_CALL_INVITE_PREFIX))return '';
  if(String(m.body||'').startsWith(AHRUF_CALL_HISTORY_PREFIX))return '<div class="message-thread-item '+(own?'own':'incoming')+'" data-message-id="'+esc(m.id)+'">'+(own?'':'<div class="message-sender">'+esc(m.fromName||m.from)+'</div>')+ahrufCallHistoryMarkup(m.body)+'<div class="message-meta"><span>'+new Date(m.createdAt||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</span></div></div>';
  const sender=!own?'<div class="message-sender">'+esc(m.fromName||m.from)+'</div>':'';
  const unreadHtml=unread?'<span class="message-unread">'+esc(t('Unread'))+'</span>':'';
