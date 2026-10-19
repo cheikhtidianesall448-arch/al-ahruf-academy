@@ -2635,13 +2635,14 @@ async function ahrufCreateCall(kind,invitees){
    call.channel.subscribe(status=>{if(status==='SUBSCRIBED'){clearTimeout(timeout);resolve()}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){clearTimeout(timeout);reject(new Error('Could not connect to the call signalling service.'))}});
   });
   await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||user?.username||ahrufMe(),kind});
+  ahrufStartRingback(call);
   for(const id of call.invitees){
    const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe()};
    ahrufBroadcastToUser(call,id,invite).catch(e=>console.warn('Instant call alert failed; using message fallback:',e));
    ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn('Call invite message could not be saved:',e));
   }
   ahrufRenderCallTiles(call);
-  ahrufSetCallStatus(call,'Calling '+call.invitees.length+' participant'+(call.invitees.length===1?'':'s')+'…');
+  ahrufSetCallStatus(call,'Ringing '+call.invitees.length+' participant'+(call.invitees.length===1?'':'s')+'…');
  }catch(e){
   console.error('In-platform call setup failed:',e);
   await ahrufDisposeCall(call,false);
@@ -2694,10 +2695,32 @@ async function ahrufAppendCallInviteMessage(call,target){
  if(ONLINE){const result=await onlineApi('send_message',{to:target,subject:'',category:'general',message:body});if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages}
  else{const pair=[ahrufMe(),String(target).toLowerCase()].sort().join('|');S.messages.push({id:'call-invite-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),conversationId:pair,from:user?.username||user?.id,fromName:user?.name,fromRole:user?.role,to:target,toName:target,toRole:'user',subject:'',category:'general',body,status:'open',createdAt:new Date().toISOString(),readBy:[user?.username||user?.id]});save()}
 }
+function ahrufStopRingback(call){
+ if(!call)return;
+ if(call.ringbackInterval){clearInterval(call.ringbackInterval);call.ringbackInterval=null}
+ if(call.ringbackOscillators){call.ringbackOscillators.forEach(o=>{try{o.stop()}catch(_){}});call.ringbackOscillators=[]}
+}
+function ahrufStartRingback(call){
+ if(!call||call.ended||call.remoteJoined||call.ringbackInterval)return;
+ const playTone=()=>{
+  try{
+   ahrufUnlockRingtone();const ctx=ahrufRingtoneContext;if(!ctx||ctx.state!=='running')return;
+   const now=ctx.currentTime;
+   [[0,440],[0.42,480]].forEach(([offset,hz])=>{
+    const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=hz;
+    gain.gain.setValueAtTime(0.0001,now+offset);gain.gain.exponentialRampToValueAtTime(0.12,now+offset+0.035);
+    gain.gain.setValueAtTime(0.12,now+offset+0.22);gain.gain.exponentialRampToValueAtTime(0.0001,now+offset+0.28);
+    osc.connect(gain);gain.connect(ctx.destination);osc.start(now+offset);osc.stop(now+offset+0.3);
+    (call.ringbackOscillators||(call.ringbackOscillators=[])).push(osc);
+   });
+  }catch(e){console.warn('Caller ringback tone unavailable:',e)}
+ };
+ playTone();call.ringbackInterval=setInterval(playTone,2400);
+}
 function ahrufAttachRoomEvents(call){
  call.channel.on('broadcast',{event:'peer_join'},async({payload:p})=>{
   if(!p?.id||p.id===ahrufMe()||call.ended)return;
-  call.participants.set(p.id,{name:p.name||p.id,kind:p.kind||'audio'});call.remoteJoined=true;ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Connected · '+call.participants.size+' participant'+(call.participants.size===1?'':'s'));
+  call.participants.set(p.id,{name:p.name||p.id,kind:p.kind||'audio'});call.remoteJoined=true;ahrufStopRingback(call);ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Connected · '+call.participants.size+' participant'+(call.participants.size===1?'':'s'));
   // Existing participants offer to the newly arrived participant; the newcomer only answers.
   await ahrufMakePeer(call,p.id,true);
  });
@@ -2780,7 +2803,7 @@ async function ahrufJoinCall(invite){
  }catch(e){console.error('Could not join call:',e);await ahrufDisposeCall(ahrufActiveCall,false);ahrufCallToast('Could not join the call. Check permissions and internet connection.')}
 }
 async function ahrufDisposeCall(call,sendSignal){
- if(!call||call.ended)return;call.ended=true;
+ if(!call||call.ended)return;call.ended=true;ahrufStopRingback(call);
  if(sendSignal&&call.channel){try{await ahrufBroadcast(call,'peer_leave',{id:ahrufMe()});await ahrufBroadcast(call,'call_end',{id:ahrufMe(),name:user?.name||ahrufMe()})}catch(_){}}
  for(const pc of call.pcs?.values?.()||[])try{pc.ontrack=null;pc.close()}catch(_){}
  for(const track of call.localStream?.getTracks?.()||[])try{track.stop()}catch(_){}
