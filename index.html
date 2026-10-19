@@ -2347,6 +2347,14 @@ function voiceWaveformBars(message){
  }
  return bars.join('');
 }
+function messageDateLabel(value,showTimeToday=false){
+ const date=new Date(value||Date.now());if(!Number.isFinite(date.getTime()))return '';
+ const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime(),day=new Date(date.getFullYear(),date.getMonth(),date.getDate()).getTime(),diff=Math.round((today-day)/86400000);
+ if(diff===0)return showTimeToday?date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'Today';
+ if(diff===1)return 'Yesterday';
+ return date.toLocaleDateString([], {year:'numeric',month:'short',day:'numeric'});
+}
+
 function messageThreadItem(m,me){
  const from=String(m.from||'').toLowerCase(),to=String(m.to||'').toLowerCase(),who=String(me||'').toLowerCase();
  const own=from===who,readBy=Array.isArray(m.readBy)?m.readBy:[];
@@ -2472,7 +2480,7 @@ function renderThreadMessages(items,me){
  let previousDay='',out='';
  (items||[]).forEach(m=>{
   const day=new Date(m.createdAt||Date.now()).toLocaleDateString();
-  if(day!==previousDay){out+='<div class="message-day-divider">'+(day===new Date().toLocaleDateString()?'Today':day)+'</div>';previousDay=day;}
+  if(day!==previousDay){out+='<div class="message-day-divider">'+messageDateLabel(m.createdAt||Date.now())+'</div>';previousDay=day;}
   out+=messageThreadItem(m,me);
  });
  return out;
@@ -2524,7 +2532,7 @@ function messages(){
   if(user.role==='admin'&&!participants.some(x=>String(x).toLowerCase()===me))heading=(items[0].fromName||items[0].from)+' ↔ '+(items[0].toName||items[0].to);
   const unread=items.filter(m=>String(m.to||'').toLowerCase()===me&&!(Array.isArray(m.readBy)?m.readBy:[]).some(x=>String(x).toLowerCase()===me)).length;
   const preview=last.attachment?(last.body||'📎 Attachment'):(last.body||'');
-  return '<button type="button" onclick="openMessageConversation(\''+esc(thread.key)+'\')" class="message-inbox-row" style="width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:14px 12px;border:0;border-bottom:1px solid var(--line);background:'+(unread?'color-mix(in srgb,var(--gold) 9%,var(--card))':'var(--card)')+';color:var(--ink);cursor:pointer"><span style="width:44px;height:44px;flex:0 0 44px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--pri);font-weight:800;font-size:1.1rem">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><span style="min-width:0;flex:1"><span style="display:flex;gap:8px;align-items:center;justify-content:space-between"><b>'+esc(heading)+'</b><span class="mute" style="font-size:.72rem;white-space:nowrap">'+esc(new Date(last.createdAt||Date.now()).toLocaleDateString())+'</span></span><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute);font-size:.86rem;margin-top:3px">'+formatMessageBody(preview)+'</span></span>'+(unread?'<span style="min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--ok);color:white;display:grid;place-items:center;font-size:.72rem;font-weight:800">'+unread+'</span>':'')+'</button>';
+  return '<button type="button" onclick="openMessageConversation(\''+esc(thread.key)+'\')" class="message-inbox-row" style="width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:14px 12px;border:0;border-bottom:1px solid var(--line);background:'+(unread?'color-mix(in srgb,var(--gold) 9%,var(--card))':'var(--card)')+';color:var(--ink);cursor:pointer"><span style="width:44px;height:44px;flex:0 0 44px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--pri);font-weight:800;font-size:1.1rem">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><span style="min-width:0;flex:1"><span style="display:flex;gap:8px;align-items:center;justify-content:space-between"><b>'+esc(heading)+'</b><span class="mute" style="font-size:.72rem;white-space:nowrap">'+esc(messageDateLabel(last.createdAt||Date.now(),true))+'</span></span><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute);font-size:.86rem;margin-top:3px">'+formatMessageBody(preview)+'</span></span>'+(unread?'<span style="min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--ok);color:white;display:grid;place-items:center;font-size:.72rem;font-weight:800">'+unread+'</span>':'')+'</button>';
  }).join('');
  const header='<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Open a discussion to read messages. New messages stay unread until you open that discussion.</span></div><button class="btn" onclick="composeMessage()">New message</button></div>';
  if(!activeMessageConversationKey){
