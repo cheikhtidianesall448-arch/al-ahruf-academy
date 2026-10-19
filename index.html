@@ -2718,20 +2718,13 @@ function ahrufStopRingback(call){
 }
 function ahrufStartRingback(call){
  if(!call||call.ended||call.remoteJoined||call.ringbackInterval)return;
- const playTone=()=>{
-  try{
-   ahrufUnlockRingtone();const ctx=ahrufRingtoneContext;if(!ctx||ctx.state!=='running')return;
-   const now=ctx.currentTime;
-   [[0,440],[0.42,480]].forEach(([offset,hz])=>{
-    const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=hz;
-    gain.gain.setValueAtTime(0.0001,now+offset);gain.gain.exponentialRampToValueAtTime(0.12,now+offset+0.035);
-    gain.gain.setValueAtTime(0.12,now+offset+0.22);gain.gain.exponentialRampToValueAtTime(0.0001,now+offset+0.28);
-    osc.connect(gain);gain.connect(ctx.destination);osc.start(now+offset);osc.stop(now+offset+0.3);
-    (call.ringbackOscillators||(call.ringbackOscillators=[])).push(osc);
-   });
-  }catch(e){console.warn('Caller ringback tone unavailable:',e)}
+ const playTone=async()=>{
+  try{const ctx=await ahrufUnlockRingtone();if(!ctx||ctx.state!=='running'||call.ended||call.remoteJoined)return;ahrufPlayStandardCallTone(ctx,0.14)}
+  catch(e){console.warn('Caller ringback tone unavailable:',e)}
  };
- playTone();call.ringbackInterval=setInterval(playTone,2400);
+ playTone();
+ // Standard telephone cadence: approximately 2 seconds ringing, 4 seconds quiet.
+ call.ringbackInterval=setInterval(playTone,6000);
 }
 function ahrufAttachRoomEvents(call){
  call.channel.on('broadcast',{event:'peer_join'},async({payload:p})=>{
@@ -2784,23 +2777,38 @@ function ensureAhrufCallInbox(){
 }
 let ahrufRingtoneContext=null;
 function ahrufUnlockRingtone(){
- try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!ahrufRingtoneContext)ahrufRingtoneContext=new AC();if(ahrufRingtoneContext.state==='suspended')ahrufRingtoneContext.resume().catch(()=>{})}catch(_){}
+ try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return Promise.resolve(null);if(!ahrufRingtoneContext)ahrufRingtoneContext=new AC();if(ahrufRingtoneContext.state==='suspended')return ahrufRingtoneContext.resume().then(()=>ahrufRingtoneContext).catch(()=>ahrufRingtoneContext);return Promise.resolve(ahrufRingtoneContext)}catch(_){return Promise.resolve(null)}
 }
-document.addEventListener('pointerdown',ahrufUnlockRingtone,{passive:true});
-document.addEventListener('keydown',ahrufUnlockRingtone);
+// A conventional telephone ringback: the 440/480 Hz US telephone pair, ringing for
+// about two seconds followed by four seconds of silence.
+function ahrufPlayStandardCallTone(ctx,level=0.18){
+ if(!ctx||ctx.state!=='running')return false;
+ try{
+  const now=ctx.currentTime;
+  [440,480].forEach(hz=>{
+   const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=hz;
+   gain.gain.setValueAtTime(0.0001,now);gain.gain.linearRampToValueAtTime(level,now+0.04);
+   gain.gain.setValueAtTime(level,now+1.72);gain.gain.linearRampToValueAtTime(0.0001,now+1.98);
+   osc.connect(gain);gain.connect(ctx.destination);osc.start(now);osc.stop(now+2.02);
+  });
+  return true;
+ }catch(e){console.warn('Telephone ring tone unavailable:',e);return false}
+}
+document.addEventListener('pointerdown',()=>{ahrufUnlockRingtone()},{passive:true});
+document.addEventListener('keydown',()=>{ahrufUnlockRingtone()});
 function ahrufShowIncomingCall(invite){
  if(ahrufActiveCall||!invite?.room)return;
  if(document.querySelector('.ahruf-incoming-overlay'))return;
  const overlay=document.createElement('div');overlay.className='ahruf-call-overlay ahruf-incoming-overlay';overlay.innerHTML='<section class="ahruf-call-panel ahruf-incoming-panel" role="alertdialog" aria-modal="true" aria-label="Incoming call"><div class="ahruf-ring-pulse"><div class="ahruf-ring-icon">'+(invite.kind==='video'?'📹':'☎')+'</div></div><div class="ahruf-incoming-label">INCOMING '+(invite.kind==='video'?'VIDEO':'VOICE')+' CALL</div><h1 class="ahruf-incoming-name">'+esc(invite.fromName||invite.from||'An academy user')+'</h1><div class="ahruf-incoming-subtitle">Al-Ahruf International Academy</div><div class="ahruf-call-status ahruf-ringing-status">Calling you…</div><div class="ahruf-incoming-actions"><button type="button" class="ahruf-call-decline"><span>✕</span><b>Decline</b></button><button type="button" class="ahruf-call-answer"><span>☎</span><b>Answer</b></button></div><div class="ahruf-incoming-hint">Tap Answer to start talking live</div></section>';document.body.appendChild(overlay);
- let handled=false,ringAudioCtx=null,ringOscillators=[],ringInterval=null,vibrateInterval=null,timeout=null;
- const stopRing=()=>{if(ringInterval)clearInterval(ringInterval);if(vibrateInterval)clearInterval(vibrateInterval);if(timeout)clearTimeout(timeout);try{navigator.vibrate?.(0)}catch(_){}ringOscillators.forEach(o=>{try{o.stop()}catch(_){}});ringOscillators=[]};
- const soundOnce=()=>{try{ahrufUnlockRingtone();ringAudioCtx=ahrufRingtoneContext;if(!ringAudioCtx)return;const now=ringAudioCtx.currentTime;[[0,880],[0.26,660],[0.52,880]].forEach(([offset,hz])=>{const osc=ringAudioCtx.createOscillator(),gain=ringAudioCtx.createGain();osc.type='sine';osc.frequency.value=hz;gain.gain.setValueAtTime(0.0001,now+offset);gain.gain.exponentialRampToValueAtTime(0.22,now+offset+0.025);gain.gain.setValueAtTime(0.22,now+offset+0.17);gain.gain.exponentialRampToValueAtTime(0.0001,now+offset+0.24);osc.connect(gain);gain.connect(ringAudioCtx.destination);osc.start(now+offset);osc.stop(now+offset+0.25);ringOscillators.push(osc)})}catch(e){console.warn('Ringing sound unavailable:',e)}};
- const vibrate=()=>{try{if('vibrate' in navigator)navigator.vibrate([450,180,450,500])}catch(_){}};
- const startRing=()=>{soundOnce();ringInterval=setInterval(soundOnce,1900);vibrate();vibrateInterval=setInterval(vibrate,1900)};
+ let handled=false,ringInterval=null,vibrateInterval=null,timeout=null;
+ const stopRing=()=>{if(ringInterval)clearInterval(ringInterval);if(vibrateInterval)clearInterval(vibrateInterval);if(timeout)clearTimeout(timeout);try{navigator.vibrate?.(0)}catch(_){}};
+ const soundOnce=async()=>{try{const ctx=await ahrufUnlockRingtone();if(!ctx||ctx.state!=='running'||handled)return;ahrufPlayStandardCallTone(ctx,0.2)}catch(e){console.warn('Incoming ringing sound unavailable:',e)}};
+ const vibrate=()=>{try{if(typeof navigator.vibrate==='function')navigator.vibrate([500,250,500,750])}catch(_){}};
+ const startRing=()=>{soundOnce();ringInterval=setInterval(soundOnce,6000);vibrate();vibrateInterval=setInterval(vibrate,3000)};
  const finish=()=>{if(handled)return false;handled=true;stopRing();overlay.remove();return true};
  overlay.querySelector('.ahruf-call-decline').onclick=()=>{if(!finish())return;ahrufSendInboxSignal(invite.from,{type:'declined',room:invite.room,from:ahrufMe()}).catch(()=>{})};
  overlay.querySelector('.ahruf-call-answer').onclick=async()=>{if(!finish())return;await ahrufJoinCall(invite)};
- overlay.addEventListener('pointerdown',()=>{ahrufUnlockRingtone();if(ringAudioCtx?.state==='suspended')ringAudioCtx.resume().catch(()=>{})},{once:true});
+ overlay.addEventListener('pointerdown',()=>{ahrufUnlockRingtone()},{once:true});
  timeout=setTimeout(()=>{if(finish())ahrufSendInboxSignal(invite.from,{type:'missed',room:invite.room,from:ahrufMe()}).catch(()=>{})},60000);
  startRing();
 }
