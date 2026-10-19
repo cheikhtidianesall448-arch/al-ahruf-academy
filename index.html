@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Al-Ahruf Academy">
 <link rel="manifest" href="./manifest.json">
-<link rel="icon" type="image/svg+xml" href="./app-icon.svg">
+<link id="academy-favicon" rel="icon" type="image/svg+xml" href="./app-icon.svg">
 <link rel="apple-touch-icon" href="./app-icon.svg">
 <title>Al-Ahruf International Academy</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Amiri+Quran:wght@400;700&family=Cormorant+Garamond:wght@600;700&family=Figtree:wght@400;600;700&display=swap">
@@ -1987,6 +1987,19 @@ function unreadCount(){
   }catch(e){}
   const baseTitle='Al-Ahruf International Academy';
   document.title=count>0?'('+count+') '+baseTitle:baseTitle;
+  // Show unread-message count directly on the browser tab favicon.
+  try{
+   const favicon=document.getElementById('academy-favicon');
+   if(favicon){
+    if(count>0){
+     const label=count>99?'99+':String(count);
+     const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="13" fill="#176b45"/><text x="32" y="43" font-size="36" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-weight="700">أ</text><circle cx="49" cy="15" r="15" fill="#e53935" stroke="#fff" stroke-width="2"/><text x="49" y="20" font-size="'+(label.length>2?'10':label.length>1?'12':'15')+'" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-weight="700">'+label+'</text></svg>';
+     favicon.href='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+    }else{
+     favicon.href='./app-icon.svg';
+    }
+   }
+  }catch(e){}
  }
 function myTeacher(){
  if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
