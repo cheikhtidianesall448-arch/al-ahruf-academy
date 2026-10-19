@@ -3676,6 +3676,91 @@ async function quranTranslationMarkup(page,mode){
  style.textContent='#quranPageControls .quran-translation-control{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.9rem;font-weight:600}#quranTranslationSelect{max-width:100%;padding:7px;border:1px solid var(--line,#c8b98e);border-radius:8px;background:var(--card,#fff);color:var(--text,inherit)}#quranReaderContent .quran-page-paper.quran-with-translation{aspect-ratio:auto!important;height:auto!important;min-height:0!important;overflow:visible!important;padding-bottom:42px!important}#quranReaderContent .quran-page-paper.quran-with-translation .quran-lines{position:relative!important;inset:auto!important;width:auto!important;height:auto!important;aspect-ratio:472/693!important;min-height:440px!important;margin:0 auto 12px!important;padding:0!important;display:flex!important;flex-direction:column!important;gap:0!important;overflow:hidden!important;box-sizing:border-box!important;border:0!important}#quranReaderContent .quran-page-paper.quran-with-translation .quran-lines>.quran-line{flex:1 1 0!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:hidden!important;display:flex!important;align-items:center!important;white-space:normal!important;line-height:1.12!important;box-sizing:border-box!important}#quranReaderContent .quran-page-paper.quran-with-translation .quran-lines>.quran-line-empty{display:flex!important}#quranReaderContent .quran-translation-panel{margin:12px 4% 24px;padding:12px 14px;border-top:2px solid #b79a52;background:rgba(229,216,180,.2);color:inherit;line-height:1.5;font-size:clamp(12px,1.65vw,15px);overflow-wrap:anywhere;box-sizing:border-box}#quranReaderContent .quran-translation-title{font-weight:800;text-align:center;margin:0 0 10px;padding-bottom:7px;border-bottom:1px solid #c5b17c}#quranReaderContent .quran-translation-verse{margin:0;padding:7px 0;border-bottom:1px solid rgba(151,126,71,.2)}#quranReaderContent .quran-translation-verse b{display:inline-block;font-size:.82em;opacity:.8;margin-inline-end:5px}#quranReaderContent .quran-translation-panel[dir=rtl]{font-family:Amiri,serif;text-align:right}#quranReaderContent .quran-translation-unavailable{margin:0;text-align:center;font-size:.9em;opacity:.8}#quranReaderContent .quran-transliteration-panel{font-size:clamp(15px,2vw,19px);line-height:1.8}#quranReaderContent .quran-transliteration-panel .quran-translation-verse{padding:10px 0}#quranReaderContent .quran-transliteration-long{margin:0;padding:4px 0;font-size:1.08em;line-height:2;letter-spacing:.015em}@media(max-width:600px){#quranPageControls .quran-translation-control{width:100%}#quranTranslationSelect{flex:1;min-width:0}#quranReaderContent .quran-translation-panel{font-size:12px;margin-inline:3%;padding:9px}#quranReaderContent .quran-transliteration-panel{font-size:15px}}';
  document.head.appendChild(style);
 })();
+(function installAhrufResponsiveMushafFit(){
+ if(document.getElementById('ahrufResponsiveMushafFit'))return;
+ const style=document.createElement('style');style.id='ahrufResponsiveMushafFit';
+ style.textContent=`
+ /* Full-screen Mushaf: use the complete available viewport on desktop and mobile. */
+ body.quran-surah-fullscreen{overflow:hidden!important}
+ body.quran-surah-fullscreen #quranReaderContent{
+  width:100vw!important;max-width:100vw!important;height:100dvh!important;min-height:100dvh!important;
+  margin:0!important;padding:0!important;overflow-y:auto!important;overflow-x:hidden!important;
+  box-sizing:border-box!important;display:block!important
+ }
+ body.quran-surah-fullscreen #quranReaderContent .quran-fullscreen-bar{
+  position:fixed!important;top:max(4px,env(safe-area-inset-top))!important;left:0!important;right:0!important;
+  transform:none!important;width:100vw!important;height:46px!important;padding:2px 10px!important;
+  margin:0!important;z-index:1000!important;box-sizing:border-box!important;
+  display:flex!important;justify-content:space-between!important;align-items:center!important;
+  background:transparent!important;border:0!important;pointer-events:none!important
+ }
+ body.quran-surah-fullscreen .quran-reader-return,
+ body.quran-surah-fullscreen .quran-reader-options{
+  pointer-events:auto!important;width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;
+  border:1px solid #bba66d!important;border-radius:50%!important;background:#fffdf5!important;color:#17332d!important;
+  font-size:27px!important;font-weight:600!important;line-height:1!important;box-shadow:0 2px 7px #0002!important;cursor:pointer!important
+ }
+ body.quran-surah-fullscreen #quranReaderContent .quran-page-paper{
+  position:relative!important;display:block!important;width:min(100vw,calc(100dvh * 472 / 693))!important;
+  max-width:none!important;min-width:0!important;height:auto!important;min-height:0!important;
+  aspect-ratio:472 / 693!important;margin:0 auto!important;box-sizing:border-box!important;
+  border-radius:0!important;overflow:hidden!important
+ }
+ body.quran-surah-fullscreen #quranReaderContent .quran-page-paper .quran-lines{
+  top:clamp(42px,6.2%,54px)!important;bottom:clamp(38px,5.8%,50px)!important;
+  left:clamp(14px,3%,30px)!important;right:clamp(14px,3%,30px)!important
+ }
+ body.quran-surah-fullscreen #quranReaderContent .quran-reader-options-wrap{position:relative!important;pointer-events:auto!important;margin-left:auto!important}
+ body.quran-surah-fullscreen #quranReaderContent .quran-reader-options-menu{
+  position:absolute!important;top:48px!important;right:0!important;z-index:1100!important;
+  width:min(280px,calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;
+  max-height:calc(100dvh - 68px)!important;overflow:auto!important;box-sizing:border-box!important;
+  padding:12px!important;background:#fffdf5!important;color:#17332d!important;border:1px solid #c5b17c!important;
+  border-radius:10px!important;box-shadow:0 6px 24px #0003!important
+ }
+ body.quran-surah-fullscreen #quranReaderContent .quran-reader-options-menu[hidden]{display:none!important}
+ body.quran-surah-fullscreen #quranReaderContent .quran-reader-options-menu select{
+  width:100%!important;min-width:0!important;max-width:100%!important;min-height:40px!important;box-sizing:border-box!important
+ }
+ body.quran-translation-open{overflow:hidden!important}
+ body.quran-translation-open #quranTranslationOverlay{
+  position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-height:100dvh!important;
+  margin:0!important;padding:0!important;box-sizing:border-box!important;overflow:hidden!important;z-index:2000!important;
+  background:var(--bg,#fffdf5)!important
+ }
+ body.quran-translation-open #quranTranslationOverlay[hidden]{display:none!important}
+ body.quran-translation-open .quran-translation-overlay-top{
+  position:absolute!important;top:0!important;left:0!important;right:0!important;height:52px!important;
+  padding:max(4px,env(safe-area-inset-top)) 10px 4px!important;box-sizing:border-box!important;
+  display:flex!important;align-items:center!important;justify-content:space-between!important;z-index:10!important;
+  background:var(--card,#fffdf5)!important;border-bottom:1px solid var(--line,#c5b17c)!important
+ }
+ body.quran-translation-open .quran-translation-overlay-content{
+  position:absolute!important;top:52px!important;left:0!important;right:0!important;bottom:0!important;
+  width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;
+  margin:0!important;padding:12px clamp(10px,3vw,24px) 24px!important;box-sizing:border-box!important;
+  overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important
+ }
+ body.quran-translation-open .quran-translation-overlay-content .quran-translation-page-number{
+  text-align:center!important;margin:0 auto 12px!important;max-width:100%!important
+ }
+ body.quran-translation-open .quran-translation-overlay .quran-reader-options-menu{
+  position:absolute!important;top:46px!important;right:0!important;z-index:20!important;
+  width:min(280px,calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;
+  max-height:calc(100dvh - 70px)!important;overflow:auto!important;box-sizing:border-box!important
+ }
+ @media(max-width:600px){
+  body.quran-surah-fullscreen #quranReaderContent .quran-page-paper{width:100vw!important;max-width:100vw!important}
+  body.quran-surah-fullscreen #quranReaderContent .quran-page-paper .quran-line{font-size:clamp(12px,3.3vw,20px)!important}
+  body.quran-translation-open .quran-translation-overlay-content{padding:10px 8px 20px!important}
+ }
+ @media(min-width:601px){
+  body.quran-surah-fullscreen #quranReaderContent .quran-page-paper .quran-line{font-size:clamp(14px,1.8vw,22px)!important}
+ }
+ `;
+ document.head.appendChild(style);
+})();
 async function loadQuranPage(page,append=false){
  page=Math.max(1,Math.min(604,Number(page)||1));
  const target='quranReaderContent',request=++quranRequestId;
