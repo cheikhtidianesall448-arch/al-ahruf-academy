@@ -1209,13 +1209,7 @@ body:has(.hero) .hero>.card form .btn{
 #app .collected-stat .collected-toggle{min-width:42px;min-height:42px;border-radius:10px}
 #app .collected-stat #collectedAmount{display:block;margin-top:10px}
 \n/* Make the login password visibility control unmistakable and easy to tap. */\nbody:has(.hero) .hero>.card .login-password-toggle{flex:0 0 54px!important;width:54px!important;min-width:54px!important;height:54px!important;min-height:54px!important;padding:10px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border:2px solid #315b49!important;border-radius:12px!important;background:#fff!important;color:#173f2d!important;box-shadow:0 2px 6px rgba(0,0,0,.16)!important;cursor:pointer!important}\nbody:has(.hero) .hero>.card .login-password-toggle svg{width:28px!important;height:28px!important;display:block!important;stroke-width:2.5!important}\nbody:has(.hero) .hero>.card .login-password-toggle:hover{background:#e8f3ec!important;border-color:#173f2d!important}\nbody:has(.hero) .hero>.card .login-password-toggle:focus-visible{outline:3px solid #c99a2e!important;outline-offset:3px!important}\n@media(max-width:700px){body:has(.hero) .hero>.card .login-password-toggle{flex-basis:56px!important;width:56px!important;min-width:56px!important;height:56px!important;min-height:56px!important}}\n
-/* Small, non-blocking notice about finding the installed app */
-#app-install-notice{position:fixed;right:16px;bottom:16px;z-index:99999;display:none;width:min(380px,calc(100vw - 32px));padding:14px 16px;background:var(--card,#fffdf8);color:var(--ink,#12302b);border:1px solid var(--gold,#c99a3d);border-radius:14px;box-shadow:0 8px 30px #0003;font-size:.95rem}
-#app-install-notice button{float:right;margin-left:12px;border:0;background:transparent;color:inherit;font-size:1.2rem;cursor:pointer}
-#app-install-notice .app-install-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}
-#app-install-notice .app-install-actions button{float:none;margin:0;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.9rem;font-weight:700}
-#app-install-notice #app-install-now{background:var(--pri);border-color:var(--pri);color:#fff}
-#app-install-notice #app-install-later{background:transparent;color:var(--ink)}
+
 
 /* Long-press message action menu; hidden until the user holds a message for one second. */
 .message-thread-item{touch-action:pan-y; -webkit-touch-callout:none}
@@ -1968,7 +1962,7 @@ async function login(role,u,p){
        throw new Error('Account role does not match the selected login.');
      }
      user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
-     toast('Signed in securely');render();openCurtains();window.dispatchEvent(new Event('academy-signed-in'));
+     toast('Signed in securely');render();openCurtains();
    }catch(e){console.error('Al-Ahruf login failed:',e);toast('Sign-in failed. Check your credentials or contact the administrator.');}
    finally{onlineBusy=false}
    return;
@@ -2383,7 +2377,11 @@ function updateVoiceWaveform(audio){
  const audio=event.target;
  if(audio instanceof HTMLAudioElement&&audio.closest(".whatsapp-voice-bubble"))updateVoiceWaveform(audio);
 },true));
-function showVoiceMessageOptions(event,id){\n event.preventDefault();event.stopPropagation();\n const rect=event.currentTarget.getBoundingClientRect();\n showMessageActionMenu(id,rect.right,rect.bottom+4);\n}\nfunction showMessageActionMenu(id,x,y){
+function showVoiceMessageOptions(event,id){
+ event.preventDefault();event.stopPropagation();
+ const rect=event.currentTarget.getBoundingClientRect();
+ showMessageActionMenu(id,rect.right,rect.bottom+4);
+}\nfunction showMessageActionMenu(id,x,y){
  const m=(S.messages||[]).find(item=>String(item.id)===String(id));
  if(!m)return;
  hideMessageActionMenu();
@@ -3708,65 +3706,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 setInterval(pollLiveMessages,3000);
 </script>
 
-<div id="app-install-notice" role="dialog" aria-live="polite" aria-labelledby="app-install-notice-text">
- <span id="app-install-notice-text">Would you like to install Al-Ahruf Academy as an app for easier access?</span>
- <div class="app-install-actions">
-  <button type="button" id="app-install-later">Not now</button>
-  <button type="button" id="app-install-now">Install app</button>
- </div>
-</div>
-<script>
-(()=>{
- let deferredInstall=null,noticeTimer=null,repeatTimer=null,hasSignedIn=false,showingInstructions=false;
- const notice=document.getElementById('app-install-notice');
- const noticeText=document.getElementById('app-install-notice-text');
- const installButton=document.getElementById('app-install-now');
- const laterButton=document.getElementById('app-install-later');
- const language=()=>String(document.documentElement.lang||'en').toLowerCase().slice(0,2);
- const standalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
- const installed=()=>standalone()||(()=>{try{return localStorage.getItem('ahruf-app-installed')==='yes'}catch(e){return false}})();
- const copy=()=>{
-  const lang=language(),ua=navigator.userAgent||'',ios=/iphone|ipad|ipod/i.test(ua),android=/android/i.test(ua);
-  if(lang==='fr')return {question:'Voulez-vous installer Al-Ahruf Academy comme application pour y accéder plus facilement ?',install:'Installer',later:'Pas maintenant',instructions:ios?'Pour installer sur iPhone/iPad : ouvrez cette page dans Safari, touchez Partager, puis « Sur l’écran d’accueil ».':android?'Pour installer : ouvrez le menu ⋮ de Chrome, puis choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».':'Pour installer, ouvrez le menu du navigateur et choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».',got:'Compris'};
-  if(lang==='ar')return {question:'هل تريد تثبيت أكاديمية الأحرف كتطبيق لتسهيل الوصول إليها؟',install:'تثبيت التطبيق',later:'ليس الآن',instructions:ios?'للتثبيت على iPhone أو iPad: افتح الصفحة في Safari، واضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».':android?'للتثبيت: افتح قائمة Chrome ⋮ ثم اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».':'للتثبيت، افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».',got:'حسنًا'};
-  return {question:'Would you like to install Al-Ahruf Academy as an app for easier access?',install:'Install app',later:'Not now',instructions:ios?'To install on iPhone/iPad: open this page in Safari, tap Share, then “Add to Home Screen”.':android?'To install: open Chrome’s ⋮ menu, then choose “Install app” or “Add to Home screen”.':'To install, open your browser menu and choose “Install app” or “Add to Home Screen”.',got:'Got it'};
- };
- const hide=()=>{notice.style.display='none';clearTimeout(noticeTimer)};
- const scheduleRepeat=()=>{clearTimeout(repeatTimer);if(hasSignedIn&&!installed())repeatTimer=setTimeout(()=>showQuestion(),300000)};
- const showQuestion=()=>{
-  if(!hasSignedIn||installed())return;
-  showingInstructions=false;const c=copy();noticeText.textContent=c.question;installButton.textContent=c.install;laterButton.textContent=c.later;installButton.style.display='';notice.style.display='block';
- };
- const showInstructions=()=>{
-  const c=copy();showingInstructions=true;noticeText.textContent=c.instructions;installButton.textContent=c.got;laterButton.textContent=c.later;installButton.style.display='';
- };
- laterButton.addEventListener('click',()=>{hide();scheduleRepeat()});
- installButton.addEventListener('click',async()=>{
-  if(showingInstructions){hide();scheduleRepeat();return}
-  if(installed()){hide();return}
-  if(deferredInstall){
-   const event=deferredInstall;deferredInstall=null;
-   try{
-    await event.prompt();
-    const choice=await event.userChoice;
-    if(choice&&choice.outcome==='accepted'){hide();return}
-    hide();scheduleRepeat();return;
-   }catch(err){showInstructions();return}
-  }
-  showInstructions();
- });
- window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e});
- window.addEventListener('appinstalled',()=>{
-  deferredInstall=null;clearTimeout(repeatTimer);hide();
-  try{localStorage.setItem('ahruf-app-installed','yes')}catch(e){}
- });
- window.addEventListener('academy-signed-in',()=>{
-  hasSignedIn=true;
-  if(!installed())setTimeout(showQuestion,1800);
- });
- if(installed()){try{localStorage.setItem('ahruf-app-installed','yes')}catch(e){}}
- if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('App installation support unavailable:',e)));}
-})();
-</script>
 </body>
 </html>
