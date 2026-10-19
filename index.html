@@ -2205,7 +2205,7 @@ function messages(){
  return header+'<section class="card" style="padding:14px"><div class="row between" style="gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line)"><button class="btn ghost sm" onclick="activeMessageConversationKey=null;render()">← All discussions</button><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div class="mute">'+items.length+' message'+(items.length===1?'':'s')+'</div></div></div><div class="message-thread" style="margin-top:8px">'+items.map(m=>messageThreadItem(m,me)).join('')+'</div>'+replyForm+'</section>';
 }
 let liveMessagePollBusy=false,lastLiveMessagePoll=0;
-function liveMessageSignature(list){return JSON.stringify((list||[]).map(m=>[m.id,m.body,m.attachment?.name,m.attachment?.size,m.createdAt,m.editedAt,(m.readBy||[]).join(',')]))}
+function liveMessageSignature(list){return JSON.stringify((list||[]).map(m=>[m.id,m.body,m.attachment?.name,m.attachment?.type,m.attachment?.size,m.attachment?.url,m.attachment?.data?.length,m.createdAt,m.editedAt,m.deletedAt,[...(m.readBy||[])].map(String).sort().join(',')]))}
 async function pollLiveMessages(){
  if(!ONLINE||!user||liveMessagePollBusy||document.hidden)return;
  const now=Date.now(),interval=tab==='messages'?3000:15000;
@@ -2215,11 +2215,14 @@ async function pollLiveMessages(){
   const data=await onlineApi('get_state'),fresh=data?.state?.messages;
   if(!Array.isArray(fresh))return;
   const previous=S.messages||[],oldIds=new Set(previous.map(m=>String(m.id)));
-  if(liveMessageSignature(previous)===liveMessageSignature(fresh))return;
+  const messagesChanged=liveMessageSignature(previous)!==liveMessageSignature(fresh);
+  const notificationsChanged=Array.isArray(data.state.notifications)&&JSON.stringify(S.notifications||[])!==JSON.stringify(data.state.notifications);
+  if(!messagesChanged&&!notificationsChanged)return;
   const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
-  const incoming=fresh.filter(m=>!oldIds.has(String(m.id))&&String(m.to||'').toLowerCase()===me);
-  S.messages=fresh;
+  const incoming=messagesChanged?fresh.filter(m=>!oldIds.has(String(m.id))&&String(m.to||'').toLowerCase()===me):[];
+  if(messagesChanged)S.messages=fresh;
   if(Array.isArray(data.state.notifications))S.notifications=data.state.notifications;
+  if(!messagesChanged){if(tab!=='messages'||!activeMessageConversationKey){const y=window.scrollY;render();window.scrollTo(0,y)}return;}
   if(tab==='messages'&&activeMessageConversationKey){
    const key=activeMessageConversationKey,keyOf=m=>String(m.conversationId||'').trim()||[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|');
    const items=fresh.filter(m=>keyOf(m)===key).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
