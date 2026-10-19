@@ -1339,6 +1339,22 @@ body.message-conversation-open .message-chat-composer textarea{max-height:22dvh!
 .ahruf-clear-choice-all:has(input:checked) .ahruf-clear-choice-mark{background:#c62828}
 .ahruf-clear-warning{margin:2px 0 0;padding:10px 12px;border-left:3px solid #c62828;border-radius:5px;background:rgba(198,40,40,.07);font-size:12px;line-height:1.5;color:var(--text,#172033)}
 @media(max-width:480px){.ahruf-clear-choice{padding:13px!important;gap:9px!important}.ahruf-clear-choice-copy strong{font-size:15px}.ahruf-clear-choice-copy small{font-size:12px}}
+/* Explicit contrast in both academy themes: deletion choices must remain readable. */
+:root[data-theme="light"] .ahruf-clear-choice{background:#ffffff!important;border-color:#667085!important}
+:root[data-theme="light"] .ahruf-clear-choice-copy strong{color:#172033!important}
+:root[data-theme="light"] .ahruf-clear-choice-copy small{color:#475467!important}
+:root[data-theme="light"] .ahruf-clear-choice:has(input:checked){background:#eaf3ff!important;border-color:#155eef!important}
+:root[data-theme="light"] .ahruf-clear-choice-all:has(input:checked){background:#fff0f0!important;border-color:#b42318!important}
+:root[data-theme="light"] .ahruf-clear-warning{background:#fff1f0!important;color:#7a271a!important}
+:root[data-theme="dark"] .ahruf-clear-choice{background:#132b24!important;border-color:#78948a!important}
+:root[data-theme="dark"] .ahruf-clear-choice-copy strong{color:#f5faf7!important}
+:root[data-theme="dark"] .ahruf-clear-choice-copy small{color:#d0e0d9!important}
+:root[data-theme="dark"] .ahruf-clear-choice:has(input:checked){background:#153d36!important;border-color:#63b3ff!important}
+:root[data-theme="dark"] .ahruf-clear-choice-all:has(input:checked){background:#482322!important;border-color:#ff8b83!important}
+:root[data-theme="dark"] .ahruf-clear-warning{background:#482322!important;color:#ffe4e1!important}
+:root[data-theme="light"] .ahruf-clear-choice-mark{color:#ffffff!important}
+:root[data-theme="dark"] .ahruf-clear-choice-mark{color:#ffffff!important}
+
 </style>
 </head>
 <body>
