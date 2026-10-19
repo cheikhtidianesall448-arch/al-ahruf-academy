@@ -2546,10 +2546,25 @@ function readMessagePrefs(kind){try{return JSON.parse(localStorage.getItem('ahru
 function writeMessagePrefs(kind,value){try{localStorage.setItem('ahrufMessage'+kind+'_'+messageUserStorageKey(),JSON.stringify(value))}catch(_){}}
 function isMessageThreadPinned(key){return !!readMessagePrefs('Pins')[key]}
 function toggleMessageThreadPin(key){const pins=readMessagePrefs('Pins');if(pins[key])delete pins[key];else pins[key]=Date.now();writeMessagePrefs('Pins',pins);hideMessageThreadMenu();render()}
-function clearMessageThreadForMe(key){if(!key)return;if(!confirm('Clear this discussion from your chat view? This only clears it for your account on this browser; it does not delete messages for the other participant. New messages will appear normally.'))return;const cleared=readMessagePrefs('Cleared');cleared[key]=Date.now();writeMessagePrefs('Cleared',cleared);hideMessageThreadMenu();document.body.classList.remove('message-conversation-open');activeMessageConversationKey=null;render()}
+function clearMessageThreadForMe(key){if(!key)return;const cleared=readMessagePrefs('Cleared');cleared[key]=Date.now();writeMessagePrefs('Cleared',cleared);hideMessageThreadMenu();document.body.classList.remove('message-conversation-open');activeMessageConversationKey=null;render()}
+async function clearMessageThreadForAll(key){
+ if(!key)return;
+ if(!ONLINE){toast('Clear for all requires the online academy connection.');return}
+ if(!confirm('Clear this entire discussion for you and the other participant? This permanently removes all messages in this discussion for both sides.'))return;
+ try{
+  const result=await onlineApi('clear_conversation',{conversationId:key});
+  if(Array.isArray(result.state?.messages))S.messages=result.state.messages;
+  const cleared=readMessagePrefs('Cleared');delete cleared[key];writeMessagePrefs('Cleared',cleared);
+  hideMessageThreadMenu();document.body.classList.remove('message-conversation-open');activeMessageConversationKey=null;render();toast('Chat cleared for both participants.');
+ }catch(e){toast('Could not clear chat for both: '+(e?.message||'Please try again.'))}
+}
+function chooseMessageClearMode(key){
+ hideMessageThreadMenu();
+ modal('Clear chat','<p>Choose where to clear this discussion:</p><div class="ahruf-clear-chat-options"><label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0"><input type="radio" name="clearMode" value="me" checked><span><b>For me</b><small style="display:block">Hide this discussion only from your chat view.</small></span></label><label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0"><input type="radio" name="clearMode" value="all"><span><b>For all (me and receiver)</b><small style="display:block">Permanently remove all messages in this discussion for both participants.</small></span></label></div>',form=>{const mode=Array.from(form).find(x=>x.name==='clearMode'&&x.checked)?.value||'me';if(mode==='all')clearMessageThreadForAll(key);else clearMessageThreadForMe(key)},'Continue');
+}
 let messageThreadMenuElement=null;
 function hideMessageThreadMenu(){if(messageThreadMenuElement){messageThreadMenuElement.remove();messageThreadMenuElement=null}}
-function showMessageThreadMenu(event,key){event.preventDefault();event.stopPropagation();hideMessageThreadMenu();const rect=event.currentTarget.getBoundingClientRect(),menu=document.createElement('div');menu.className='message-longpress-menu';menu.setAttribute('role','menu');menu.style.left=Math.max(8,Math.min(rect.right-190,window.innerWidth-198))+'px';menu.style.top=Math.max(8,Math.min(rect.bottom+4,window.innerHeight-110))+'px';menu.innerHTML='<button type="button" data-thread-action="clear">🧹 Clear chat</button><button type="button" data-thread-action="pin">'+(isMessageThreadPinned(key)?'📌 Unpin discussion':'📌 Pin discussion')+'</button>';menu.addEventListener('click',e=>{const b=e.target.closest('[data-thread-action]');if(!b)return;if(b.dataset.threadAction==='clear')clearMessageThreadForMe(key);else toggleMessageThreadPin(key)});menu.addEventListener('pointerdown',e=>e.stopPropagation());document.body.appendChild(menu);messageThreadMenuElement=menu}
+function showMessageThreadMenu(event,key){event.preventDefault();event.stopPropagation();hideMessageThreadMenu();const rect=event.currentTarget.getBoundingClientRect(),menu=document.createElement('div');menu.className='message-longpress-menu';menu.setAttribute('role','menu');menu.style.left=Math.max(8,Math.min(rect.right-190,window.innerWidth-198))+'px';menu.style.top=Math.max(8,Math.min(rect.bottom+4,window.innerHeight-110))+'px';menu.innerHTML='<button type="button" data-thread-action="clear">🧹 Clear chat</button><button type="button" data-thread-action="pin">'+(isMessageThreadPinned(key)?'📌 Unpin discussion':'📌 Pin discussion')+'</button>';menu.addEventListener('click',e=>{const b=e.target.closest('[data-thread-action]');if(!b)return;if(b.dataset.threadAction==='clear')chooseMessageClearMode(key);else toggleMessageThreadPin(key)});menu.addEventListener('pointerdown',e=>e.stopPropagation());document.body.appendChild(menu);messageThreadMenuElement=menu}
 document.addEventListener('pointerdown',e=>{if(messageThreadMenuElement&&!messageThreadMenuElement.contains(e.target)&&!e.target.closest('[data-message-thread-menu]'))hideMessageThreadMenu()});
 
 const AHRUF_CALL_HISTORY_PREFIX='[[AHRUF_CALL_HISTORY]]|';
