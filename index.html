@@ -2364,7 +2364,7 @@ function messageThreadItem(m,me){
  if(m.attachment){
   const a=m.attachment,src=a.data||a.url||'',type=String(a.type||'').toLowerCase(),name=String(a.name||'attachment');
   const isImage=type.startsWith('image/')||/\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(name),isVideo=type.startsWith('video/')||/\.(mp4|webm|mov|m4v|ogv)$/i.test(name);
-  if(type.startsWith('audio/')) attachmentHtml=(a.forwarded?'<div class="voice-forwarded-label">Forwarded</div>':'')+'<div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><div class="whatsapp-voice-content"><div class="whatsapp-voice-waveform" aria-label="Voice waveform" role="img">'+voiceWaveformBars(m)+'<span class="whatsapp-voice-playhead" aria-hidden="true"></span></div><audio controls preload="metadata" src="'+esc(src)+'" aria-label="Voice message"></audio></div><button type="button" class="voice-message-options" aria-label="Voice message options" title="Options" onclick="showVoiceMessageOptions(event,\''+esc(String(m.id||''))+'\')">⋮</button></div>';
+  if(type.startsWith('audio/')) attachmentHtml=(a.forwarded?'<div class="voice-forwarded-label">Forwarded</div>':'')+'<div class="whatsapp-voice-bubble"><span class="whatsapp-voice-icon">🎙</span><div class="whatsapp-voice-content"><div class="whatsapp-voice-waveform" aria-label="Voice waveform" role="img">'+voiceWaveformBars(m)+'<span class="whatsapp-voice-playhead" aria-hidden="true"></span></div><audio controls preload="metadata" src="'+esc(src)+'" aria-label="Voice message"></audio></div><button type="button" class="voice-message-options" aria-label="Voice message options" title="Options" onclick="showVoiceMessageOptions(event)">⋮</button></div>';
   else if(isImage&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'image\')" rel="noopener noreferrer" aria-label="Picture: '+esc(name)+'" style="display:inline-block;max-width:100%"><img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" style="display:block;width:auto;height:auto;max-width:100%;max-height:55vh;object-fit:contain;border-radius:8px"></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else if(isVideo&&src) attachmentHtml='<div style="margin:7px 0"><a href="'+esc(src)+'" onclick="openMessageMediaViewer(event,this,\'video\')" rel="noopener noreferrer" aria-label="Video: '+esc(name)+'" style="display:block;position:relative;max-width:520px;text-decoration:none"><video muted playsinline preload="metadata" src="'+esc(src)+'" style="display:block;width:100%;max-height:240px;object-fit:contain;background:#111;border-radius:8px;pointer-events:none"></video><span style="display:inline-block;margin-top:5px;padding:5px 10px;border-radius:6px;background:#128c7e;color:#fff;font-weight:600">▶ Open video</span></a><div style="font-size:.75rem;color:#667781;margin-top:3px">'+esc(name)+'</div></div>';
   else attachmentHtml='<p style="margin-top:5px!important">📎 '+esc(name)+'</p>';
@@ -2374,7 +2374,7 @@ function messageThreadItem(m,me){
  const status=own?'<span title="Message status">'+(readBy.length?'✓✓':'✓')+'</span>':'';
  const actions='';
 
- const optionsButton='<button type="button" class="voice-message-options" aria-label="Message options" title="Message options" onclick="showVoiceMessageOptions(event,\''+esc(String(m.id||''))+'\')" style="position:absolute;right:6px;top:6px;z-index:2">⋮</button>';
+ const optionsButton='<button type="button" class="voice-message-options" aria-label="Message options" title="Message options" onclick="showVoiceMessageOptions(event)" style="position:absolute;right:6px;top:6px;z-index:2">⋮</button>';
   return '<div class="message-thread-item '+(own?'own':'incoming')+'" data-message-id="'+esc(m.id)+'" style="position:relative;padding-right:42px">'+optionsButton+sender+unreadHtml+(m.body?'<p>'+formatMessageBody(m.body)+'</p>':'')+attachmentHtml+'<div class="message-meta"><span>'+time+'</span>'+status+'</div>'+actions+'</div>';
 }
 
@@ -2398,6 +2398,8 @@ function updateVoiceWaveform(audio){
 },true));
 function showVoiceMessageOptions(event,id){
  event.preventDefault();event.stopPropagation();
+ if(id==null||id===''){const item=event.currentTarget&&event.currentTarget.closest('.message-thread-item');id=item&&item.dataset?item.dataset.messageId:'';}
+ if(!id)return;
  const rect=event.currentTarget.getBoundingClientRect();
  showMessageActionMenu(id,rect.right,rect.bottom+4);
 }
