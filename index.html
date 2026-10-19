@@ -2570,18 +2570,44 @@ function ahrufCallHistoryMarkup(body){
  const people=Math.max(2,Number(parts[3])||2);
  return '<div class="ahruf-call-history"><span class="ahruf-call-history-icon">'+(parts[0]==='video'?'▣':'☎')+'</span><div><b>'+esc(kind)+'</b><small>'+esc(status)+' · '+esc(duration)+(parts[1]==='answered'?' · '+people+' participants':'')+'</small></div></div>';
 }
-async function ahrufSaveCallHistory(peer,key,kind,seconds,answered,people){
+async function ahrufSendCallInvite(call){
+ const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
+ const message=(call.kind==='video'?'📹 Incoming video call. ':'☎ Incoming voice call. ')+'Join now: https://meet.jit.si/'+call.room;
+ call.inviteBody=message;
+ try{
+  if(ONLINE){
+   const result=await onlineApi('send_message',{to:call.peer,subject:'',category:'general',message});
+   if(result.state&&Array.isArray(result.state.messages)){
+    S.messages=result.state.messages;
+    const sent=S.messages.slice().reverse().find(m=>String(m.from||'').toLowerCase()===me&&String(m.to||'').toLowerCase()===String(call.peer).toLowerCase()&&String(m.body||'')===message);
+    if(sent)call.inviteMessageId=sent.id;
+   }
+  }else{
+   const pair=[me,String(call.peer).toLowerCase()].sort().join('|');
+   const existing=(S.messages||[]).slice().reverse().find(m=>[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|')===pair);
+   const item={id:'call-invite-'+Date.now(),conversationId:existing?.conversationId||pair,from:user.username||user.id,fromName:user.name,fromRole:user.role,to:call.peer,toName:call.peer,toRole:'user',subject:'',category:'general',body:message,status:'open',createdAt:new Date().toISOString(),readBy:[user.username||user.id]};
+   S.messages.push(item);call.inviteMessageId=item.id;save();
+  }
+ }catch(e){console.warn('Could not send call invitation:',e);toast('Call started, but the chat invitation could not be sent. You can still use Invite inside the call.');}
+}
+async function ahrufSaveCallHistory(peer,key,kind,seconds,answered,people,inviteMessageId){
  if(!peer)return;
  const message=AHRUF_CALL_HISTORY_PREFIX+[kind,answered?'answered':'missed',Math.max(0,Math.round(seconds)),Math.max(1,people||1)].join('|');
  try{
   if(ONLINE){
-   const result=await onlineApi('send_message',{to:peer,subject:'',category:'general',message,conversationId:String(key||'')});
+   let result;
+   if(inviteMessageId)result=await onlineApi('edit_message',{id:inviteMessageId,message});
+   else result=await onlineApi('send_message',{to:peer,subject:'',category:'general',message});
    if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages;
   }else{
-   const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
-   const pair=[me,String(peer).toLowerCase()].sort().join('|');
-   const existing=(S.messages||[]).slice().reverse().find(m=>[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|')===pair);
-   S.messages.push({id:'call-'+Date.now(),conversationId:existing?.conversationId||pair,from:user.username||user.id,fromName:user.name,fromRole:user.role,to:peer,toName:peer,toRole:'user',subject:'',category:'general',body:message,status:'open',createdAt:new Date().toISOString(),readBy:[user.username||user.id]});
+   const existing=inviteMessageId?(S.messages||[]).find(m=>String(m.id)===String(inviteMessageId)):null;
+   if(existing){existing.body=message;existing.editedAt=new Date().toISOString();}
+   else{
+    const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
+    const pair=[me,String(peer).toLowerCase()].sort().join('|');
+    const prior=(S.messages||[]).slice().reverse().find(m=>[String(m.from||'').toLowerCase(),String(m.to||'').toLowerCase()].sort().join('|')===pair);
+    S.messages.push({id:'call-'+Date.now(),conversationId:prior?.conversationId||pair,from:user.username||user.id,fromName:user.name,fromRole:user.role,to:peer,toName:peer,toRole:'user',subject:'',category:'general',body:message,status:'open',createdAt:new Date().toISOString(),readBy:[user.username||user.id]});
+   }
    save();
   }
  }catch(e){console.warn('Could not save call history:',e);toast('Call ended, but its history could not be saved.');}
@@ -2593,7 +2619,7 @@ function closeAhrufCall(log=true){
  const elapsed=Math.max(0,Math.floor((Date.now()-call.startedAt)/1000));
  try{call.api?.dispose()}catch(_){}
  call.overlay?.remove();
- if(log)ahrufSaveCallHistory(call.peer,call.key,call.kind,elapsed,call.remoteJoined,call.remoteJoined?call.participants.size+1:1);
+ if(log)ahrufSaveCallHistory(call.peer,call.key,call.kind,elapsed,call.remoteJoined,call.remoteJoined?call.participants.size+1:1,call.inviteMessageId);
 }
 async function startAhrufCall(kind){
  if(ahrufActiveCall)return toast('A call is already open.');
@@ -2617,6 +2643,8 @@ async function startAhrufCall(kind){
   script=document.createElement('script');script.src='https://meet.jit.si/external_api.js';script.async=true;script.dataset.ahrufJitsi='1';script.onload=resolve;script.onerror=reject;document.head.appendChild(script);
  });
  try{
+  await ahrufSendCallInvite(call);
+  if(ahrufActiveCall!==call)return;
   await loadApi();
   if(ahrufActiveCall!==call)return;
   stage.innerHTML='';
@@ -2634,6 +2662,7 @@ async function startAhrufCall(kind){
  }catch(e){
   console.error('Call setup failed:',e);
   if(ahrufActiveCall===call){ahrufActiveCall=null;overlay.remove()}
+  ahrufSaveCallHistory(call.peer,call.key,call.kind,0,false,1,call.inviteMessageId);
   toast('Could not start the call. Check your internet connection and browser permissions.');
  }
 }
