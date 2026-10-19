@@ -1974,6 +1974,17 @@ function unreadCount(){
  const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
  return (S.messages||[]).filter(m=>String(m.to||'').toLowerCase()===me&&!(Array.isArray(m.readBy)?m.readBy:[]).some(x=>String(x).toLowerCase()===me)).length;
 }
+ function syncAppUnreadBadge(){
+  const count=user?unreadCount():0;
+  try{
+   if('setAppBadge' in navigator){
+    if(count>0)navigator.setAppBadge(count).catch(()=>{});
+    else if('clearAppBadge' in navigator)navigator.clearAppBadge().catch(()=>{});
+   }
+  }catch(e){}
+  const baseTitle='Al-Ahruf International Academy';
+  document.title=count>0?'('+count+') '+baseTitle:baseTitle;
+ }
 function myTeacher(){
  if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
  const student=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(user.username||user.id||'').toLowerCase())||((S.students||[]).length===1?(S.students||[])[0]:null);
