@@ -2109,7 +2109,7 @@ function myTeacher(){
  const assigned=student?.teacher;
  const teacher=(S.teachers||[]).find(t=>String(t.username||'').toLowerCase()===String(assigned||'').toLowerCase());
  if(!assigned||!teacher)return '<div class="card"><h3>My Teacher</h3><p class="mute">Your teacher has not been assigned yet. Please contact the academy administrator.</p></div>';
- return '<div class="card"><h3>My Teacher</h3><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 0">'+teacherAvatar(teacher,64)+'<div><h3 style="margin:0 0 6px">'+esc(teacher.name||'Teacher')+'</h3><div class="mute">Your assigned Quran teacher</div>'+(teacher.email?'<div>'+esc(teacher.email)+'</div>':'')+(teacher.phone?'<div>'+esc(teacher.phone)+'</div>':'')+'</div></div><p class="mute">Send a private message to ask a question or discuss your lessons.</p><button class="btn" onclick="composeMessage(\''+esc(teacher.username)+'\')">Message My Teacher</button></div>';
+ return '<div class="card"><h3>My Teacher</h3><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 0">'+teacherAvatar(teacher,64)+'<div><h3 style="margin:0 0 6px">'+esc(teacher.name||'Teacher')+'</h3><div class="mute">Your assigned Quran teacher</div>'+(teacher.email?'<div>'+esc(teacher.email)+'</div>':'')+(teacher.phone?'<div>'+esc(teacher.phone)+'</div>':'')+'</div></div><p class="mute">Send a private message to ask a question or discuss your lessons.</p><button class="btn" onclick="openClassmateDiscussion(\''+esc(teacher.username)+'\')">Message My Teacher</button></div>';
 }
 function currentStudent(){
  const sid=String(user.username||user.studentId||user.student_id||user.id||'').trim().toLowerCase();
@@ -2168,6 +2168,7 @@ function openClassmateDiscussion(to){
   return (from===me&&dest===peer)||(from===peer&&dest===me);
  }).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
  activeMessageConversationKey=matching.length?messageConversationKey(matching[0]):[me,peer].sort().join('|');
+ tab='messages';
  document.body.classList.add('message-conversation-open');
  render();
 }
