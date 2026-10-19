@@ -2552,6 +2552,25 @@ function messages(){
  document.body.classList.add("message-conversation-open");
   return header+'<section class="card message-chat-shell"><div class="message-chat-header"><button class="btn ghost sm" onclick="document.body.classList.remove(&quot;message-conversation-open&quot;);activeMessageConversationKey=null;render()" aria-label="Back to discussions" title="Back to discussions">←</button><span class="message-chat-avatar">'+esc(String(heading||'?').trim().charAt(0).toUpperCase())+'</span><div style="flex:1;min-width:0"><b>'+esc(heading)+'</b><div style="font-size:.76rem;color:#667781">Discussion · '+items.length+' message'+(items.length===1?'':'s')+'</div></div></div><div class="message-thread">'+renderThreadMessages(items,me)+'</div>'+replyForm+'</section>';
 }
+/* On touch screens, swiping left inside an open discussion returns to the discussion list. */
+(function(){
+ let startX=0,startY=0,tracking=false;
+ document.addEventListener('touchstart',function(e){
+  if(!document.body.classList.contains('message-conversation-open')||!e.touches||e.touches.length!==1){tracking=false;return}
+  if(e.target.closest('input,textarea,select,button,a,audio,video,[contenteditable="true"]')){tracking=false;return}
+  startX=e.touches[0].clientX;startY=e.touches[0].clientY;tracking=true;
+ },{passive:true});
+ document.addEventListener('touchend',function(e){
+  if(!tracking||!document.body.classList.contains('message-conversation-open')||!e.changedTouches||!e.changedTouches.length){tracking=false;return}
+  const dx=e.changedTouches[0].clientX-startX,dy=e.changedTouches[0].clientY-startY;tracking=false;
+  if(dx < -90 && Math.abs(dx)>Math.abs(dy)*1.35){
+   document.body.classList.remove('message-conversation-open');
+   activeMessageConversationKey=null;
+   render();
+  }
+ },{passive:true});
+ document.addEventListener('touchcancel',function(){tracking=false},{passive:true});
+})();
 let liveMessagePollBusy=false,lastLiveMessagePoll=0;
 function liveMessageSignature(list){return JSON.stringify((list||[]).map(m=>[m.id,m.body,m.attachment?.name,m.attachment?.type,m.attachment?.size,m.attachment?.url,m.attachment?.data?.length,m.createdAt,m.editedAt,m.deletedAt,[...(m.readBy||[])].map(String).sort().join(',')]))}
 async function pollLiveMessages(){
