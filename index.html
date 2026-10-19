@@ -2062,10 +2062,17 @@ function composeMessage(to,replyToId){
  recordedAudioAttachment=null;activeMessageRecorder=null;activeMessageChunks=[];
  const original=replyToId?(S.messages||[]).find(m=>String(m.id)===String(replyToId)):null;
  const recipients=messageRecipients();
- if(to&&!recipients.some(x=>String(x.u).toLowerCase()===String(to).toLowerCase())&&original){recipients.push({u:to,n:original.fromName||to,r:original.fromRole||'user'});}
+ if(to&&!recipients.some(x=>String(x.u).toLowerCase()===String(to).toLowerCase())){
+  const peer=(S.messagePeers||[]).find(x=>String(x.id||x.username||'').toLowerCase()===String(to).toLowerCase());
+  const student=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(to).toLowerCase());
+  const teacher=(S.teachers||[]).find(x=>String(x.username||'').toLowerCase()===String(to).toLowerCase());
+  recipients.push({u:to,n:original?.fromName||peer?.name||student?.name||teacher?.name||to,r:original?.fromRole||(student||peer?'student':teacher?'teacher':'user')});
+ }
+ const selected=recipients.find(x=>String(x.u).toLowerCase()===String(to||'').toLowerCase());
  const opts=recipients.map(x=>'<option value="'+esc(x.u)+'" '+(String(x.u).toLowerCase()===String(to||'').toLowerCase()?'selected':'')+'>'+esc(x.n)+' — '+esc(x.r)+'</option>').join('');
+ const recipientField=to?'<input type="hidden" name="to" value="'+esc(to)+'"><p class="mute" style="margin:0 0 12px">To: <b>'+esc(selected?.n||to)+'</b></p>':'<label>Recipient</label><select name="to" required>'+opts+'</select>';
  const replyField=replyToId?'<input type="hidden" name="replyToId" value="'+esc(replyToId)+'">':'';
-  modal(replyToId?'Reply':'New message',replyField+'<label>Recipient</label><select name="to" required>'+opts+'</select><label>Message (optional when attaching a file or voice message)</label><textarea name="message" rows="5" placeholder="Write a message..."></textarea><label>Attach any file type</label><input type="file" name="attachment" accept="*/*" style="padding:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn ghost sm recordAudioBtn" type="button" onclick="startMessageRecording()">🎙 Record voice</button><button class="btn ghost sm stopAudioBtn" type="button" onclick="stopMessageRecording()" disabled>■ Stop recording</button></div><p class="recordingStatus" class="mute">Any file type is accepted. Maximum file size: 10 MB.</p>',sendPlatformMessage,'Send message')
+  modal(replyToId?'Reply':to?'Message '+(selected?.n||to):'New message',replyField+recipientField+'<label>Message (optional when attaching a file or voice message)</label><textarea name="message" rows="5" placeholder="Write a message..."></textarea><label>Attach any file type</label><input type="file" name="attachment" accept="*/*" style="padding:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn ghost sm recordAudioBtn" type="button" onclick="startMessageRecording()">🎙 Record voice</button><button class="btn ghost sm stopAudioBtn" type="button" onclick="stopMessageRecording()" disabled>■ Stop recording</button></div><p class="recordingStatus mute">Any file type is accepted. Maximum file size: 10 MB.</p>',sendPlatformMessage,'Send message')
 }
 function replyMessage(to){composeMessage(to)}
 function replyToPlatformMessage(id){
