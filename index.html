@@ -2607,7 +2607,7 @@ async function ahrufCreateCall(kind,invitees){
  if(ahrufActiveCall)return ahrufCallToast('A call is already open.');
  if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)return ahrufCallToast('Calls require a modern browser, HTTPS, and microphone/camera permission.');
  const room='ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),key=String(activeMessageConversationKey||''),peer=invitees[0]||ahrufCallPeer(key);
- const call={room,key,peer,kind,invitees:[...new Set(invitees.map(x=>String(x).toLowerCase()))],participants:new Map(),pcs:new Map(),streams:new Map(),localStream:null,client:null,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:false,ended:false,inviteMessageId:null};
+ const call={room,key,peer,kind,invitees:[...new Set(invitees.map(x=>String(x).toLowerCase()))],participants:new Map(),pcs:new Map(),streams:new Map(),pendingIce:new Map(),localStream:null,client:null,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:false,ended:false,inviteMessageId:null};
  ahrufActiveCall=call;
  try{
   call.client=await ahrufCallClient();
@@ -2674,8 +2674,8 @@ function ahrufAttachRoomEvents(call){
    let pc=call.pcs.get(p.from);
    if(!pc&&p.description?.type==='offer')pc=await ahrufMakePeer(call,p.from,false);
    if(!pc)return;
-   if(p.description){await pc.setRemoteDescription(p.description);if(p.description.type==='offer'){const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await ahrufBroadcast(call,'signal',{to:p.from,description:pc.localDescription})}}
-   if(p.candidate)try{await pc.addIceCandidate(p.candidate)}catch(e){console.warn('ICE candidate skipped:',e.message)}
+   if(p.description){await pc.setRemoteDescription(p.description);const queued=call.pendingIce.get(p.from)||[];call.pendingIce.delete(p.from);for(const candidate of queued){try{await pc.addIceCandidate(candidate)}catch(e){console.warn('Queued ICE candidate skipped:',e.message)}}if(p.description.type==='offer'){const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await ahrufBroadcast(call,'signal',{to:p.from,description:pc.localDescription})}}
+   if(p.candidate){if(pc.remoteDescription){try{await pc.addIceCandidate(p.candidate)}catch(e){console.warn('ICE candidate skipped:',e.message)}}else{const queued=call.pendingIce.get(p.from)||[];queued.push(p.candidate);call.pendingIce.set(p.from,queued)}}
   }catch(e){console.warn('Call negotiation failed:',e)}
  });
  call.channel.on('broadcast',{event:'peer_leave'},({payload:p})=>{if(p?.id){const pc=call.pcs.get(p.id);if(pc)pc.close();call.pcs.delete(p.id);call.streams.delete(p.id);call.participants.delete(p.id);ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Participant left · '+call.participants.size+' connected')}});
