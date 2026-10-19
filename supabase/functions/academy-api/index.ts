@@ -1162,12 +1162,12 @@ async function updateProfilePhoto(ctx: any, body: any) {
   const { data: publicData } = ctx.supabaseAdmin.storage
     .from("profile-photos")
     .getPublicUrl(`${profile.id}/avatar.jpg`);
-  const photoUrl = publicData.publicUrl;
+  const photoUrl = `${publicData.publicUrl}?v=${Date.now()}`;
   const { error: updateError } = await ctx.supabaseAdmin.from("profiles")
     .update({ photo_url: photoUrl }).eq("id", profile.id);
   if (updateError) throw updateError;
 
-  return { ok: true, photo_url: `${photoUrl}?v=${Date.now()}` };
+  return { ok: true, photo_url: photoUrl };
 }
 
 async function getState(ctx: any) {
