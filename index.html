@@ -2569,7 +2569,7 @@ function messages(){
  document.addEventListener('touchend',function(e){
   if(!tracking||!document.body.classList.contains('message-conversation-open')||!e.changedTouches||!e.changedTouches.length){tracking=false;return}
   const dx=e.changedTouches[0].clientX-startX,dy=e.changedTouches[0].clientY-startY;tracking=false;
-  if(dx < -65 && Math.abs(dx)>Math.abs(dy)*1.2){
+  if(dx > 65 && Math.abs(dx)>Math.abs(dy)*1.2){
    document.body.classList.remove('message-conversation-open');
    activeMessageConversationKey=null;
    render();
