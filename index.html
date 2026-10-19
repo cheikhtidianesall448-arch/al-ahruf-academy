@@ -2019,7 +2019,7 @@ function syncSiteFavicon(){
 }
 function render(){
  const who=$('#who'),out=$('#out'),app=$('#app'),themeBtn=$('button[onclick="theme()"]');
- if(user)ensureAhrufCallInbox();
+ 
  if(themeBtn)themeBtn.textContent=currentLang==='fr'?'Thème':currentLang==='ar'?'المظهر':'Theme';
  if(who)who.textContent=user?user.name:'';
  if(out)out.style.display=user?'':'none';
@@ -2621,7 +2621,6 @@ async function ahrufCreateCall(kind,invitees){
   });
   await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||user?.username||ahrufMe(),kind});
   for(const id of call.invitees){
-   await ahrufBroadcastToUser(call,id,{type:'invite',room,kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),createdAt:Date.now()});
    ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn('Call invite message could not be saved:',e));
   }
   ahrufRenderCallTiles(call);
@@ -2695,7 +2694,7 @@ async function ahrufInviteDuringCall(call){
  const available=ahrufCallPeople().filter(p=>!call.invitees.includes(String(p.id).toLowerCase())&&!call.participants.has(String(p.id).toLowerCase()));
  if(!available.length)return ahrufCallToast('No additional participants are available.');
  const body='<p class="mute">Select academy users to invite to this active call.</p><div class="ahruf-call-invite-list">'+available.map(p=>'<label><input type="checkbox" name="invitee" value="'+esc(p.id)+'"><span><b>'+esc(p.name)+'</b><small>'+esc(p.role)+'</small></span></label>').join('')+'</div>';
- modal('Invite participants',body,async form=>{const ids=[...form.querySelectorAll('input[name="invitee"]:checked')].map(x=>x.value);if(!ids.length)return ahrufCallToast('Choose at least one participant.');for(const id of ids){call.invitees.push(String(id).toLowerCase());await ahrufBroadcastToUser(call,id,{type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||ahrufMe(),createdAt:Date.now()});ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn(e))}ahrufSetCallStatus(call,'Invitation sent to '+ids.length+' participant'+(ids.length===1?'':'s'));},'Send invitations');
+ modal('Invite participants',body,async form=>{const ids=[...form.querySelectorAll('input[name="invitee"]:checked')].map(x=>x.value);if(!ids.length)return ahrufCallToast('Choose at least one participant.');for(const id of ids){call.invitees.push(String(id).toLowerCase());ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn(e))}ahrufSetCallStatus(call,'Invitation sent to '+ids.length+' participant'+(ids.length===1?'':'s'));},'Send invitations');
 }
 function ensureAhrufCallInbox(){
  const me=ahrufMe();if(!me)return;
@@ -2870,6 +2869,7 @@ async function pollLiveMessages(){
   if(!messagesChanged&&!notificationsChanged)return;
   const me=String(user.username||user.studentId||user.student_id||user.id||'').toLowerCase();
   const incoming=messagesChanged?fresh.filter(m=>!oldIds.has(String(m.id))&&String(m.to||'').toLowerCase()===me):[];
+  incoming.filter(m=>String(m.body||'').startsWith(AHRUF_CALL_INVITE_PREFIX)).forEach(m=>{const p=String(m.body).slice(AHRUF_CALL_INVITE_PREFIX.length).split('|');if(p.length>=4)ahrufShowIncomingCall({room:p[0],kind:p[1],from:p[2],fromName:decodeURIComponent(p.slice(3).join('|'))})});
   if(messagesChanged)S.messages=fresh;
   if(Array.isArray(data.state.notifications))S.notifications=data.state.notifications;
   if(!messagesChanged){if(tab!=='messages'||!activeMessageConversationKey){const y=window.scrollY;render();window.scrollTo(0,y)}return;}
