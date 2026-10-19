@@ -1216,6 +1216,14 @@ body:has(.hero) .hero>.card form .btn{
 #app-install-notice .app-install-actions button{float:none;margin:0;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.9rem;font-weight:700}
 #app-install-notice #app-install-now{background:var(--pri);border-color:var(--pri);color:#fff}
 #app-install-notice #app-install-later{background:transparent;color:var(--ink)}
+
+/* Long-press message action menu; hidden until the user holds a message for one second. */
+.message-thread-item{touch-action:pan-y; -webkit-touch-callout:none}
+.message-thread-item .message-actions{display:none!important}
+.message-longpress-menu{position:fixed;z-index:10020;min-width:160px;max-width:220px;padding:5px;background:var(--card,#fff);color:var(--ink,#173c37);border:1px solid var(--line,#ccd5d1);border-radius:12px;box-shadow:0 8px 28px #0003;display:flex;flex-direction:column;gap:3px}
+.message-longpress-menu button{display:block;width:100%;min-height:42px;padding:9px 12px;text-align:left;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:.9rem;cursor:pointer}
+.message-longpress-menu button:hover,.message-longpress-menu button:focus-visible{background:var(--soft,#edf3ef);outline:2px solid var(--gold,#c99a3d);outline-offset:-2px}
+.message-longpress-menu button.danger{color:#b42318}
 </style>
 
 <style>
@@ -2324,8 +2332,90 @@ function messageThreadItem(m,me){
  const sender=!own?'<div class="message-sender">'+esc(m.fromName||m.from)+'</div>':'';
  const unreadHtml=unread?'<span class="message-unread">Unread</span>':'';
  const status=own?'<span title="Message status">'+(readBy.length?'✓✓':'✓')+'</span>':'';
- const actions=(canEdit?'<div class="message-actions"><button class="btn ghost sm" onclick="deletePlatformMessage(\''+esc(m.id)+'\')">Delete</button>':'')+(m.attachment&&String(m.attachment.type||'').toLowerCase().startsWith('audio/')?'<button class="btn ghost sm" onclick="forwardVoiceMessage(\''+esc(m.id)+'\')">Forward</button><button class="btn ghost sm" onclick="shareVoiceMessage(\''+esc(m.id)+'\')">Share</button>':'')+(canEdit||m.attachment&&String(m.attachment.type||'').toLowerCase().startsWith('audio/')?'</div>':'');
+ const actions='';
+
  return '<div class="message-thread-item '+(own?'own':'incoming')+'" data-message-id="'+esc(m.id)+'">'+sender+unreadHtml+(m.body?'<p>'+formatMessageBody(m.body)+'</p>':'')+attachmentHtml+'<div class="message-meta"><span>'+time+'</span>'+status+'</div>'+actions+'</div>';
+}
+
+/* Message actions appear only after a one-second long press. */
+let messageHoldTimer=null,messageHoldStart=null,messageActionMenu=null;
+function clearMessageHold(){if(messageHoldTimer){clearTimeout(messageHoldTimer);messageHoldTimer=null}messageHoldStart=null}
+function hideMessageActionMenu(){if(messageActionMenu){messageActionMenu.remove();messageActionMenu=null}}
+function showMessageActionMenu(id,x,y){
+ const m=(S.messages||[]).find(item=>String(item.id)===String(id));
+ if(!m)return;
+ hideMessageActionMenu();
+ const me=String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
+ const own=String(m.from||'').toLowerCase()===me;
+ const canManage=user?.role==='admin'||own;
+ const isAudio=!!(m.attachment&&String(m.attachment.type||'').toLowerCase().startsWith('audio/'));
+ const options=[];
+ if(canManage&&String(m.body||'').trim())options.push('<button type="button" data-action="edit">✏️ Edit</button>');
+ if(isAudio)options.push('<button type="button" data-action="forward">↪ Forward</button>');
+ if(canManage)options.push('<button type="button" data-action="delete" class="danger">🗑 Delete</button>');
+ if(!options.length)return;
+ const menu=document.createElement('div');
+ menu.className='message-longpress-menu';
+ menu.setAttribute('role','menu');
+ menu.innerHTML=options.join('');
+ menu.style.left=Math.max(8,Math.min(x,window.innerWidth-176))+'px';
+ menu.style.top=Math.max(8,Math.min(y,window.innerHeight-160))+'px';
+ menu.addEventListener('pointerdown',event=>event.stopPropagation());
+ menu.addEventListener('click',event=>{
+  const button=event.target.closest('button[data-action]');
+  if(!button)return;
+  const action=button.dataset.action;
+  hideMessageActionMenu();
+  if(action==='edit')editPlatformMessage(id);
+  else if(action==='forward')forwardVoiceMessage(id);
+  else if(action==='delete')deletePlatformMessage(id);
+ });
+ document.body.appendChild(menu);
+ messageActionMenu=menu;
+}
+document.addEventListener('pointerdown',event=>{
+ const item=event.target.closest('.message-thread-item');
+ if(!item||event.target.closest('button,a,input,textarea,select,audio,video,[contenteditable="true"]'))return;
+ clearMessageHold();
+ const id=item.getAttribute('data-message-id');
+ if(!id)return;
+ messageHoldStart={id,x:event.clientX,y:event.clientY};
+ messageHoldTimer=setTimeout(()=>{
+  if(!messageHoldStart)return;
+  showMessageActionMenu(messageHoldStart.id,messageHoldStart.x,messageHoldStart.y);
+  messageHoldTimer=null;
+ },1000);
+},true);
+document.addEventListener('pointerup',clearMessageHold,true);
+document.addEventListener('pointercancel',clearMessageHold,true);
+document.addEventListener('pointermove',event=>{
+ if(messageHoldStart&&Math.hypot(event.clientX-messageHoldStart.x,event.clientY-messageHoldStart.y)>12)clearMessageHold();
+},true);
+document.addEventListener('contextmenu',event=>{
+ if(event.target.closest('.message-thread-item'))event.preventDefault();
+});
+document.addEventListener('pointerdown',event=>{
+ if(messageActionMenu&&!event.target.closest('.message-longpress-menu'))hideMessageActionMenu();
+},false);
+async function editPlatformMessage(id){
+ const m=(S.messages||[]).find(item=>String(item.id)===String(id));
+ if(!m)return toast('Message not found.');
+ const me=String(user?.username||user?.id||'').toLowerCase();
+ if(user.role!=='admin'&&String(m.from||'').toLowerCase()!==me)return toast('You can edit only your own messages.');
+ if(!String(m.body||'').trim())return toast('Only text messages can be edited.');
+ modal('Edit message','<label>Message</label><textarea name="message" rows="4" maxlength="3000" required>'+esc(m.body)+'</textarea>',async form=>{
+  const message=String(form.elements.message?.value||'').trim();
+  if(!message)return toast('A message or attachment is required.');
+  try{
+   if(ONLINE){
+    const result=await onlineApi('edit_message',{id:m.id,message});
+    if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages;
+    else if(Array.isArray(result.messages))S.messages=result.messages;
+    else {const current=(S.messages||[]).find(item=>String(item.id)===String(id));if(current){current.body=message;current.editedAt=new Date().toISOString()}}
+   }else{m.body=message;m.editedAt=new Date().toISOString();save()}
+   toast('Message updated');render();
+  }catch(error){toast(error?.message||'Could not edit message.')}
+ },'Save changes');
 }
 function renderThreadMessages(items,me){
  let previousDay='',out='';
@@ -2453,19 +2543,7 @@ async function forwardVoiceMessage(id){
   await sendPlatformMessage(f);
  },'Forward voice message');
 }
-async function shareVoiceMessage(id){
- const m=(S.messages||[]).find(x=>String(x.id)===String(id)),a=m?.attachment;
- if(!a||!String(a.type||'').toLowerCase().startsWith('audio/'))return toast('Voice message not found.');
- try{
-  if(!navigator.share)throw new Error('sharing-unavailable');
-  const data=a.data||a.url||'';
-  if(data.startsWith('data:')&&navigator.canShare&&typeof File!=='undefined'){
-   const response=await fetch(data),blob=await response.blob(),file=new File([blob],a.name||'voice-message.webm',{type:a.type||blob.type||'audio/webm'});
-   if(navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Al-Ahruf voice message'});return}
-  }
-  await navigator.share({title:'Al-Ahruf voice message',text:'Voice message shared from Al-Ahruf International Academy.'});
- }catch(e){if(e.name==='AbortError')return;toast('Sharing audio is not supported here. Use Forward to send it to another academy user.')}
-}
+
 function cancelMessageDraft(form){
  if(!form)return;
  const msg=form.elements.message;if(msg)msg.value='';
