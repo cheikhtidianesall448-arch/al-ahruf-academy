@@ -1212,6 +1212,10 @@ body:has(.hero) .hero>.card form .btn{
 /* Small, non-blocking notice about finding the installed app */
 #app-install-notice{position:fixed;right:16px;bottom:16px;z-index:99999;display:none;width:min(380px,calc(100vw - 32px));padding:14px 16px;background:var(--card,#fffdf8);color:var(--ink,#12302b);border:1px solid var(--gold,#c99a3d);border-radius:14px;box-shadow:0 8px 30px #0003;font-size:.95rem}
 #app-install-notice button{float:right;margin-left:12px;border:0;background:transparent;color:inherit;font-size:1.2rem;cursor:pointer}
+#app-install-notice .app-install-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}
+#app-install-notice .app-install-actions button{float:none;margin:0;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.9rem;font-weight:700}
+#app-install-notice #app-install-now{background:var(--pri);border-color:var(--pri);color:#fff}
+#app-install-notice #app-install-later{background:transparent;color:var(--ink)}
 </style>
 
 <style>
