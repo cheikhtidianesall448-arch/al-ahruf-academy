@@ -2998,7 +2998,16 @@ async function ahrufSaveCallHistory(peer,key,kind,seconds,answered,people,invite
  }catch(e){console.warn('Could not save call history:',e);ahrufCallToast('Call ended, but its history could not be saved.')}
  if(activeMessageConversationKey===key)render();
 }
-async function startAhrufCall(kind){ahrufCallInviteModal(kind,ahrufCallPeer(activeMessageConversationKey))}
+async function startAhrufCall(kind){
+ if(ahrufActiveCall)return ahrufCallToast('A call is already open.');
+ const peer=ahrufCallPeer(activeMessageConversationKey);
+ // In a one-to-one discussion, tapping the voice/video icon calls that person immediately.
+ // Keep the participant picker only for group discussions where no single peer can be inferred.
+ if(peer&&!String(activeMessageConversationKey||'').toLowerCase().startsWith('group:')){
+  return ahrufCreateCall(kind==='audio'?'audio':'video',[peer]);
+ }
+ return ahrufCallInviteModal(kind,peer);
+}
 (function installAhrufCallStyles(){
  if(document.getElementById('ahrufCallStyles'))return;
  const st=document.createElement('style');st.id='ahrufCallStyles';
