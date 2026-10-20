@@ -1223,11 +1223,16 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
       return { status: "denied", allowed: false, message: "This class call is available only during its scheduled time." };
     }
     const [hour, minute] = text(item.start).split(":").map(Number);
+    const [endHour, endMinute] = text(item.end).split(":").map(Number);
     const nowMinutes = Number(part("hour")) * 60 + Number(part("minute"));
     const startMinutes = hour * 60 + minute;
+    const endMinutes = endHour * 60 + endMinute;
+    const duration = endMinutes > startMinutes ? endMinutes - startMinutes : 60;
     const elapsed = nowMinutes - startMinutes;
-    if (!Number.isFinite(startMinutes) || elapsed < 0 || elapsed >= 30) {
-      return { status: "denied", allowed: false, message: "This class call is outside the permitted joining window." };
+    // Permit joining throughout the scheduled lesson, not only during its first 30 minutes.
+    // Attendance rules remain separate and are not changed by this call-access check.
+    if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || elapsed < 0 || elapsed >= duration) {
+      return { status: "denied", allowed: false, message: "This class call is outside the scheduled lesson time." };
     }
   }
   const teacherRecord = (state.teachers || []).find((t: any) =>
