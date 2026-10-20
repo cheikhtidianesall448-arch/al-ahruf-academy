@@ -2860,7 +2860,7 @@ async function ahrufInviteDuringCall(call){
  const available=ahrufCallPeople().filter(p=>!call.invitees.includes(String(p.id).toLowerCase())&&!call.participants.has(String(p.id).toLowerCase()));
  if(!available.length)return ahrufCallToast('No additional participants are available.');
  const body='<p class="mute">Select academy users to invite to this active call.</p><div class="ahruf-call-invite-list">'+available.map(p=>'<label><input type="checkbox" name="invitee" value="'+esc(p.id)+'"><span><b>'+esc(p.name)+'</b><small>'+esc(p.role)+'</small></span></label>').join('')+'</div>';
- modal('Invite participants',body,async form=>{const ids=[...Array.from(form).filter(x=>x.name==='invitee'&&x.checked)].map(x=>x.value);if(!ids.length)return ahrufCallToast('Choose at least one participant.');for(const id of ids){call.invitees.push(String(id).toLowerCase());const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe()};ahrufBroadcastToUser(call,id,invite).catch(e=>console.warn('Instant call alert failed:',e));ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn(e))}ahrufSetCallStatus(call,'Invitation sent to '+ids.length+' participant'+(ids.length===1?'':'s'));},'Send invitations');
+ modal('Invite participants',body,async form=>{const ids=[...Array.from(form).filter(x=>x.name==='invitee'&&x.checked)].map(x=>x.value);if(!ids.length)return ahrufCallToast('Choose at least one participant.');for(const id of ids){call.invitees.push(String(id).toLowerCase());const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),timetableId:call.timetableId||''};ahrufBroadcastToUser(call,id,invite).catch(e=>console.warn('Instant call alert failed:',e));ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn(e))}ahrufSetCallStatus(call,'Invitation sent to '+ids.length+' participant'+(ids.length===1?'':'s'));},'Send invitations');
 }
 function ensureAhrufCallInbox(){
  const me=ahrufMe();if(!me)return;
@@ -3851,12 +3851,13 @@ function myclass(){
  else if(teacher)notice=nextClassNotice(nextScheduledClass(schedule),'Your next class');
  else if(admin)notice=(S.teachers||[]).map(tr=>nextClassNotice(nextScheduledClass((S.timetable||[]).filter(x=>[tr.username,tr.name,tr.id].some(v=>String(x.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase()))),"Teacher "+(tr.name||tr.username)+"’s next class")).join('');
  if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
+ if(teacher)ahrufStartTeacherScheduleMonitor();
  updateNextClassCountdown();window._nextClassTimer=setInterval(updateNextClassCountdown,60000);
  const cards=schedule.map(item=>{
   const students=(Array.isArray(item.students)?item.students:[]).map(sid=>(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(sid||'').toLowerCase())).filter(Boolean);
   let actions='';
   if(student)actions='<button class="btn gold" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'video\')">📹 Call teacher</button><button class="btn ghost" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'audio\')">☎ Voice call</button>';
-  if(teacher)actions=students.map(st=>'<button class="btn gold" type="button" data-timetable="'+esc(item.id)+'" data-student="'+esc(st.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,this.dataset.student,\'video\')">📹 Call '+esc(st.name||st.id)+'</button><button class="btn ghost" type="button" data-timetable="'+esc(item.id)+'" data-student="'+esc(st.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,this.dataset.student,\'audio\')">☎ Voice</button>').join('');
+  if(teacher)actions='<button class="btn gold" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'video\')">📹 Call eligible students</button><button class="btn ghost" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'audio\')">☎ Voice call</button>'+students.map(st=>'<button class="btn ghost" type="button" data-timetable="'+esc(item.id)+'" data-student="'+esc(st.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,this.dataset.student,\'video\')">Call '+esc(st.name||st.id)+'</button>').join('');
   return '<div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 6px">'+esc(item.course||'Quran class')+'</h3><div class="mute">'+esc(item.day||'')+' · '+esc(item.start||'')+'–'+esc(item.end||'')+' · Senegal time (UTC+0)</div><div class="mute" style="margin-top:5px">Teacher: '+esc(teacherName(item.teacher))+(teacher?' · Students: '+esc(students.map(x=>x.name||x.id).join(', ')||'None assigned'):'')+'</div>'+(actions?'<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">'+actions+'</div>':'')+'</div>';
  }).join('');
  return notice+'<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">Direct audio and video calls inside Al-Ahruf. Timetable and attendance rules apply. No external meeting links are required.</span></div></div>'+(cards||'<div class="card mute">No scheduled classes are assigned here yet. Please check the timetable or contact the administrator.</div>');
@@ -3866,22 +3867,44 @@ async function startScheduledClassCall(timetableId,studentUsername='',kind='vide
  if(ahrufActiveCall)return ahrufCallToast('End your current call before starting another.');
  const room='ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
  try{
-  let result,peer='';
+  let result,peers=[];
   if(user.role==='student'){
+   const attendance=await onlineApi('record_class_attendance',{timetableId:String(timetableId)});
+   if(!['present','late'].includes(attendance.status))throw new Error(attendance.message||'You are not eligible for this scheduled call.');
    result=await onlineApi('authorize_student_class_call',{timetableId:String(timetableId),room});
    if(result?.status!=='allowed')throw new Error(result?.message||'This class call is not available now.');
-   peer=String(result.teacherUsername||'').trim().toLowerCase();
+   peers=[String(result.teacherUsername||'').trim().toLowerCase()];
   }else{
    result=await onlineApi('authorize_class_call',{timetableId:String(timetableId),studentUsername:String(studentUsername||''),room});
    if(result?.status!=='allowed')throw new Error(result?.message||'This class call is not available now.');
-   const selected=(result.students||[]).find(x=>String(x.username||'').trim().toLowerCase()===String(studentUsername||'').trim().toLowerCase());
-   peer=String(selected?.username||'').trim().toLowerCase();
+   peers=(result.students||[]).filter(x=>!studentUsername||String(x.username||'').trim().toLowerCase()===String(studentUsername).trim().toLowerCase()).map(x=>String(x.username||'').trim().toLowerCase());
   }
-  if(!peer)throw new Error('The other participant could not be identified or is not eligible.');
-  await ahrufCreateCall(kind==='audio'?'audio':'video',[peer],{room,timetableId:String(timetableId)});
+  peers=peers.filter(Boolean);
+  if(!peers.length)throw new Error('No eligible participant is available for this scheduled call.');
+  await ahrufCreateCall(kind==='audio'?'audio':'video',peers,{room,timetableId:String(timetableId)});
  }catch(e){ahrufCallToast(e?.message||'Could not start the scheduled class call.')}
 }
-
+function ahrufStartTeacherScheduleMonitor(){
+ if(window._ahrufTeacherScheduleTimer)return;
+ const check=async()=>{
+  if(!user||user.role!=='teacher'||document.hidden||ahrufActiveCall)return;
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Dakar',weekday:'long',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),get=n=>parts.find(p=>p.type===n)?.value||'';
+  const day=get('weekday').toLowerCase(),minutes=Number(get('hour'))*60+Number(get('minute'));
+  const schedule=(S.timetable||[]).filter(item=>[user.username,user.id,user.name].some(v=>String(item.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase())&&String(item.day||'').toLowerCase()===day);
+  for(const item of schedule){
+   const [sh,sm]=String(item.start||'').split(':').map(Number),[eh,em]=String(item.end||'').split(':').map(Number);
+   if(![sh,sm,eh,em].every(Number.isFinite)||minutes<sh*60+sm||minutes>=eh*60+em)continue;
+   window._ahrufAutoCalled=window._ahrufAutoCalled||new Set();
+   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Dakar',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+   const key=String(item.id)+'|'+date;
+   if(window._ahrufAutoCalled.has(key))continue;
+   window._ahrufAutoCalled.add(key);
+   await startScheduledClassCall(item.id,'','video');
+   if(ahrufActiveCall)break;
+  }
+ };
+ check();window._ahrufTeacherScheduleTimer=setInterval(check,30000);
+}
 function editClassLink(){modal('Class settings','Class calls are managed by the academy timetable. Edit the class day, start/end time, teacher, and assigned students in Timetable settings. No external meeting URL is needed.',()=>{},'Close')}
 function deleteClassLink(){toast('External class links are no longer used.')}
 function klass(){
