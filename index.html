@@ -2667,7 +2667,7 @@ async function enableAhrufCallAlerts(){
   toast(currentLang==='fr'?'Les alertes d’appel sont activées sur cet appareil.':currentLang==='ar'?'تم تفعيل تنبيهات المكالمات على هذا الجهاز.':'Call alerts are enabled on this device.');
  }catch(e){console.error('Call push setup failed:',e);toast(e?.message||'Could not enable call alerts.')}
 }
-function ahrufCheckPendingPushCall(){try{const u=new URL(location.href),room=u.searchParams.get('incomingCall');if(!room||!user||typeof ahrufShowIncomingCall!=='function')return;const from=u.searchParams.get('from')||'',fromName=u.searchParams.get('fromName')||from,kind=u.searchParams.get('kind')||'audio';u.searchParams.delete('incomingCall');u.searchParams.delete('from');u.searchParams.delete('fromName');u.searchParams.delete('kind');history.replaceState({},'',u.pathname+u.search+u.hash);ahrufShowIncomingCall({room,kind,from,fromName})}catch(e){console.warn('Could not restore incoming call alert:',e)}}
+function ahrufCheckPendingPushCall(){try{const u=new URL(location.href),room=u.searchParams.get('incomingCall');if(!room||!user||typeof ahrufShowIncomingCall!=='function')return;const from=u.searchParams.get('from')||'',fromName=u.searchParams.get('fromName')||from,kind=u.searchParams.get('kind')||'audio',timetableId=u.searchParams.get('timetableId')||'';u.searchParams.delete('incomingCall');u.searchParams.delete('from');u.searchParams.delete('fromName');u.searchParams.delete('kind');history.replaceState({},'',u.pathname+u.search+u.hash);ahrufShowIncomingCall({room,kind,from,fromName,timetableId})}catch(e){console.warn('Could not restore incoming call alert:',e)}}
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='AHRUF_INCOMING_CALL'&&user&&typeof ahrufShowIncomingCall==='function')ahrufShowIncomingCall(event.data.call)});
 
 function ahrufCallClient(){
@@ -2736,7 +2736,7 @@ async function ahrufCreateCall(kind,invitees,options={}){
   await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||user?.username||ahrufMe(),kind});
   ahrufStartRingback(call);
   for(const id of call.invitees){
-   const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe()};
+   const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),timetableId:call.timetableId||''};
    ahrufBroadcastToUser(call,id,invite).catch(e=>console.warn('Instant call alert failed; using message fallback:',e));
    ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn('Call invite message could not be saved:',e));
   }
@@ -2799,12 +2799,12 @@ function ahrufDirectConversationId(target){
  return String(previous?.conversationId||pair);
 }
 async function ahrufAppendCallInviteMessage(call,target){
- const body=AHRUF_CALL_INVITE_PREFIX+[call.room,call.kind,ahrufMe(),encodeURIComponent(String(user?.name||user?.username||ahrufMe()))].join('|');
+ const body=AHRUF_CALL_INVITE_PREFIX+[call.room,call.kind,ahrufMe(),encodeURIComponent(String(user?.name||user?.username||ahrufMe())),String(call.timetableId||'')].join('|');
  if(ONLINE){
   // The API reuses the existing direct conversation ID for this sender/recipient pair.
   const result=await onlineApi('send_message',{to:target,subject:'',category:'general',message:body});
   if(result.state&&Array.isArray(result.state.messages))S.messages=result.state.messages;
-  try{await ahrufPushRequest({action:'incoming_call',target,room:call.room,kind:call.kind});}catch(pushError){console.warn('Background call push was not delivered:',pushError?.message||pushError)}
+  try{await ahrufPushRequest({action:'incoming_call',target,room:call.room,kind:call.kind,timetableId:call.timetableId||''});}catch(pushError){console.warn('Background call push was not delivered:',pushError?.message||pushError)}
  }else{
   const conversationId=ahrufDirectConversationId(target);
   S.messages.push({id:'call-invite-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),conversationId,from:user?.username||user?.id,fromName:user?.name,fromRole:user?.role,to:target,toName:target,toRole:'user',subject:'',category:'general',body,status:'open',createdAt:new Date().toISOString(),readBy:[user?.username||user?.id]});
@@ -2954,6 +2954,14 @@ async function ahrufSendInboxSignal(target,payload){
 async function ahrufJoinCall(invite){
  if(ahrufActiveCall)return ahrufCallToast('You are already in a call.');
  try{
+  if(invite?.timetableId){
+   if(user?.role==='student'){
+    const attendance=await onlineApi('record_class_attendance',{timetableId:String(invite.timetableId)});
+    if(!['present','late'].includes(attendance.status))throw new Error(attendance.message||'You are not eligible for this scheduled call.');
+   }
+   const access=await onlineApi('join_class_call',{room:String(invite.room),timetableId:String(invite.timetableId)});
+   if(access.status!=='allowed')throw new Error(access.message||'You are not authorized to join this scheduled call.');
+  }
   const client=await ahrufCallClient(),localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:invite.kind==='video'});
   const me=ahrufMe(),peer=String(invite.from||'').toLowerCase(),pairKey=[me.toLowerCase(),peer].sort().join('|');const call={room:invite.room,key:pairKey,peer:invite.from,kind:invite.kind||'audio',invitees:[],participants:new Map(),pcs:new Map(),streams:new Map(),pendingIce:new Map(),localStream,client,channel:null,overlay:null,miniBar:null,startedAt:Date.now(),remoteJoined:true,ended:false,inviteMessageId:null};ahrufActiveCall=call;ahrufBuildCallOverlay(call);
   call.channel=client.channel('ahruf-call-'+call.room,{config:{private:true,broadcast:{self:false}}});ahrufAttachRoomEvents(call);
@@ -3857,11 +3865,13 @@ async function startScheduledClassCall(timetableId,studentUsername='',kind='vide
  if(!user||!['student','teacher'].includes(user.role))return ahrufCallToast('Only the assigned student or teacher can start a scheduled class call.');
  if(ahrufActiveCall)return ahrufCallToast('End your current call before starting another.');
  try{
-  const result=await onlineApi('authorize_class_call',{timetableId:String(timetableId),studentUsername:String(studentUsername||''),kind:kind==='audio'?'audio':'video'});
-  if(!result?.ok||!result.call?.id)throw new Error(result?.error||'The academy could not authorize this class call.');
-  const peer=user.role==='student'?result.teacherUsername:result.studentUsername;
-  if(!peer)throw new Error('The other participant could not be identified.');
-  await ahrufCreateCall(kind==='audio'?'audio':'video',[peer],{room:result.call.id,timetableId:String(timetableId)});
+  const room='ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+  const action=user.role==='student'?'authorize_student_class_call':'authorize_class_call';
+  const result=await onlineApi(action,{timetableId:String(timetableId),studentUsername:String(studentUsername||''),kind:kind==='audio'?'audio':'video',room});
+  if(result.status!=='allowed')throw new Error(result.message||'The academy could not authorize this class call.');
+  const peer=user.role==='student'?result.teacherUsername:(result.students||[]).find(x=>String(x.username||'').toLowerCase()===String(studentUsername||'').toLowerCase())?.username;
+  if(!peer)throw new Error('The other participant is not eligible for this scheduled call.');
+  await ahrufCreateCall(kind==='audio'?'audio':'video',[peer],{room,timetableId:String(timetableId)});
  }catch(e){ahrufCallToast(e?.message||'Could not start the scheduled class call.')}
 }
 function editClassLink(){modal('Class settings','Class calls are managed by the academy timetable. Edit the class day, start/end time, teacher, and assigned students in Timetable settings. No external meeting URL is needed.',()=>{},'Close')}
