@@ -4425,7 +4425,7 @@ async function loadQuranPage(page,append=false){
     '<div class="quran-lines" lang="ar" dir="rtl">'+renderedRows.join('')+'</div>'+
     translationMarkup+
     '<div class="quran-page-number">۞ '+String(page).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[Number(d)])+' ۞</div></div>';  const content=document.getElementById(target);
-  if(content){const toolsBar=append?'':'<div class="quran-fullscreen-bar"><button type="button" class="quran-reader-return" onclick="exitQuranFullscreen()" aria-label="Return" title="Return">←</button><div class="quran-reader-options-wrap"><button type="button" class="quran-reader-options" aria-label="Reader options" title="Reader options" onclick="quranToggleReaderOptions(event)">⋮</button><div class="quran-reader-options-menu" id="quranReaderOptionsMenu" hidden><label for="quranFullscreenTranslationSelect">'+esc(t('Translation'))+'</label><select id="quranFullscreenTranslationSelect" onchange="quranSetTranslation(this.value)"><option value="off">Off</option><option value="en">English</option><option value="fr">Français</option><option value="ar">العربية (Tafsir)</option><option value="translit">Transliteration</option></select></div></div></div>';const pageMarkup=toolsBar+heading+paper;if(append){content.insertAdjacentHTML('beforeend',pageMarkup);quranContinuousNextPage=page+1;}else{content.innerHTML=pageMarkup+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';quranContinuousNextPage=page+1;}const papers=content.querySelectorAll('.quran-page-paper');const turnPaper=papers[papers.length-1];const turnDirection=quranDisplayedMushafPage===null?null:(page>quranDisplayedMushafPage?'next':page<quranDisplayedMushafPage?'previous':null);quranDisplayedMushafPage=page;if(turnPaper&&turnDirection&&!append)turnPaper.classList.add('quran-turn-'+turnDirection);const lineGrid=turnPaper&&turnPaper.querySelector('.quran-lines');if(lineGrid){lineGrid.style.removeProperty('display');lineGrid.style.removeProperty('grid-template-rows');}applyArabicIndicDigits(turnPaper||content);quranApplyReaderSettings();quranContinuousLoading=false;if(page===604){quranContinuousNextPage=605;const status=document.createElement('p');status.className='quran-source';status.textContent=t('End of the 604-page Mushaf.');content.appendChild(status);}}
+  if(content){const toolsBar=append?'':'<div class="quran-fullscreen-bar"><button type="button" class="quran-reader-return" onclick="exitQuranFullscreen()" aria-label="Return" title="Return">←</button><div class="quran-reader-options-wrap"><button type="button" class="quran-reader-options" aria-label="Reader options" title="Reader options" onclick="quranToggleReaderOptions(event)">⋮</button><div class="quran-reader-options-menu" id="quranReaderOptionsMenu" hidden><label for="quranFullscreenTranslationSelect">'+esc(t('Translation'))+'</label><select id="quranFullscreenTranslationSelect" onchange="quranSetTranslation(this.value)"><option value="off">Off</option><option value="en">English</option><option value="fr">Français</option><option value="ar">العربية (Tafsir)</option><option value="translit">Transliteration</option></select></div></div></div>';const pageMarkup=toolsBar+heading+paper;if(append){content.insertAdjacentHTML('beforeend',pageMarkup);quranContinuousNextPage=page+1;}else{content.innerHTML=pageMarkup+tajweedLegendHtml()+'<div class="quran-source">'+esc(t('Tajweed-colored Uthmani word text and printed line positions are supplied by Quran.com API.'))+' <a href="https://api-docs.quran.com/" target="_blank" rel="noopener">Quran Foundation API documentation</a></div>';quranContinuousNextPage=page+1;}const papers=content.querySelectorAll('.quran-page-paper');const turnPaper=papers[papers.length-1];const turnDirection=quranDisplayedMushafPage===null?null:(page>quranDisplayedMushafPage?'next':page<quranDisplayedMushafPage?'previous':null);quranDisplayedMushafPage=page;if(turnPaper&&turnDirection&&!append)turnPaper.classList.add('quran-turn-'+turnDirection);const lineGrid=turnPaper&&turnPaper.querySelector('.quran-lines');if(lineGrid){lineGrid.style.removeProperty('display');lineGrid.style.removeProperty('grid-template-rows');}if(lineGrid){const rowCount=Math.max(15,lineGrid.children.length);lineGrid.style.setProperty('--mushaf-row-count',String(rowCount));lineGrid.style.setProperty('grid-template-rows','repeat('+rowCount+',minmax(0,1fr))');}applyArabicIndicDigits(turnPaper||content);quranApplyReaderSettings();quranContinuousLoading=false;if(page===604){quranContinuousNextPage=605;const status=document.createElement('p');status.className='quran-source';status.textContent=t('End of the 604-page Mushaf.');content.appendChild(status);}}
  }catch(e){
   console.warn('15-line Tajweed Mushaf page failed',e);
   if(append)quranContinuousLoading=false;
@@ -4599,15 +4599,17 @@ setInterval(pollLiveMessages,3000);
    position:absolute!important;top:7%!important;bottom:7%!important;
    left:5%!important;right:5%!important;
    display:grid!important;grid-template-columns:minmax(0,1fr)!important;
-   grid-template-rows:repeat(15,minmax(0,1fr))!important;
+   grid-template-rows:repeat(var(--mushaf-row-count,15),minmax(0,1fr))!important;
+   grid-auto-rows:minmax(0,1fr)!important;
    gap:0!important;height:auto!important;max-height:none!important;
    overflow:hidden!important;box-sizing:border-box!important;
+   align-content:stretch!important;
   }
   #quranReaderContent .quran-page-paper .quran-lines>.quran-line{
-   display:block!important;width:100%!important;min-width:0!important;
-   min-height:0!important;height:100%!important;max-height:none!important;
+   display:flex!important;align-items:center!important;width:100%!important;min-width:0!important;
+   min-height:0!important;height:auto!important;max-height:none!important;
    box-sizing:border-box!important;overflow:hidden!important;
-   white-space:normal!important;line-height:1.15!important;
+   white-space:nowrap!important;line-height:1.15!important;
    font-size:clamp(11px,1.65vw,21px)!important;
   }
   body.quran-surah-fullscreen #quranReaderContent{
@@ -4624,7 +4626,7 @@ setInterval(pollLiveMessages,3000);
   }
   body.quran-surah-fullscreen #quranReaderContent .quran-page-paper .quran-lines{
    top:7%!important;bottom:7%!important;left:5%!important;right:5%!important;
-   grid-template-rows:repeat(15,minmax(0,1fr))!important;
+   grid-template-rows:repeat(var(--mushaf-row-count,15),minmax(0,1fr))!important;
   }
   body.quran-surah-fullscreen #quranReaderContent .quran-fullscreen-bar{
    position:fixed!important;top:env(safe-area-inset-top,0px)!important;
