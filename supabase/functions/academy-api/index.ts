@@ -1269,16 +1269,19 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
     if (target && !peers.length) return { status: "denied", allowed: false, message: "That student is not assigned to this class." };
     peerUsernames.push(...peers.map((st: any) => st.username).filter(Boolean));
   }
-  const usernames = [...new Set([text(profile.username), ...peerUsernames].filter(Boolean).map((v) => lower(v)))];
-  const { data: callProfiles, error: profilesError } = await ctx.supabaseAdmin
-    .from("profiles").select("id,username").in("username", usernames);
-  if (profilesError) throw profilesError;
-  const participantRows = (callProfiles || []).map((p: any) => ({
-    room, user_id: p.id, username: text(p.username), timetable_id: timetableId,
+  // Always register the authenticated caller from the trusted profile already resolved
+  // above. Do not rely on a case-sensitive username lookup to find the caller again.
+  const peerNames = [...new Set(peerUsernames.map((v) => lower(v)).filter((v) => v && v !== lower(profile.username)))];
+  const peerProfiles = await Promise.all(peerNames.map(async (username) => {
+    const { data, error } = await ctx.supabaseAdmin
+      .from("profiles").select("id,username").ilike("username", username).limit(1).maybeSingle();
+    if (error) throw error;
+    return data;
   }));
-  if (!participantRows.some((p: any) => p.user_id === profile.id)) {
-    throw new Error("Your account could not be registered for this call room.");
-  }
+  const callProfiles = [profile, ...peerProfiles.filter(Boolean)];
+  const participantRows = [...new Map(callProfiles.map((p: any) => [p.id, {
+    room, user_id: p.id, username: text(p.username), timetable_id: timetableId,
+  }])).values()];
   const { error: participantsError } = await ctx.supabaseAdmin
     .from("academy_call_participants")
     .upsert(participantRows, { onConflict: "room,user_id" });
