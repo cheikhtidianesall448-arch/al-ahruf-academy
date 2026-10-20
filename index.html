@@ -3419,13 +3419,17 @@ async function updateCurrentProfilePicture(file){
  try{
   const picture=await cropProfilePhotoBeforeApply(file);if(!picture)return;
   const role=String(user&&user.role||'').toLowerCase(),key=String(user&&(user.username||user.studentId||user.student_id||user.id)||'').trim().toLowerCase();
+  if(!key)throw new Error(t('Could not update profile photo'));
+  // Use a narrowly scoped endpoint; students must not submit the whole academy state.
+  if(ONLINE)await onlineApi('save_profile_photo',{picture});
   const record=currentProfileRecord();
   if(record)record.picture=picture;
   if(!S.profilePictures||typeof S.profilePictures!=='object')S.profilePictures={};
   S.profilePictures[role+':'+key]=picture;
   if(user)user.picture=picture;
-  save();render();toast(t('Profile photo updated'));
- }catch(error){toast(String(error&&error.message||t('Could not update profile photo')),6000);}
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){}
+  render();toast(t('Profile photo updated'));
+ }catch(error){console.error('Profile photo save failed:',error);toast(String(error&&error.message||t('Could not update profile photo')),6000);}
 }
 (function installAhrufPhotoCropStyles(){
  if(document.getElementById('ahrufPhotoCropStyles'))return;
