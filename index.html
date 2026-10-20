@@ -1502,7 +1502,7 @@ async function onlineApi(action,payload={}){
   }
 
   let session=null;
-  if(action!=='login'&&action!=='academy_chat'){
+  if(action!=='login'){
     session=await currentSession(false);
     if(!session?.access_token){
       throw new Error('Your login session has expired. Please log out and sign in again.');
