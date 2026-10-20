@@ -1805,7 +1805,7 @@ Object.assign(I18N.ar,{
  'Students can open this link only during their assigned class time.':'يمكن للطلاب فتح هذا الرابط في موعد الدرس المحدد فقط.',
  'Show collected amount':'إظهار المبلغ المحصّل','Hide collected amount':'إخفاء المبلغ المحصّل'
 });
-I18N.fr['Class not started yet']='Le cours n’a pas encore commencé';I18N.fr['Your class will start in']='Votre cours commencera dans';I18N.fr.day='jour';I18N.fr.days='jours';I18N.fr.hour='heure';I18N.fr.hours='heures';I18N.fr.minute='minute';I18N.fr.minutes='minutes';I18N.ar['Class not started yet']='لم يبدأ الدرس بعد';I18N.ar['Your class will start in']='سيبدأ درسك خلال';I18N.ar.day='يوم';I18N.ar.days='أيام';I18N.ar.hour='ساعة';I18N.ar.hours='ساعات';I18N.ar.minute='دقيقة';I18N.ar.minutes='دقائق';
+I18N.fr['Please wait. Your class will start in']='Veuillez patienter. Votre cours commencera dans';I18N.ar['Please wait. Your class will start in']='يرجى الانتظار. سيبدأ درسك خلال';I18N.fr['Class not started yet']='Le cours n’a pas encore commencé';I18N.fr['Your class will start in']='Votre cours commencera dans';I18N.fr.day='jour';I18N.fr.days='jours';I18N.fr.hour='heure';I18N.fr.hours='heures';I18N.fr.minute='minute';I18N.fr.minutes='minutes';I18N.ar['Class not started yet']='لم يبدأ الدرس بعد';I18N.ar['Your class will start in']='سيبدأ درسك خلال';I18N.ar.day='يوم';I18N.ar.days='أيام';I18N.ar.hour='ساعة';I18N.ar.hours='ساعات';I18N.ar.minute='دقيقة';I18N.ar.minutes='دقائق';
 Object.assign(I18N.fr,{
  'You missed this class because you tried to join more than 30 minutes after it started. Please open Messages and contact your teacher to negotiate a make-up lesson or agree on how to catch up.':'Vous avez manqué ce cours car vous avez essayé de le rejoindre plus de 30 minutes après son début. Ouvrez Messages et contactez votre enseignant pour négocier un cours de rattrapage ou convenir d’une façon de rattraper le contenu.'
 });
@@ -3927,12 +3927,31 @@ function myclass(){
  }).join('');
  return notice+'<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">Direct audio and video calls inside Al-Ahruf. Timetable and attendance rules apply. No external meeting links are required.</span></div></div>'+(cards||'<div class="card mute">No scheduled classes are assigned here yet. Please check the timetable or contact the administrator.</div>');
 }
+function ahrufStudentClassWaitMessage(item){
+ if(!item||!item.day||!item.start)return '';
+ const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Dakar',year:'numeric',month:'2-digit',day:'2-digit',weekday:'long',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+ const get=n=>parts.find(p=>p.type===n)?.value||'';
+ const nowDay=get('weekday').toLowerCase(),dayNames=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+ const targetDay=String(item.day).trim().toLowerCase(),targetIndex=dayNames.indexOf(targetDay);
+ const [sh,sm]=String(item.start).split(':').map(Number);
+ if(targetIndex<0||![sh,sm].every(Number.isFinite))return '';
+ const nowMinutes=Number(get('hour'))*60+Number(get('minute')),startMinutes=sh*60+sm;
+ let daysAhead=(targetIndex-dayNames.indexOf(nowDay)+7)%7;
+ if(daysAhead===0&&startMinutes<=nowMinutes)return '';
+ const nowUtc=Date.UTC(Number(get('year')),Number(get('month'))-1,Number(get('day')),Number(get('hour')),Number(get('minute')),Number(get('second')));
+ const startUtc=Date.UTC(Number(get('year')),Number(get('month'))-1,Number(get('day'))+daysAhead,sh,sm,0);
+ const remaining=Math.max(0,Math.ceil((startUtc-nowUtc)/60000));
+ const d=Math.floor(remaining/1440),h=Math.floor((remaining%1440)/60),m=remaining%60;
+ return t('Please wait. Your class will start in')+' '+d+' '+t(d===1?'day':'days')+', '+h+' '+t(h===1?'hour':'hours')+', '+m+' '+t(m===1?'minute':'minutes')+'.';
+}
 async function startScheduledClassCall(timetableId,studentUsername='',kind='video'){
  if(!user||!['student','teacher'].includes(user.role))return ahrufCallToast('Only the assigned student or teacher can start a scheduled class call.');
  if(ahrufActiveCall)return ahrufCallToast('End your current call before starting another.');
  if(user.role==='student'){
   const scheduled=(S.timetable||[]).find(x=>String(x.id)===String(timetableId));
   if((scheduled?.students||[]).length>1)return ahrufCallToast('This is a group class. Please answer the teacher’s group call so both students join together.');
+  const waitMessage=ahrufStudentClassWaitMessage(scheduled);
+  if(waitMessage)return ahrufCallToast(waitMessage);
  }
  const room='ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
  try{
