@@ -4713,6 +4713,44 @@ setInterval(pollLiveMessages,3000);
  document.head.appendChild(st);
 })();
 
+/* Baseline Mushaf layout: justify Arabic text across each line and keep the standard 15-line grid before zooming. */
+(function installMushafFullWidth15LineLayout(){
+ if(document.getElementById('ahrufMushafFullWidth15LineLayout'))return;
+ const st=document.createElement('style');st.id='ahrufMushafFullWidth15LineLayout';
+ st.textContent=`
+  #quranReaderContent .quran-page-paper .quran-lines{
+   direction:rtl!important;text-align:justify!important;text-align-last:justify!important;
+   grid-template-columns:minmax(0,1fr)!important;
+   grid-template-rows:repeat(var(--mushaf-row-count,15),minmax(1.45em,auto))!important;
+   align-content:stretch!important;justify-items:stretch!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line{
+   display:block!important;width:100%!important;min-width:0!important;
+   height:auto!important;min-height:1.45em!important;max-height:none!important;
+   text-align:justify!important;text-align-last:justify!important;
+   text-justify:inter-word!important;direction:rtl!important;
+   white-space:normal!important;overflow:visible!important;
+   overflow-wrap:normal!important;word-break:normal!important;
+   line-height:1.45!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line>span:not(.quran-surah-heading):not(.quran-basmala-line):not(.quran-ayah-mark){
+   display:inline!important;max-width:none!important;white-space:normal!important;
+   overflow-wrap:normal!important;word-break:normal!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-line-empty{
+   min-height:1.45em!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines .quran-surah-heading,
+  #quranReaderContent .quran-page-paper .quran-lines .quran-basmala-line{
+   text-align:center!important;text-align-last:center!important;
+  }
+  @media(max-width:600px){
+   #quranReaderContent .quran-page-paper .quran-lines>.quran-line{line-height:1.45!important}
+  }
+ `;
+ document.head.appendChild(st);
+})();
+
 /* Keep the Mushaf paper portrait-shaped on every device; let it grow vertically when zoomed. */
 (function installPortraitReadableMushafPages(){
  if(document.getElementById('ahrufPortraitReadableMushafPages'))return;
