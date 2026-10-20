@@ -1182,6 +1182,13 @@ async function getState(ctx: any) {
   };
 }
 
+function actionIsStudentClassCall(body: any) {
+  return ["authorize_student_class_call", "authorised_student_class_call", "authorized_student_class_call"].includes(lower(body.action));
+}
+function actionIsTeacherClassCall(body: any) {
+  return ["authorize_class_call", "authorised_class_call", "authorized_class_call"].includes(lower(body.action));
+}
+
 async function authorizeScheduledClassCall(ctx: any, body: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
@@ -1222,6 +1229,22 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
     if (!Number.isFinite(startMinutes) || elapsed < 0 || elapsed >= 30) {
       return { status: "denied", allowed: false, message: "This class call is outside the permitted joining window." };
     }
+  }
+  const teacherRecord = (state.teachers || []).find((t: any) =>
+    lower(t?.username) === lower(item.teacher) || lower(t?.name) === lower(item.teacher) || lower(t?.id) === lower(item.teacher)
+  );
+  const studentRecords = (state.students || []).filter((st: any) => (item.students || []).some((id: any) =>
+    [st?.id, st?.username, st?.studentId, st?.student_id].some((v: any) => lower(v) === lower(id))
+  ));
+  if (actionIsStudentClassCall(body)) {
+    return { status: "allowed", allowed: true, timetableId, teacherUsername: text(teacherRecord?.username || teacherRecord?.id || item.teacher), message: "Access authorized." };
+  }
+  if (actionIsTeacherClassCall(body)) {
+    const target = lower(body.studentUsername || body.student_username);
+    const peers = studentRecords.map((st: any) => ({ username: text(st?.username || st?.id || st?.studentId || st?.student_id), name: text(st?.name || st?.full_name) }))
+      .filter((st: any) => !target || lower(st.username) === target || lower(st.name) === target);
+    if (target && !peers.length) return { status: "denied", allowed: false, message: "That student is not assigned to this class." };
+    return { status: "allowed", allowed: true, timetableId, students: peers, message: "Access authorized." };
   }
   return { status: "allowed", allowed: true, timetableId, message: "Access authorized." };
 }
@@ -1376,8 +1399,8 @@ export default {
           return json(await login(ctx, body));
         }
 
-        if (["join_class_call", "authorised_student_class_call", "authorized_student_class_call"].includes(action)) {
-          return json(await authorizeScheduledClassCall(ctx, body));
+        if (["join_class_call", "authorize_student_class_call", "authorised_student_class_call", "authorized_student_class_call", "authorize_class_call", "authorised_class_call", "authorized_class_call"].includes(action)) {
+          return json(await authorizeScheduledClassCall(ctx, { ...body, action }));
         }
 
         if (action === "record_class_attendance") {
