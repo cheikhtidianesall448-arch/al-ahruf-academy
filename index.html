@@ -4457,14 +4457,13 @@ function quranToggleTranslationOverlayOptions(event){if(event)event.stopPropagat
 (function installOriginalMushafTextSpacing(){if(document.getElementById('ahrufOriginalMushafTextSpacing'))return;const st=document.createElement('style');st.id='ahrufOriginalMushafTextSpacing';st.textContent='body.quran-surah-fullscreen #quranReaderContent .quran-page-paper{box-sizing:border-box!important;width:min(100vw,calc(100dvh * 472 / 693))!important;max-width:min(100vw,calc(100dvh * 472 / 693))!important;max-height:100dvh!important;margin:0 auto!important;overflow:hidden!important}body.quran-surah-fullscreen #quranReaderContent .quran-lines{display:block!important;direction:rtl!important;text-align:justify!important;text-align-last:justify!important;word-spacing:normal!important;letter-spacing:normal!important;line-height:normal!important}body.quran-surah-fullscreen #quranReaderContent .quran-line{display:block!important;white-space:nowrap!important;word-spacing:normal!important;letter-spacing:normal!important;line-height:normal!important;min-height:0!important}body.quran-surah-fullscreen #quranReaderContent .quran-line>span{letter-spacing:normal!important;word-spacing:normal!important}body.quran-surah-fullscreen #quranReaderContent .quran-line.quran-surah-row,body.quran-surah-fullscreen #quranReaderContent .quran-line.quran-basmala-row{white-space:normal!important;text-align:center!important;text-align-last:center!important}body.quran-surah-fullscreen #quranReaderContent .quran-line.quran-surah-row .quran-surah-title-panel,body.quran-surah-fullscreen #quranReaderContent .quran-line.quran-basmala-row .quran-basmala-panel{display:inline-block!important}body.quran-surah-fullscreen #quranReaderContent .quran-line .quran-ayah-mark{letter-spacing:normal!important;word-spacing:normal!important}@media(max-width:600px){body.quran-surah-fullscreen #quranReaderContent .quran-page-paper{width:100vw!important;max-width:100vw!important}}';document.head.appendChild(st)})();
 function quranToggleReaderOptions(event){if(event)event.stopPropagation();const menu=document.getElementById('quranReaderOptionsMenu');if(!menu)return;menu.hidden=!menu.hidden;const select=document.getElementById('quranFullscreenTranslationSelect');if(select)select.value=quranGetTranslationMode();}
 async function exitQuranFullscreen(){
+ /* Leave the browser/window size under the user's control; exit only the Mushaf reader layout. */
  document.body.classList.remove('quran-surah-fullscreen');
- try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen();}catch(error){console.debug('Browser fullscreen exit was unavailable',error)}
  render();
 }
 async function openSurahInMushaf(){
+ /* Fill only the current browser viewport, including when the browser is snapped to half the monitor. */
  document.body.classList.add('quran-surah-fullscreen');
- /* Use native browser fullscreen when supported; the viewport-filling CSS remains the fallback. */
- try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:'hide'});}catch(error){console.debug('Native fullscreen unavailable; keeping immersive reader layout',error)}
  const selector=document.getElementById('quranSurahSelect');
  const number=Math.max(1,Math.min(114,Number(selector&&selector.value)||1));
  try{
