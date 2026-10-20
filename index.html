@@ -2711,7 +2711,7 @@ function ahrufCallPeople(){
  const me=ahrufMe(),seen=new Set();
  return all.filter(p=>{const id=String(p.id||'').trim().toLowerCase();if(!id||id===me||seen.has(id))return false;seen.add(id);return true});
 }
-function ahrufCallToast(text){if(typeof toast==='function')toast(text);else console.info(text)}
+function ahrufCallToast(text){if(typeof toast==='function')toast(text,5000);else console.info(text)}
 function ahrufCallInviteModal(kind,initialPeer){
  const people=ahrufCallPeople();
  if(!people.length){ahrufCallToast('No other academy users are available to invite.');return}
