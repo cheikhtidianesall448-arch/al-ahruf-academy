@@ -2682,7 +2682,7 @@ function ahrufCallClient(){
   }
   const cfg=window.AHRUF_SUPABASE;
   if(!cfg?.url||!cfg?.key||!window.supabase?.createClient)throw new Error('Supabase Realtime is not configured.');
-  return window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:20}}});
+  if(sb)return sb;return window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:20}}});
  })();
  return ahrufCallClientPromise;
 }
@@ -2717,17 +2717,17 @@ function ahrufCallInviteModal(kind,initialPeer){
   await ahrufCreateCall(kind,ids);
  },'Start call');
 }
-async function ahrufCreateCall(kind,invitees){
+async function ahrufCreateCall(kind,invitees,options={}){
  if(ahrufActiveCall)return ahrufCallToast('A call is already open.');
  if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)return ahrufCallToast('Calls require a modern browser, HTTPS, and microphone/camera permission.');
- const room='ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),key=String(activeMessageConversationKey||''),peer=invitees[0]||ahrufCallPeer(key);
- const call={room,key,peer,kind,invitees:[...new Set(invitees.map(x=>String(x).toLowerCase()))],participants:new Map(),pcs:new Map(),streams:new Map(),pendingIce:new Map(),localStream:null,client:null,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:false,ended:false,inviteMessageId:null};
+ const room=String(options.room||('ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10))),key=String(activeMessageConversationKey||''),peer=invitees[0]||ahrufCallPeer(key);
+ const call={room,timetableId:options.timetableId||'',key,peer,kind,invitees:[...new Set(invitees.map(x=>String(x).toLowerCase()))],participants:new Map(),pcs:new Map(),streams:new Map(),pendingIce:new Map(),localStream:null,client:null,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:false,ended:false,inviteMessageId:null};
  ahrufActiveCall=call;
  try{
   call.client=await ahrufCallClient();
   call.localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:kind==='video'});
   ahrufBuildCallOverlay(call);
-  call.channel=call.client.channel('ahruf-call-'+room,{config:{broadcast:{self:false}}});
+  call.channel=call.client.channel('ahruf-call-'+room,{config:{private:true,broadcast:{self:false}}});
   ahrufAttachRoomEvents(call);
   await new Promise((resolve,reject)=>{
    const timeout=setTimeout(()=>reject(new Error('Signalling channel timed out.')),12000);
@@ -3856,49 +3856,39 @@ function timetableHasClassLink(item,link,ids,studentRec=null){
  return !linkLevel||linkLevel==='all'||!studentLevel||normalizeClassMatch(linkLevel)===normalizeClassMatch(studentLevel);
 }
 function myclass(){
- S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
- S.classLinks=S.classLinks.map(c=>({...c,url:classLinkTarget(c.url)}));
  const admin=user.role==='admin',teacher=user.role==='teacher',student=user.role==='student';
  const me=String(user.username||user.id||'').trim().toLowerCase();
  const studentRec=student?((S.students||[]).find(x=>String(x.id||'').trim().toLowerCase()===me)||currentStudent()):null;
- let studentNextNotice='';
- if(student){
-  const ids=studentTimetableIds(studentRec);
-  const normalizeStudentName=v=>String(v||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  const scheduled=(S.timetable||[]).filter(item=>(Array.isArray(item.students)?item.students:[]).some(v=>ids.includes(String(v||'').trim().toLowerCase())||(!!studentRec&&normalizeStudentName(v)===normalizeStudentName(studentRec.name))));
-  const next=nextScheduledClass(scheduled);
-  if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
-  if(next){
-   const prefix='Your next class';
-   studentNextNotice='<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="mute">UPCOMING CLASS · SENEGAL TIME (GMT/UTC+0)</div><b>'+esc(next.item.course||'Quran class')+'</b><div data-next-class-timestamp="'+next.date.getTime()+'" data-prefix="'+esc(prefix+' in ')+'" style="margin-top:5px;font-weight:750">Calculating…</div><div class="mute" style="margin-top:4px">'+esc(next.item.day)+' · '+esc(next.item.start)+'</div><div class="mute" style="margin-top:4px">Teacher: '+esc(teacherName(next.item.teacher))+'</div></div>';
-   window._nextClassTimer=setInterval(updateNextClassCountdown,60000);
-  }
+ const ids=student?studentTimetableIds(studentRec):[];
+ const assigned=(S.timetable||[]).filter(item=>{
+  if(student)return (Array.isArray(item.students)?item.students:[]).some(v=>ids.includes(String(v||'').trim().toLowerCase()));
+  if(teacher)return [user.username,user.id,user.name].some(v=>String(item.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase());
+  return admin;
+ });
+ const next=nextScheduledClass(assigned);
+ let notice='';
+ if(student&&next){
+  notice='<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="mute">UPCOMING CLASS · SENEGAL TIME (UTC+0)</div><b>'+esc(next.item.course||'Quran class')+'</b><div data-next-class-timestamp="'+next.date.getTime()+'" data-prefix="Your next class in " style="margin-top:5px;font-weight:750">Calculating…</div><div class="mute">'+esc(next.item.day)+' · '+esc(next.item.start)+' · Teacher: '+esc(teacherName(next.item.teacher))+'</div></div>';
  }
- const assignedTeacher=String(studentRec?.teacher||'').trim().toLowerCase();
- const myTeacher=String((S.teachers||[]).find(t=>String(t.username||'').trim().toLowerCase()===assignedTeacher||String(t.name||'').trim().toLowerCase()===assignedTeacher)?.username||assignedTeacher).trim().toLowerCase();
- const studentIds=student?studentTimetableIds(studentRec):[];
- // Students must have an explicit matching timetable assignment to see a class link.
- // Matching level/teacher labels alone must never expose an unscheduled meeting.
- const rows=student?S.classLinks.filter(c=>
-  (S.timetable||[]).some(item=>timetableHasClassLink(item,c,studentIds,studentRec))
- ):S.classLinks.filter(c=>admin||String(c.owner||'').toLowerCase()===me);
- let nextNotices='';
- if(teacher){
-  const ownSchedule=(S.timetable||[]).filter(x=>[user.username,user.id,user.name].some(v=>String(x.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase()));
-  nextNotices=nextClassNotice(nextScheduledClass(ownSchedule),'Your next class');
- }else if(admin){
-  nextNotices=(S.teachers||[]).map(tr=>{
-   const schedule=(S.timetable||[]).filter(x=>[tr.username,tr.name,tr.id].some(v=>String(x.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase()));
-   return nextClassNotice(nextScheduledClass(schedule),"Teacher "+(tr.name||tr.username)+"’s next class");
-  }).join('')||'<div class="card mute">No teachers have been added yet.</div>';
- }
- if(nextNotices){
-  if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
-  updateNextClassCountdown();
-  window._nextClassTimer=setInterval(updateNextClassCountdown,60000);
- }
- return (student?studentNextNotice:nextNotices)+`<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">${student?'Class links saved by your academy or teacher. New links appear automatically when they match your level and assigned teacher.':'Save reusable class links here. Students will see matching links automatically, including students enrolled later.'}</span></div>${!student?'<button class="btn" onclick="editClassLink()">+ Add class link</button>':''}</div>
- ${rows.map(c=>`<div class="card" style="margin-bottom:12px"><h3 style="margin-top:0">${esc(c.title)}</h3><div class="mute">${esc(c.level&&c.level!=='all'?'Level: '+c.level:'All levels')}${c.teacher?' · Teacher: '+esc(teacherName(c.teacher)):' · Available across teachers'}</div>${student?'<p class="mute">Open your scheduled class using this link.</p>':'<p style="word-break:break-all">'+esc(c.url)+'</p>'}<div class="row">${student?'<button class="btn gold" type="button" data-id="'+esc(c.id)+'" onclick="openMyClassScheduledLink(this.dataset.id)">Open link</button>':'<a class="btn gold" href="'+esc(c.url)+'" target="_blank" rel="noopener">Open class</a><button class="btn ghost" data-url="'+esc(c.url)+'" onclick="copy(this.dataset.url)">Copy link</button>'}${!student&&(admin||String(c.owner||'').toLowerCase()===me)?'<button class="btn ghost" data-id="'+esc(c.id)+'" onclick="editClassLink(this.dataset.id)">Edit</button><button class="btn ghost" data-id="'+esc(c.id)+'" onclick="deleteClassLink(this.dataset.id)">Delete</button>':''}</div></div>`).join('')||'<div class="card mute">'+(student?'No class links are assigned to your level or teacher yet. Please contact your teacher or administrator.':'No saved class links yet. Add a link once and eligible students will see it automatically.')+'</div>'}`
+ if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
+ if(next){updateNextClassCountdown();window._nextClassTimer=setInterval(updateNextClassCountdown,60000)}
+ const cards=assigned.map(item=>{
+  const studentNames=(Array.isArray(item.students)?item.students:[]).map(sid=>(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(sid||'').toLowerCase())).filter(Boolean);
+  const targetButtons=teacher?studentNames.map(st=>'<button class="btn gold" type="button" onclick="startScheduledClassCall(\''+esc(item.id)+'\',\''+esc(st.id)+'\',\'video\')">📹 Call '+esc(st.name||st.id)+'</button><button class="btn ghost" type="button" onclick="startScheduledClassCall(\''+esc(item.id)+'\',\''+esc(st.id)+'\',\'audio\')">☎ Voice</button>').join(''):student?'<button class="btn gold" type="button" onclick="startScheduledClassCall(\''+esc(item.id)+'\',\'\',\'video\')">📹 Call teacher</button><button class="btn ghost" type="button" onclick="startScheduledClassCall(\''+esc(item.id)+'\',\'\',\'audio\')">☎ Voice call</button>':'';
+  return '<div class="card" style="margin-bottom:12px"><div class="row between" style="align-items:flex-start"><div><h3 style="margin:0 0 6px">'+esc(item.course||'Quran class')+'</h3><div class="mute">'+esc(item.day||'')+' · '+esc(item.start||'')+'–'+esc(item.end||'')+' · Senegal time</div><div class="mute">Teacher: '+esc(teacherName(item.teacher))+'</div>'+(teacher?'<div class="mute">Students: '+esc(studentNames.map(x=>x.name||x.id).join(', ')||'No students assigned')+'</div>':'')+'</div><span class="badge">Scheduled</span></div>'+(targetButtons?'<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">'+targetButtons+'</div>':'')+'</div>';
+ }).join('');
+ return notice+'<div class="row between" style="margin-bottom:12px"><div><h3>MyClass</h3><span class="mute">Direct audio and video calls inside Al-Ahruf. Your assigned timetable and attendance rules apply. No external meeting links.</span></div></div>'+ (cards||'<div class="card mute">No scheduled classes are assigned here yet. Please check the timetable or contact the administrator.</div>');
+}
+async function startScheduledClassCall(timetableId,studentUsername='',kind='video'){
+ if(!user||!['student','teacher'].includes(user.role))return ahrufCallToast('Only the assigned student or teacher can start a scheduled class call.');
+ if(ahrufActiveCall)return ahrufCallToast('End your current call before starting another.');
+ try{
+  const result=await onlineApi('authorize_class_call',{timetableId:String(timetableId),studentUsername:String(studentUsername||''),kind:kind==='audio'?'audio':'video'});
+  if(!result?.ok||!result.call?.id)throw new Error('The academy could not authorize this class call.');
+  const peer=user.role==='student'?result.teacherUsername:result.studentUsername;
+  if(!peer)throw new Error('The other participant could not be identified.');
+  await ahrufCreateCall(kind==='audio'?'audio':'video',[peer],{room:result.call.id,timetableId:String(timetableId)});
+ }catch(e){ahrufCallToast(e?.message||'Could not start the scheduled class call.')}
 }
 async function openMyClassScheduledLink(classLinkId){
  if(user?.role!=='student')return toast(t('Only students can use this class entry.'));
@@ -3922,36 +3912,11 @@ async function openMyClassScheduledLink(classLinkId){
  const match=next?.item||candidates[0];
  await requestScheduledClass(match.id);
 }
-function editClassLink(id){
- if(user.role!=='admin'&&user.role!=='teacher')return;
- S.classLinks=Array.isArray(S.classLinks)?S.classLinks:[];
- const me=String(user.username||user.id||'').trim().toLowerCase();
- const c=S.classLinks.find(x=>String(x.id)===String(id))||{title:'',url:'',level:'all',teacher:user.role==='teacher'?(user.username||''):'',owner:me};
- if(id&&user.role!=='admin'&&String(c.owner||'').toLowerCase()!==me)return toast('You can only edit your own class links.');
- const levelOptions=['all','Beginner','Intermediate','Advanced'].map(v=>'<option value="'+v+'" '+(String(c.level||'all')===v?'selected':'')+'>'+(v==='all'?'All levels':v)+'</option>').join('');
- const teacherOptionsHtml='<option value="">All teachers</option>'+(S.teachers||[]).map(t=>'<option value="'+esc(t.username)+'" '+(String(c.teacher||'').toLowerCase()===String(t.username||'').toLowerCase()?'selected':'')+'>'+esc(t.name)+' — '+esc(t.username)+'</option>').join('');
-  const savedRoom=String(c.url||'').replace('https://meet.jit.si/','').replace('http://meet.jit.si/','').split('?')[0].split('#')[0].replace(/\/$/,'');
- modal(id?'Edit class link':'Add class link',`<label>Class name</label><input name="title" required maxlength="100" value="${esc(c.title)}" placeholder="e.g. Tajwid — Level 1"><label>Google Meet link</label><input name="url" type="url" required value="${esc(c.url||"")}" placeholder="https://meet.google.com/abc-defg-hij"><p class="mute">Paste the Google Meet link for this class. Students will open the same meeting.</p><div class="row"><div style="flex:1;min-width:180px"><label>Student level</label><select name="level">${levelOptions}</select></div>${user.role==='admin'?'<div style="flex:1;min-width:180px"><label>Assigned teacher</label><select name="teacher">'+teacherOptionsHtml+'</select></div>':'<input type="hidden" name="teacher" value="'+esc(c.teacher||user.username||'')+'">'}</div><p class="mute">Leave All levels to show this class to students at every level.</p>`,async f=>{
- const url=f.url.value.trim();if(!/^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(url))return toast('Paste a valid Google Meet link.'),false;
- const item={id:c.id||('cl-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)),title:f.title.value.trim(),url,level:f.level.value||'all',teacher:user.role==='teacher'?(user.username||''):f.teacher.value,owner:c.owner||me,createdAt:c.createdAt||new Date().toISOString()};
- if(!item.title)return false;
- const index=S.classLinks.findIndex(x=>String(x.id)===String(id));
- if(index>=0)S.classLinks[index]=item;else S.classLinks.unshift(item);
- save();toast('Google Meet class link saved');render();
- });
-}
-function deleteClassLink(id){
- const c=(S.classLinks||[]).find(x=>String(x.id)===String(id));if(!c)return;
- if(user.role!=='admin'&&String(c.owner||'').toLowerCase()!==String(user.username||user.id||'').toLowerCase())return toast('You can only delete your own class links.');
- if(!confirm('Delete this saved class link?'))return;
- S.classLinks=S.classLinks.filter(x=>String(x.id)!==String(id));save();toast('Class link deleted');render();
-}
+function editClassLink(){toast('External class links have been replaced by direct scheduled calls. Edit the timetable to change class assignments.')}
+function deleteClassLink(){toast('External class links are no longer used.')}
 function klass(){
- if(!['admin','teacher'].includes(user.role))return '<div class="card"><b>Permission denied.</b></div>';
- S.classes=Array.isArray(S.classes)?S.classes:[];
- return `<div class="card"><h3>Start a live class</h3><p class="mute">Teachers and the administrator can create class rooms. Students can only join active classes.</p><form class="row" onsubmit="event.preventDefault();startClass(this.t.value,this.meet.value)"><input name="t" placeholder="Class title, e.g. Tajwid, Level 2" required style="flex:1;min-width:220px"><input name="meet" type="url" placeholder="Google Meet link (https://meet.google.com/...)" required style="flex:1;min-width:280px"><button class="btn">Save Google Meet class</button></form><p class="mute">Create the meeting in Google Meet first, then paste its link here so everyone joins the same room.</p></div><br>
- <div class="grid2">${S.classes.map((c,i)=>{const inv=base()+'#class='+c.code;return `<div class="card" style="border-color:var(--gold)"><div><span class="live"></span><b>${esc(c.title)}</b></div><div class="code">${esc(c.code)}</div><p class="mute" style="word-break:break-all">${esc(inv)}</p><div class="row"><a class="btn gold" target="_blank" rel="noopener" href="${esc(c.url||"https://meet.google.com/new")}">Open Google Meet</a><button class="btn ghost" data-invite="${esc(inv)}" onclick="copy(this.dataset.invite)">Copy invite</button><a class="btn ghost" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('Join our live class "'+c.title+'" at Al-Ahruf Academy: '+inv)}">WhatsApp</a><button class="btn ghost" onclick="endClass(${i})">End</button></div></div>`}).join('')||'<div class="card mute">No active classes. Start one above.</div>'}</div>
- <p class="mute">Open the room first as host, then share the invite. Students can join but cannot create or end classes.</p>`}
+ return '<div class="card"><h3>Direct classes</h3><p class="mute">Live audio and video classes now start from MyClass according to the saved timetable. Google Meet links are no longer required.</p><button class="btn gold" onclick="tab=\'myclass\';render()">Open MyClass</button></div>';
+}
 function studentLiveClass(){
  if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
  S.classes=Array.isArray(S.classes)?S.classes:[];
