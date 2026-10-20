@@ -2084,7 +2084,7 @@ function syncSiteFavicon(){
   if(logo.complete)apply();else logo.addEventListener('load',apply,{once:true});
  }catch(e){}
 }
-function render(){if(user)ensureAhrufCallInbox();
+function render(){if(user)ensureAhrufCallInbox();if(user?.role==='teacher'&&typeof ahrufStartTeacherScheduleMonitor==='function')ahrufStartTeacherScheduleMonitor();
  const who=$('#who'),out=$('#out'),app=$('#app'),themeBtn=$('button[onclick="theme()"]'),pushBtn=$('#callAlertsBtn');
  
  if(themeBtn)themeBtn.textContent=currentLang==='fr'?'Thème':currentLang==='ar'?'المظهر':'Theme';
@@ -3888,7 +3888,7 @@ async function startScheduledClassCall(timetableId,studentUsername='',kind='vide
 function ahrufStartTeacherScheduleMonitor(){
  if(window._ahrufTeacherScheduleTimer)return;
  const check=async()=>{
-  if(!user||user.role!=='teacher'||document.hidden||ahrufActiveCall)return;
+  if(!user||user.role!=='teacher'||ahrufActiveCall)return;
   const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Dakar',weekday:'long',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),get=n=>parts.find(p=>p.type===n)?.value||'';
   const day=get('weekday').toLowerCase(),minutes=Number(get('hour'))*60+Number(get('minute'));
   const schedule=(S.timetable||[]).filter(item=>[user.username,user.id,user.name].some(v=>String(item.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase())&&String(item.day||'').toLowerCase()===day);
