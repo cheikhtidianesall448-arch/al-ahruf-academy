@@ -1155,6 +1155,38 @@ async function recordMissedTimetableClasses(ctx: any, state: any) {
   return state;
 }
 
+async function saveProfilePhoto(ctx: any, body: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  const role = normalizedRole(profile.role);
+  if (!["student", "teacher", "admin"].includes(role)) throw new Error("This account cannot update a profile photo.");
+  const picture = text(body.picture);
+  if (!picture || !/^data:image\/(?:jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(picture)) {
+    throw new Error("Choose a valid JPG, PNG, or WebP profile photo.");
+  }
+  if (picture.length > 2_500_000) throw new Error("The profile photo is too large. Please choose a smaller image.");
+
+  const state = await getAcademyState(ctx);
+  const username = lower(profile.username);
+  const keys = role === "student" ? ["id", "username", "studentId", "student_id", "userId", "user_id"] : ["username", "id", "userId", "user_id"];
+  const list = role === "student" ? state.students : role === "teacher" ? state.teachers : [];
+  const record = list.find((item: any) => keys.some((key: string) => lower(item?.[key]) === username));
+  if (role !== "admin" && !record) throw new Error("Your academy profile could not be found. Please sign in again.");
+
+  if (record) record.picture = picture;
+  state.profilePictures = state.profilePictures && typeof state.profilePictures === "object" ? state.profilePictures : {};
+  state.profilePictures[`${role}:${username}`] = picture;
+  const { error: stateError } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (stateError) throw stateError;
+
+  const { error: profileError } = await ctx.supabaseAdmin.from("profiles")
+    .update({ photo_url: picture }).eq("id", profile.id);
+  if (profileError) console.warn("Could not sync profiles.photo_url; academy_state photo was saved:", profileError.message);
+
+  return { ok: true };
+}
+
 async function getState(ctx: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile) throw new Error("Not authenticated.");
@@ -1455,6 +1487,10 @@ export default {
 
         if (action === "record_class_attendance") {
           return json(await recordClassAttendance(ctx, body));
+        }
+
+        if (action === "save_profile_photo") {
+          return json(await saveProfilePhoto(ctx, body));
         }
 
         if (action === "get_state") {
