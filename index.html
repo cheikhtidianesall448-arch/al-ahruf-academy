@@ -2786,7 +2786,7 @@ function ahrufRenderCallTiles(call){
 }
 async function ahrufBroadcast(call,event,payload){if(!call?.channel)return;return call.channel.send({type:'broadcast',event,payload:{...payload,from:ahrufMe(),room:call.room}})}
 async function ahrufBroadcastToUser(call,target,payload){
- const channel=call.client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{broadcast:{self:false}}});
+ const channel=call.client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{private:true,broadcast:{self:false}}});
  try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Invite channel timeout')),6000);channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Invite channel unavailable'))}})});await channel.send({type:'broadcast',event:'call_invite',payload});}finally{setTimeout(()=>{try{call.client.removeChannel(channel)}catch(_){}},1500)}
 }
 function ahrufDirectConversationId(target){
@@ -2869,7 +2869,7 @@ function ensureAhrufCallInbox(){
   if(ahrufCallInbox&&ahrufCallInboxUser===me)return;
   if(ahrufCallInbox)try{client.removeChannel(ahrufCallInbox)}catch(_){}
   const topic='ahruf-user-'+me.replace(/[^a-z0-9_-]/g,'_');
-  ahrufCallInbox=client.channel(topic,{config:{broadcast:{self:false}}});
+  ahrufCallInbox=client.channel(topic,{config:{private:true,broadcast:{self:false}}});
   ahrufCallInboxUser=me;
   ahrufCallInbox.on('broadcast',{event:'call_invite'},({payload})=>{if(payload?.type==='invite')ahrufShowIncomingCall(payload)});
   ahrufCallInbox.on('broadcast',{event:'call_response'},({payload})=>{
@@ -2948,7 +2948,7 @@ function ahrufShowIncomingCall(invite){
  startRing();
 }
 async function ahrufSendInboxSignal(target,payload){
- const client=await ahrufCallClient(),channel=client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{broadcast:{self:false}}});
+ const client=await ahrufCallClient(),channel=client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{private:true,broadcast:{self:false}}});
  try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Signalling timeout')),5000);channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Unavailable'))}})});await channel.send({type:'broadcast',event:'call_response',payload})}finally{setTimeout(()=>{try{client.removeChannel(channel)}catch(_){}},1000)}
 }
 async function ahrufJoinCall(invite){
@@ -2956,7 +2956,7 @@ async function ahrufJoinCall(invite){
  try{
   const client=await ahrufCallClient(),localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:invite.kind==='video'});
   const me=ahrufMe(),peer=String(invite.from||'').toLowerCase(),pairKey=[me.toLowerCase(),peer].sort().join('|');const call={room:invite.room,key:pairKey,peer:invite.from,kind:invite.kind||'audio',invitees:[],participants:new Map(),pcs:new Map(),streams:new Map(),pendingIce:new Map(),localStream,client,channel:null,overlay:null,miniBar:null,startedAt:Date.now(),remoteJoined:true,ended:false,inviteMessageId:null};ahrufActiveCall=call;ahrufBuildCallOverlay(call);
-  call.channel=client.channel('ahruf-call-'+call.room,{config:{broadcast:{self:false}}});ahrufAttachRoomEvents(call);
+  call.channel=client.channel('ahruf-call-'+call.room,{config:{private:true,broadcast:{self:false}}});ahrufAttachRoomEvents(call);
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Call room timed out')),12000);call.channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Could not join call room'))}})});
   call.participants.set(invite.from,{name:invite.fromName||invite.from});await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||ahrufMe(),kind:call.kind});ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Joining '+(invite.fromName||invite.from)+'…');
  }catch(e){console.error('Could not join call:',e);await ahrufDisposeCall(ahrufActiveCall,false);ahrufCallToast('Could not join the call. Check permissions and internet connection.')}
@@ -3871,19 +3871,14 @@ function klass(){
  return '<div class="card"><h3>Direct academy calls</h3><p class="mute">Live classes are launched from MyClass using the timetable. Google Meet links are no longer used. Set the teacher, students, day, and class time in Timetable settings.</p><button class="btn gold" type="button" onclick="tab=\'myclass\';render()">Open MyClass</button></div>';
 }
 function studentLiveClass(){
- if(user.role!=='student')return '<div class="card"><b>Permission denied.</b></div>';
- S.classes=Array.isArray(S.classes)?S.classes:[];
- const sid=String(user.username||user.id||'').toLowerCase();
- const assigned=(S.timetable||[]).filter(x=>(x.students||[]).map(String).some(id=>id.toLowerCase()===sid));
- const cards=S.classes.map(c=>{
-  const item=assigned.find(x=>String(x.classCode||'')===String(c.code)||(!x.classCode&&String(x.course||'').trim().toLowerCase()===String(c.title||'').trim().toLowerCase()));
-  if(!item)return '';
-  return '<div class="card" style="border-color:var(--gold)"><div><span class="live"></span><b>'+esc(c.title)+'</b></div><div class="mute" style="margin:8px 0">'+esc(item.day)+' · '+esc(item.start)+'–'+esc(item.end)+' · '+esc(teacherName(item.teacher))+'</div><button class="btn gold" type="button" onclick="requestScheduledClass(\''+esc(item.id)+'\')">Check attendance &amp; join class</button></div>';
- }).join('');
- return '<div class="card"><h3>Live class</h3><p class="mute">Your class links are unlocked only at the time assigned in your timetable. Present and late attendance is recorded automatically.</p></div><br><div class="grid2">'+(cards||'<div class="card mute">No class links are assigned to your timetable yet. Ask your teacher to connect a Google Meet link to your scheduled class.</div>')+'</div>';
+ return user?.role==='student'?myclass():'<div class="card"><b>Permission denied.</b></div>';
 }
-function startClass(t,meetUrl){if(!['admin','teacher'].includes(user?.role))return toast('Only a teacher or administrator can create a live class.');const title=String(t||'').trim(),url=String(meetUrl||'').trim();if(!title)return toast('Enter a class title.');if(!/^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(url))return toast('Paste a valid Google Meet link.');S.classes=Array.isArray(S.classes)?S.classes:[];S.classes.unshift({title,code:newCode(),url,owner:String(user.username||user.id||'').toLowerCase()});save();toast('Google Meet class saved');render()}
-function endClass(i){if(!['admin','teacher'].includes(user?.role)){toast('Only a teacher or administrator can end a live class.');return}if(!Array.isArray(S.classes)||!S.classes[i])return;S.classes.splice(i,1);save();render()}
+function startClass(){
+ toast('Live classes are now started directly from MyClass using the timetable.');
+}
+function endClass(){
+ toast('End the active call using the End Call button.');
+}
 function copy(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Invite copied'),()=>modal('Copy invite link',`<input value="${esc(t)}" readonly onfocus="this.select()">`,()=>{}, 'Done'))}
 
 
