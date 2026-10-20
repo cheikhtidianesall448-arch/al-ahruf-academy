@@ -3867,7 +3867,7 @@ function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not f
 
 function invoiceCurrencyCode(p){const v=String(p?.currency||'USD').toUpperCase();return ['XOF','USD','EUR','GBP'].includes(v)?v:'USD'}
 function invoiceCurrencyLabel(code){return ({XOF:'CFA (XOF)',USD:'US Dollar (USD)',EUR:'Euro (EUR)',GBP:'Pound Sterling (GBP)'})[String(code||'USD').toUpperCase()]||'US Dollar (USD)'}
-function invoiceMoney(p){const code=invoiceCurrencyCode(p),amount=Number(p?.amt||0);try{return new Intl.NumberFormat(code==='XOF'?'fr-SN':'en-US',{style:'currency',currency:code,maximumFractionDigits:code==='XOF'?0:2}).format(amount)}catch(_){return (code==='XOF'?'CFA ':code+' ')+amount.toLocaleString()}}
+function invoiceMoney(p){const code=invoiceCurrencyCode(p),amount=Number(p?.amt||0);try{return new Intl.NumberFormat('en-US',{style:'currency',currency:code,maximumFractionDigits:code==='XOF'?0:2,useGrouping:true}).format(amount)}catch(_){return (code==='XOF'?'CFA ':code+' ')+amount.toLocaleString('en-US')}}
 function collectedByCurrency(){
  if(user.role!=='admin')return toast('Only the administrator can view collected payments.');
  const currencies=['XOF','USD','EUR','GBP'];
