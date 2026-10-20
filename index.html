@@ -3538,7 +3538,7 @@ function studentProfile(id){
  const progress=Array.isArray(s.sur)?s.sur:[];
  const row=(label,value)=>'<div style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;min-width:0"><div class="mute" style="font-size:12px;margin-bottom:4px">'+label+'</div><div style="font-weight:650;overflow-wrap:anywhere">'+(value||'—')+'</div></div>';
  const html='<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap">'+userIdAvatar(s,'student',72)+'<div><h3 style="margin:0 0 5px">'+esc(s.name||'Student')+'</h3><div class="mute">'+esc(s.id||'')+'</div></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px">'+row('Phone',esc(s.phone))+row('Email',esc(s.email))+row('Age',s.age==null?'—':esc(String(s.age)))+row('Sex',esc(s.sex))+row('Level',esc(s.level))+row('Teacher',esc(teacherName(s.teacher)))+row('Payment status',esc(s.pay))+row('Quran progress',progress.length+' / 114 surahs')+'</div><div style="margin-top:16px"><div class="row between" style="margin-bottom:6px"><b>Memorization progress</b><span class="mute">'+Math.round(progress.length/114*100)+'%</span></div><div class="bar2"><i style="width:'+Math.min(100,progress.length/114*100)+'%"></i></div><div class="mute" style="margin-top:8px;font-size:12px">'+(progress.length?progress.map(x=>esc(String(x))).join(', '):'No memorized surahs recorded yet.')+'</div></div>';
- modal('Student profile',html,null);
+ const d=$('#dlg');d.innerHTML=`<h2>Student profile</h2>${html}<div class="row end" style="margin-top:18px"><button type="button" class="btn" onclick="document.getElementById('dlg').close()">OK</button></div>`;d.showModal();
 }
 async function delS(id,b){
  if(b.dataset.s){
