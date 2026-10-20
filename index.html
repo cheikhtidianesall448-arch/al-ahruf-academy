@@ -4816,6 +4816,38 @@ setInterval(pollLiveMessages,3000);
  `;
  document.head.appendChild(st);
 })();
+
+/* Final full-line Arabic justification: remove flex spacing conflicts so every normal
+   Mushaf text row uses the full inner width, including its final visual line. */
+(function installFinalMushafLineFill(){
+ if(document.getElementById('ahrufFinalMushafLineFill'))return;
+ const st=document.createElement('style');st.id='ahrufFinalMushafLineFill';
+ st.textContent=`
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row){
+   display:block!important;width:100%!important;box-sizing:border-box!important;
+   direction:rtl!important;text-align:justify!important;text-align-last:justify!important;
+   text-justify:inter-word!important;word-spacing:normal!important;letter-spacing:normal!important;
+   white-space:normal!important;overflow:visible!important;overflow-wrap:normal!important;
+   word-break:normal!important;line-height:1.55!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line:not(.quran-surah-row):not(.quran-basmala-row)>span:not(.quran-ayah-mark){
+   display:inline!important;white-space:normal!important;max-width:none!important;
+   overflow-wrap:normal!important;word-break:normal!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line .quran-ayah-mark{
+   display:inline-flex!important;vertical-align:middle!important;white-space:nowrap!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-line-empty{
+   text-align:start!important;text-align-last:start!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-surah-row,
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-basmala-row{
+   display:flex!important;justify-content:center!important;text-align:center!important;text-align-last:center!important;
+  }
+ `;
+ document.head.appendChild(st);
+})(); 
+
 </script>
 
 </body>
