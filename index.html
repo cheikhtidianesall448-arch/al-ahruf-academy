@@ -3500,18 +3500,10 @@ async function delT(username,b){
  else{S.teachers=(S.teachers||[]).filter(t=>String(t.username).toLowerCase()!==String(username).toLowerCase());S.students.forEach(s=>{if(String(s.teacher||'').toLowerCase()===String(username).toLowerCase())s.teacher=''});save();toast('Teacher deleted');render()}
 }
 
-let collectedAmountHidden=true;
-function toggleCollectedAmount(){
- collectedAmountHidden=!collectedAmountHidden;
- const amount=document.getElementById('collectedAmount'),eye=document.getElementById('collectedEyeIcon'),button=document.querySelector('.collected-toggle');
- if(amount)amount.textContent=collectedAmountHidden?'••••••':'$'+S.pay.filter(p=>p.st==='paid').reduce((a,p)=>a+p.amt,0);
- if(eye)eye.textContent=collectedAmountHidden?'🙈':'👁';
- if(button){button.setAttribute('aria-label',collectedAmountHidden?'Show collected amount':'Hide collected amount');button.title=collectedAmountHidden?'Show collected amount':'Hide collected amount';}
-}
 function overview(){
- const n=S.students.length,known=S.students.filter(s=>s.sex==='Male'||s.sex==='Female').length,males=S.students.filter(s=>s.sex==='Male').length,females=S.students.filter(s=>s.sex==='Female').length,maleRate=known?males/known*100:0,femaleRate=known?females/known*100:0,avg=n?S.students.reduce((a,s)=>a+lvl(s),0)/n:0,rev=S.pay.filter(p=>p.st==='paid').reduce((a,p)=>a+p.amt,0),due=S.pay.filter(p=>p.st!=='paid').length;
+ const n=S.students.length,known=S.students.filter(s=>s.sex==='Male'||s.sex==='Female').length,males=S.students.filter(s=>s.sex==='Male').length,females=S.students.filter(s=>s.sex==='Female').length,maleRate=known?males/known*100:0,femaleRate=known?females/known*100:0,avg=n?S.students.reduce((a,s)=>a+lvl(s),0)/n:0,due=S.pay.filter(p=>p.st!=='paid').length;
  const top=[...S.students].sort((a,b)=>b.sur.length-a.sur.length);
- return '<div class="stats"><div class="card"><b>'+n+'</b><span>Students</span></div><div class="card"><b>'+maleRate.toFixed(1)+'%</b><span>Male students</span></div><div class="card"><b>'+femaleRate.toFixed(1)+'%</b><span>Female students</span></div><div class="card"><b>'+avg.toFixed(1)+'%</b><span>Average Quran progress</span></div><div class="card collected-stat"><div class="collected-stat-head"><span>Collected</span><button type="button" class="collected-toggle" aria-label="Show collected amount" title="Show collected amount" onclick="toggleCollectedAmount()" style="border:0;background:transparent;cursor:pointer;font-size:1.4em;padding:4px 8px;color:inherit"><span id="collectedEyeIcon">🙈</span></button></div><b id="collectedAmount">••••••</b></div><div class="card"><b>'+due+'</b><span>Unpaid invoices</span></div></div>'
+ return '<div class="stats"><div class="card"><b>'+n+'</b><span>Students</span></div><div class="card"><b>'+maleRate.toFixed(1)+'%</b><span>Male students</span></div><div class="card"><b>'+femaleRate.toFixed(1)+'%</b><span>Female students</span></div><div class="card"><b>'+avg.toFixed(1)+'%</b><span>Average Quran progress</span></div><div class="card"><b>'+due+'</b><span>Unpaid invoices</span></div></div>'
  +'<div class="card"><h3>Quran Memorization Ranking</h3><p class="mute">Ranked automatically by the number of memorized surahs.</p><br>'
  +top.map((s,i)=>'<div class="row between" style="margin-bottom:8px"><span><b>#'+(i+1)+'</b> '+esc(s.name)+'</span><span class="mute">'+s.sur.length+' surahs</span></div><div class="bar2"><i style="width:'+lvl(s)+'%"></i></div>').join('')
  +(top.length?'':'<p class="mute">Add students to start the ranking.</p>')+'</div>';
