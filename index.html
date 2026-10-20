@@ -1806,6 +1806,12 @@ Object.assign(I18N.ar,{
  'Show collected amount':'إظهار المبلغ المحصّل','Hide collected amount':'إخفاء المبلغ المحصّل'
 });
 I18N.fr['Class not started yet']='Le cours n’a pas encore commencé';I18N.fr['Your class will start in']='Votre cours commencera dans';I18N.fr.day='jour';I18N.fr.days='jours';I18N.fr.hour='heure';I18N.fr.hours='heures';I18N.fr.minute='minute';I18N.fr.minutes='minutes';I18N.ar['Class not started yet']='لم يبدأ الدرس بعد';I18N.ar['Your class will start in']='سيبدأ درسك خلال';I18N.ar.day='يوم';I18N.ar.days='أيام';I18N.ar.hour='ساعة';I18N.ar.hours='ساعات';I18N.ar.minute='دقيقة';I18N.ar.minutes='دقائق';
+Object.assign(I18N.fr,{
+ 'You missed this class because you tried to join more than 30 minutes after it started. Please open Messages and contact your teacher to negotiate a make-up lesson or agree on how to catch up.':'Vous avez manqué ce cours car vous avez essayé de le rejoindre plus de 30 minutes après son début. Ouvrez Messages et contactez votre enseignant pour négocier un cours de rattrapage ou convenir d’une façon de rattraper le contenu.'
+});
+Object.assign(I18N.ar,{
+ 'You missed this class because you tried to join more than 30 minutes after it started. Please open Messages and contact your teacher to negotiate a make-up lesson or agree on how to catch up.':'لقد فاتك هذا الدرس لأنك حاولت الانضمام بعد أكثر من 30 دقيقة من بدايته. افتح الرسائل وتواصل مع معلمك للاتفاق على درس تعويضي أو خطة لتعويض ما فاتك.'
+});
 function t(key){return (I18N[currentLang]&&I18N[currentLang][key])||key}
 function setLanguage(lang){
  if(!LANGS[lang])return;
@@ -3932,10 +3938,13 @@ async function startScheduledClassCall(timetableId,studentUsername='',kind='vide
  try{
   let result,peers=[];
   if(user.role==='student'){
+   result=await onlineApi('authorize_student_class_call',{timetableId:String(timetableId),room});
+   if(result?.status!=='allowed'){
+    if(result?.code==='CLASS_MISSED')throw new Error(t('You missed this class because you tried to join more than 30 minutes after it started. Please open Messages and contact your teacher to negotiate a make-up lesson or agree on how to catch up.'));
+    throw new Error(result?.message||'This class call is not available now.');
+   }
    const attendance=await onlineApi('record_class_attendance',{timetableId:String(timetableId)});
    if(!['present','late'].includes(attendance.status))throw new Error(attendance.message||'You are not eligible for this scheduled call.');
-   result=await onlineApi('authorize_student_class_call',{timetableId:String(timetableId),room});
-   if(result?.status!=='allowed')throw new Error(result?.message||'This class call is not available now.');
    peers=[String(result.teacherUsername||'').trim().toLowerCase()];
   }else{
    result=await onlineApi('authorize_class_call',{timetableId:String(timetableId),studentUsername:String(studentUsername||''),room});
