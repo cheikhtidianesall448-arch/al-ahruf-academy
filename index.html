@@ -3324,8 +3324,8 @@ function editTimetable(id){
  },x.id?'Save changes':'Add course')
 }
 function deleteTimetable(id,b){const isAdmin=user.role==='admin',isTeacher=user.role==='teacher';const x=(S.timetable||[]).find(a=>String(a.id)===String(id));if(!x||(!isAdmin&&!(isTeacher&&(String(x.teacher||'').toLowerCase()===String(user.username||user.id||'').toLowerCase()||String(x.teacher||'')===String(user.id||'')))))return;if(!b.dataset.s){b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red');return}S.timetable=(S.timetable||[]).filter(x=>String(x.id)!==String(id));save();toast('Timetable entry removed');render()}
-Object.assign(I18N.fr,{'Profile picture':'Photo de profil','Choose photo':'Choisir une photo','Replace photo':'Remplacer la photo','Your profile photo':'Votre photo de profil','Profile photo updated':'Photo de profil mise à jour','Could not update profile photo':'Impossible de mettre à jour la photo de profil','Adjust photo':'Ajuster la photo','Move the crop using the sliders, zoom in or out, then apply when ready.':'Déplacez le cadrage avec les curseurs, ajustez le zoom, puis appliquez.','Photo crop preview':'Aperçu du cadrage','Zoom':'Zoom','Horizontal position':'Position horizontale','Vertical position':'Position verticale','Apply photo':'Appliquer la photo'});
-Object.assign(I18N.ar,{'Profile picture':'الصورة الشخصية','Choose photo':'اختيار صورة','Replace photo':'استبدال الصورة','Your profile photo':'صورتك الشخصية','Profile photo updated':'تم تحديث الصورة الشخصية','Could not update profile photo':'تعذر تحديث الصورة الشخصية','Adjust photo':'تعديل الصورة','Move the crop using the sliders, zoom in or out, then apply when ready.':'حرّك إطار القص باستخدام أشرطة التمرير، واضبط التكبير، ثم طبّق الصورة.','Photo crop preview':'معاينة قص الصورة','Zoom':'التكبير','Horizontal position':'الموضع الأفقي','Vertical position':'الموضع العمودي','Apply photo':'تطبيق الصورة'});
+Object.assign(I18N.fr,{'Profile picture':'Photo de profil','Choose photo':'Choisir une photo','Replace photo':'Remplacer la photo','Your profile photo':'Votre photo de profil','Profile photo updated':'Photo de profil mise à jour','Could not update profile photo':'Impossible de mettre à jour la photo de profil','Adjust photo':'Ajuster la photo','Touch and drag the photo to reposition it, or use the sliders. Zoom in or out, then apply when ready.':'Déplacez le cadrage avec les curseurs, ajustez le zoom, puis appliquez.','Photo crop preview':'Aperçu du cadrage','Zoom':'Zoom','Horizontal position':'Position horizontale','Vertical position':'Position verticale','Apply photo':'Appliquer la photo'});
+Object.assign(I18N.ar,{'Profile picture':'الصورة الشخصية','Choose photo':'اختيار صورة','Replace photo':'استبدال الصورة','Your profile photo':'صورتك الشخصية','Profile photo updated':'تم تحديث الصورة الشخصية','Could not update profile photo':'تعذر تحديث الصورة الشخصية','Adjust photo':'تعديل الصورة','Touch and drag the photo to reposition it, or use the sliders. Zoom in or out, then apply when ready.':'المس الصورة واسحبها لتغيير موضعها، أو استخدم أشرطة التمرير. اضبط التكبير ثم طبّق الصورة.','Photo crop preview':'معاينة قص الصورة','Zoom':'التكبير','Horizontal position':'الموضع الأفقي','Vertical position':'الموضع العمودي','Apply photo':'تطبيق الصورة'});
 function currentProfileRecord(){
  const role=String(user&&user.role||'').toLowerCase();
  const key=String(user&&(user.username||user.studentId||user.student_id||user.id)||'').trim().toLowerCase();
@@ -3363,7 +3363,9 @@ async function cropProfilePhotoBeforeApply(file){
   layer.innerHTML='<div class="ahruf-photo-crop-modal" role="dialog" aria-modal="true" aria-labelledby="ahrufCropTitle"><h3 id="ahrufCropTitle">'+esc(t('Adjust photo'))+'</h3><p class="mute">'+esc(t('Move the crop using the sliders, zoom in or out, then apply when ready.'))+'</p><div class="ahruf-photo-crop-frame"><canvas width="400" height="400" aria-label="'+esc(t('Photo crop preview'))+'"></canvas></div><label>'+esc(t('Zoom'))+' <span id="ahrufCropZoomValue">1.0×</span><input id="ahrufCropZoom" type="range" min="1" max="3" step=".05" value="1"></label><label>'+esc(t('Horizontal position'))+'<input id="ahrufCropX" type="range" min="-100" max="100" value="0"></label><label>'+esc(t('Vertical position'))+'<input id="ahrufCropY" type="range" min="-100" max="100" value="0"></label><div class="ahruf-photo-crop-actions"><button type="button" class="btn ghost" data-crop-cancel>'+esc(t('Cancel'))+'</button><button type="button" class="btn" data-crop-apply>'+esc(t('Apply photo'))+'</button></div></div>';
   document.body.appendChild(layer);
   const canvas=layer.querySelector('canvas'),ctx=canvas.getContext('2d'),zoom=layer.querySelector('#ahrufCropZoom'),x=layer.querySelector('#ahrufCropX'),y=layer.querySelector('#ahrufCropY'),zv=layer.querySelector('#ahrufCropZoomValue');
-  let finished=false;
+  let finished=false,dragging=false,lastPointerX=0,lastPointerY=0;
+  canvas.style.touchAction='none';
+  canvas.style.cursor='grab';
   function draw(){
    const scale=Math.min(img.naturalWidth,img.naturalHeight)/Number(zoom.value),maxX=Math.max(0,(img.naturalWidth-scale)/2),maxY=Math.max(0,(img.naturalHeight-scale)/2);
    const sx=Math.max(0,Math.min(img.naturalWidth-scale,img.naturalWidth/2+Number(x.value)/100*maxX-scale/2));
@@ -3371,6 +3373,24 @@ async function cropProfilePhotoBeforeApply(file){
    ctx.clearRect(0,0,400,400);ctx.drawImage(img,sx,sy,scale,scale,0,0,400,400);zv.textContent=Number(zoom.value).toFixed(1)+'×';
   }
   function close(value){if(finished)return;finished=true;layer.remove();resolve(value);}
+  canvas.addEventListener('pointerdown',e=>{
+   if(finished)return;dragging=true;lastPointerX=e.clientX;lastPointerY=e.clientY;
+   canvas.style.cursor='grabbing';try{canvas.setPointerCapture(e.pointerId)}catch(_){}
+   e.preventDefault();
+  });
+  canvas.addEventListener('pointermove',e=>{
+   if(!dragging||finished)return;
+   const rect=canvas.getBoundingClientRect(),scale=Math.min(img.naturalWidth,img.naturalHeight)/Number(zoom.value);
+   const maxX=Math.max(0,(img.naturalWidth-scale)/2),maxY=Math.max(0,(img.naturalHeight-scale)/2);
+   const dx=(e.clientX-lastPointerX)*400/Math.max(1,rect.width)*scale;
+   const dy=(e.clientY-lastPointerY)*400/Math.max(1,rect.height)*scale;
+   lastPointerX=e.clientX;lastPointerY=e.clientY;
+   if(maxX>0)x.value=String(Math.max(-100,Math.min(100,Number(x.value)-dx/maxX*100)));
+   if(maxY>0)y.value=String(Math.max(-100,Math.min(100,Number(y.value)-dy/maxY*100)));
+   draw();e.preventDefault();
+  });
+  function stopDrag(){dragging=false;canvas.style.cursor='grab';}
+  canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);canvas.addEventListener('lostpointercapture',stopDrag);
   [zoom,x,y].forEach(el=>el.addEventListener('input',draw));draw();
   layer.querySelector('[data-crop-cancel]').onclick=()=>close(null);
   layer.querySelector('[data-crop-apply]').onclick=()=>close(canvas.toDataURL('image/jpeg',.88));
