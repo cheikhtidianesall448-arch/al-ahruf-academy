@@ -1236,6 +1236,41 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
   const studentRecords = (state.students || []).filter((st: any) => (item.students || []).some((id: any) =>
     [st?.id, st?.username, st?.studentId, st?.student_id].some((v: any) => lower(v) === lower(id))
   ));
+  const room = text(body.room);
+  if (!room || !/^[a-zA-Z0-9_-]{8,160}$/.test(room)) {
+    return { status: "denied", allowed: false, message: "A valid call room is required." };
+  }
+
+  // Private Realtime rooms are protected by RLS against this participant table.
+  // Register only the authenticated user and the other users authorized for this
+  // scheduled class before the browser subscribes to the private channel.
+  const peerUsernames: string[] = [];
+  if (role === "student") {
+    peerUsernames.push(text(teacherRecord?.username || teacherRecord?.id || item.teacher));
+  } else if (role === "teacher" || role === "admin") {
+    const target = lower(body.studentUsername || body.student_username);
+    const peers = studentRecords.map((st: any) => ({
+      username: text(st?.username || st?.id || st?.studentId || st?.student_id),
+      name: text(st?.name || st?.full_name),
+    })).filter((st: any) => !target || lower(st.username) === target || lower(st.name) === target);
+    if (target && !peers.length) return { status: "denied", allowed: false, message: "That student is not assigned to this class." };
+    peerUsernames.push(...peers.map((st: any) => st.username).filter(Boolean));
+  }
+  const usernames = [...new Set([text(profile.username), ...peerUsernames].filter(Boolean).map((v) => lower(v)))];
+  const { data: callProfiles, error: profilesError } = await ctx.supabaseAdmin
+    .from("profiles").select("id,username").in("username", usernames);
+  if (profilesError) throw profilesError;
+  const participantRows = (callProfiles || []).map((p: any) => ({
+    room, user_id: p.id, username: text(p.username), timetable_id: timetableId,
+  }));
+  if (!participantRows.some((p: any) => p.user_id === profile.id)) {
+    throw new Error("Your account could not be registered for this call room.");
+  }
+  const { error: participantsError } = await ctx.supabaseAdmin
+    .from("academy_call_participants")
+    .upsert(participantRows, { onConflict: "room,user_id" });
+  if (participantsError) throw participantsError;
+
   if (actionIsStudentClassCall(body)) {
     return { status: "allowed", allowed: true, timetableId, teacherUsername: text(teacherRecord?.username || teacherRecord?.id || item.teacher), message: "Access authorized." };
   }
@@ -1243,7 +1278,6 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
     const target = lower(body.studentUsername || body.student_username);
     const peers = studentRecords.map((st: any) => ({ username: text(st?.username || st?.id || st?.studentId || st?.student_id), name: text(st?.name || st?.full_name) }))
       .filter((st: any) => !target || lower(st.username) === target || lower(st.name) === target);
-    if (target && !peers.length) return { status: "denied", allowed: false, message: "That student is not assigned to this class." };
     return { status: "allowed", allowed: true, timetableId, students: peers, message: "Access authorized." };
   }
   return { status: "allowed", allowed: true, timetableId, message: "Access authorized." };
