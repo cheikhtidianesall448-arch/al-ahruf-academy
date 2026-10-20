@@ -4675,6 +4675,72 @@ setInterval(pollLiveMessages,3000);
  /* Desktop zoom support: Ctrl + mouse wheel over the reader. */
  reader.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();zoom=Math.max(.75,Math.min(3,zoom*(e.deltaY<0?1.08:.92)));apply();try{localStorage.setItem('ahrufMushafZoom',String(zoom))}catch(_){}},{passive:false});
 })();
+
+/* Keep the Mushaf paper portrait-shaped on every device; let it grow vertically when zoomed. */
+(function installPortraitReadableMushafPages(){
+ if(document.getElementById('ahrufPortraitReadableMushafPages'))return;
+ const st=document.createElement('style');st.id='ahrufPortraitReadableMushafPages';
+ st.textContent=`
+  #quranReaderContent .quran-page-paper{
+   position:relative!important;display:block!important;
+   width:100%!important;max-width:100%!important;min-width:0!important;
+   height:auto!important;min-height:0!important;max-height:none!important;
+   aspect-ratio:auto!important;overflow:visible!important;
+   container-type:inline-size!important;box-sizing:border-box!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines{
+   position:relative!important;inset:auto!important;
+   width:100%!important;height:auto!important;min-height:146.8cqw!important;
+   max-height:none!important;box-sizing:border-box!important;
+   display:grid!important;
+   grid-template-columns:minmax(0,1fr)!important;
+   grid-template-rows:repeat(var(--mushaf-row-count,15),auto)!important;
+   grid-auto-rows:auto!important;align-content:start!important;
+   overflow:visible!important;
+   padding:7% 5% 10%!important;gap:0!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line{
+   width:100%!important;min-width:0!important;height:auto!important;
+   min-height:1.45em!important;max-height:none!important;
+   display:flex!important;flex-wrap:wrap!important;align-items:center!important;
+   justify-content:space-between!important;align-content:center!important;
+   white-space:normal!important;overflow:visible!important;
+   overflow-wrap:anywhere!important;word-break:normal!important;
+   line-height:1.55!important;font-size:1em!important;
+   padding-block:.08em!important;box-sizing:border-box!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line>span{
+   display:inline!important;flex:0 1 auto!important;min-width:0!important;
+   max-width:100%!important;white-space:normal!important;
+   line-height:inherit!important;overflow-wrap:anywhere!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-line-empty{
+   min-height:1.45em!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-surah-title-panel,
+  #quranReaderContent .quran-page-paper .quran-basmala-panel{
+   max-width:100%!important;white-space:normal!important;
+   overflow-wrap:anywhere!important;line-height:1.6!important;
+  }
+  body.quran-surah-fullscreen #quranReaderContent .quran-page-paper{
+   width:100%!important;max-width:100%!important;min-height:0!important;
+   height:auto!important;aspect-ratio:auto!important;overflow:visible!important;
+   margin:0 auto 16px!important;
+  }
+  body.quran-surah-fullscreen #quranReaderContent .quran-page-paper .quran-lines{
+   min-height:146.8cqw!important;padding:7% 5% 10%!important;
+  }
+  @media(max-width:600px){
+   #quranReaderContent .quran-page-paper .quran-lines{
+    min-height:146.8cqw!important;padding:8% 4.5% 11%!important;
+   }
+   #quranReaderContent .quran-page-paper .quran-lines>.quran-line{
+    line-height:1.6!important;min-height:1.5em!important;
+   }
+  }
+ `;
+ document.head.appendChild(st);
+})();
 </script>
 
 </body>
