@@ -1229,10 +1229,18 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
     const endMinutes = endHour * 60 + endMinute;
     const duration = endMinutes > startMinutes ? endMinutes - startMinutes : 60;
     const elapsed = nowMinutes - startMinutes;
-    // Permit joining throughout the scheduled lesson, not only during its first 30 minutes.
-    // Attendance rules remain separate and are not changed by this call-access check.
     if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || elapsed < 0 || elapsed >= duration) {
       return { status: "denied", allowed: false, message: "This class call is outside the scheduled lesson time." };
+    }
+    // Students may join only during the first 30 minutes. After that, direct them
+    // to contact their teacher to negotiate a make-up lesson or catch-up plan.
+    if (role === "student" && elapsed >= 30) {
+      return {
+        status: "denied",
+        allowed: false,
+        code: "CLASS_MISSED",
+        message: "You missed this class because you tried to join more than 30 minutes after it started. Please open Messages and contact your teacher to negotiate a make-up lesson or agree on how to catch up.",
+      };
     }
   }
   const teacherRecord = (state.teachers || []).find((t: any) =>
