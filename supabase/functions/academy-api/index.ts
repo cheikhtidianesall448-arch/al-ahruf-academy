@@ -1182,6 +1182,50 @@ async function getState(ctx: any) {
   };
 }
 
+async function authorizeScheduledClassCall(ctx: any, body: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  const role = normalizedRole(profile.role);
+  if (!["student", "teacher", "admin"].includes(role)) throw new Error("This account cannot join academy class calls.");
+  const timetableId = text(body.timetableId || body.timetable_id);
+  if (!timetableId) throw new Error("A scheduled class is required for this call.");
+  const state = await getAcademyState(ctx);
+  const item = (state.timetable || []).find((x: any) => text(x?.id) === timetableId);
+  if (!item) return { status: "denied", allowed: false, message: "This scheduled class was not found." };
+  const me = lower(profile.username);
+  if (role === "student") {
+    const assigned = Array.isArray(item.students) && item.students.some((id: any) => lower(id) === me);
+    if (!assigned) return { status: "denied", allowed: false, message: "This class is not assigned to your student account." };
+  } else if (role === "teacher") {
+    const teacherRecord = (state.teachers || []).find((t: any) => lower(t?.username) === me);
+    if (lower(item.teacher) !== me && lower(item.teacher) !== lower(profileName(profile)) && lower(item.teacher) !== lower(teacherRecord?.name)) {
+      return { status: "denied", allowed: false, message: "You are not the teacher assigned to this class." };
+    }
+  }
+  const meet = (state.classes || []).find((x: any) =>
+    (text(item.classCode) ? lower(x?.code) === lower(item.classCode) : normalizeClassTitle(x?.title) === normalizeClassTitle(item?.course)) &&
+    /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(x?.url))
+  );
+  if (!meet) return { status: "denied", allowed: false, message: "No valid Google Meet link is connected to this class." };
+  if (role === "student") {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Dakar", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).formatToParts(new Date());
+    const part = (name: string) => parts.find((p) => p.type === name)?.value || "";
+    if (lower(item.day) !== lower(part("weekday"))) {
+      return { status: "denied", allowed: false, message: "This class call is available only during its scheduled time." };
+    }
+    const [hour, minute] = text(item.start).split(":").map(Number);
+    const nowMinutes = Number(part("hour")) * 60 + Number(part("minute"));
+    const startMinutes = hour * 60 + minute;
+    const elapsed = nowMinutes - startMinutes;
+    if (!Number.isFinite(startMinutes) || elapsed < 0 || elapsed >= 30) {
+      return { status: "denied", allowed: false, message: "This class call is outside the permitted joining window." };
+    }
+  }
+  return { status: "allowed", allowed: true, timetableId, message: "Access authorized." };
+}
+
 async function recordClassAttendance(ctx: any, body: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
@@ -1330,6 +1374,10 @@ export default {
         // user session; the service-role client is never exposed to the browser.
         if (action === "login") {
           return json(await login(ctx, body));
+        }
+
+        if (["join_class_call", "authorised_student_class_call", "authorized_student_class_call"].includes(action)) {
+          return json(await authorizeScheduledClassCall(ctx, body));
         }
 
         if (action === "record_class_attendance") {
