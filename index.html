@@ -1486,7 +1486,7 @@ async function onlineApi(action,payload={}){
 
   async function request(accessToken){
     const headers={'Content-Type':'application/json','apikey':AHRUF_CFG.key};
-    if(action!=='login'&&action!=='academy_chat')headers.Authorization='Bearer '+accessToken;
+    if(action!=='login')headers.Authorization='Bearer '+accessToken;
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),15000);
     try{
