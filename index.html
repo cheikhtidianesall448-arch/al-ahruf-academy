@@ -3864,16 +3864,24 @@ function myclass(){
 async function startScheduledClassCall(timetableId,studentUsername='',kind='video'){
  if(!user||!['student','teacher'].includes(user.role))return ahrufCallToast('Only the assigned student or teacher can start a scheduled class call.');
  if(ahrufActiveCall)return ahrufCallToast('End your current call before starting another.');
+ const room='ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
  try{
-  const room='ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
-  const action=user.role==='student'?'authorize_student_class_call':'authorize_class_call';
-  const result=await onlineApi(action,{timetableId:String(timetableId),studentUsername:String(studentUsername||''),kind:kind==='audio'?'audio':'video',room});
-  if(result.status!=='allowed')throw new Error(result.message||'The academy could not authorize this class call.');
-  const peer=user.role==='student'?result.teacherUsername:(result.students||[]).find(x=>String(x.username||'').toLowerCase()===String(studentUsername||'').toLowerCase())?.username;
-  if(!peer)throw new Error('The other participant is not eligible for this scheduled call.');
+  let result,peer='';
+  if(user.role==='student'){
+   result=await onlineApi('authorize_student_class_call',{timetableId:String(timetableId),room});
+   if(result?.status!=='allowed')throw new Error(result?.message||'This class call is not available now.');
+   peer=String(result.teacherUsername||'').trim().toLowerCase();
+  }else{
+   result=await onlineApi('authorize_class_call',{timetableId:String(timetableId),studentUsername:String(studentUsername||''),room});
+   if(result?.status!=='allowed')throw new Error(result?.message||'This class call is not available now.');
+   const selected=(result.students||[]).find(x=>String(x.username||'').trim().toLowerCase()===String(studentUsername||'').trim().toLowerCase());
+   peer=String(selected?.username||'').trim().toLowerCase();
+  }
+  if(!peer)throw new Error('The other participant could not be identified or is not eligible.');
   await ahrufCreateCall(kind==='audio'?'audio':'video',[peer],{room,timetableId:String(timetableId)});
  }catch(e){ahrufCallToast(e?.message||'Could not start the scheduled class call.')}
 }
+
 function editClassLink(){modal('Class settings','Class calls are managed by the academy timetable. Edit the class day, start/end time, teacher, and assigned students in Timetable settings. No external meeting URL is needed.',()=>{},'Close')}
 function deleteClassLink(){toast('External class links are no longer used.')}
 function klass(){
