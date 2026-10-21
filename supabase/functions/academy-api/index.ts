@@ -1558,6 +1558,31 @@ async function academyChat(ctx: any, body: any) {
     const translations: Record<string, string> = { en, fr, ar };
     return { reply: replyLanguages.map((language: string) => translations[language]).filter(Boolean).join("\\n\\n") };
   };
+
+  // High-priority intent routes: answer dashboard analytics before broad classification.
+  const fastGenderText = intentQ.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+  const fastMentionsGender = /\\b(male|males|men|boys|female|females|women|girls|gender|sex)\\b|garçons?|filles?|masculin|féminin|ذكور|إناث|الطلاب الذكور|الطالبات/i.test(fastGenderText);
+  const fastMentionsStudents = /\\b(students?|learners?|pupils?|boys|girls)\\b|garçons?|filles?|élèves?|étudiants?|طلاب|طالبات|الطلاب|الطالبات/i.test(fastGenderText);
+  const fastAsksGenderStats = fastMentionsGender && (fastMentionsStudents || /percentage|percent|proportion|share|ratio|how many|number of|count|total|what\\s*%|%|pourcentage|combien|nombre|نسبة|كم عدد|عدد|٪/i.test(fastGenderText));
+  if (fastAsksGenderStats) {
+    if (!isAdmin && !isTeacher) return tr("Academy-wide student gender statistics are available only to authorized staff.", "Les statistiques globales sur le sexe des élèves sont réservées au personnel autorisé.", "إحصاءات جنس الطلاب على مستوى الأكاديمية متاحة للموظفين المخولين فقط.");
+    const rows = Array.isArray(state.students) ? state.students : [];
+    const sex = (student: any) => lower(student?.sex || student?.gender || student?.sexAtRegistration || student?.studentGender).normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
+    const males = rows.filter((student: any) => /^(male|m|boy|boys|masculin|garçon|garcons|ذكر|ذكور)$/.test(sex(student))).length;
+    const females = rows.filter((student: any) => /^(female|f|girl|girls|feminin|fille|filles|أنثى|إناث)$/.test(sex(student))).length;
+    const known = males + females, malePercent = known ? (males / known * 100).toFixed(1) : "0.0", femalePercent = known ? (females / known * 100).toFixed(1) : "0.0";
+    const asksOnlyMale = /\\b(male|males|men|boys)\\b|garçons?|masculin|ذكور|الطلاب الذكور/i.test(fastGenderText) && !/\\b(female|females|women|girls)\\b|filles?|féminin|إناث|الطالبات/i.test(fastGenderText);
+    const asksOnlyFemale = /\\b(female|females|women|girls)\\b|filles?|féminin|إناث|الطالبات/i.test(fastGenderText) && !/\\b(male|males|men|boys)\\b|garçons?|masculin|ذكور|الطلاب الذكور/i.test(fastGenderText);
+    if (asksOnlyMale || asksOnlyFemale) return tr(
+      "There are " + (asksOnlyMale ? males : females) + " " + (asksOnlyMale ? "male" : "female") + " students: " + (asksOnlyMale ? malePercent : femalePercent) + "% of students with a recorded gender. Total student records: " + rows.length + "; gender recorded for " + known + ".",
+      "Il y a " + (asksOnlyMale ? males : females) + " élèves " + (asksOnlyMale ? "masculins" : "féminins") + " : " + (asksOnlyMale ? malePercent : femalePercent) + "% des élèves dont le sexe est renseigné. Total des dossiers : " + rows.length + "; sexe renseigné pour " + known + ".",
+      "عدد الطلاب " + (asksOnlyMale ? "الذكور" : "الإناث") + ": " + (asksOnlyMale ? males : females) + "، أي " + (asksOnlyMale ? malePercent : femalePercent) + "% من الطلاب المسجل جنسهم. إجمالي السجلات: " + rows.length + "؛ الجنس مسجل لـ " + known + "."
+    );
+    return tr("Student gender statistics: " + males + " male (" + malePercent + "%), " + females + " female (" + femalePercent + "%), from " + rows.length + " student records. Percentages use records with a recognized gender (" + known + ").",
+      "Statistiques de sexe : " + males + " garçons (" + malePercent + "%), " + females + " filles (" + femalePercent + "%), sur " + rows.length + " dossiers. Les pourcentages utilisent les dossiers avec un sexe reconnu (" + known + ").",
+      "إحصاءات جنس الطلاب: " + males + " ذكور (" + malePercent + "%)، و" + females + " إناث (" + femalePercent + "%)، من أصل " + rows.length + " سجل. تُحسب النسب من السجلات ذات الجنس المعروف (" + known + ").");
+  }
+
   // Answer a student's "who + teacher" question from their own assignment.
   if (/(\\bwho\\b.*\\bteacher\\b|\\bteacher\\b.*\\bwho\\b|\\bwho\\s+teaches\\s+me\\b|\\bmy\\s+teacher\\b|\\bqui\\b.*\\b(enseignant|professeur)\\b|\\bmon\\s+(enseignant|professeur)\\b|من\\s+هو\\s+معلمي|من\\s+معلمك|معلمي|مدرسي)/i.test(intentQ)) {
     if (role === "student" && myStudent) {
@@ -1692,6 +1717,13 @@ async function academyChat(ctx: any, body: any) {
     "You're welcome! It's my pleasure. Feel free to ask me anything about your classes, timetable, attendance, or progress. I'm your Al-Ahruf assistant.",
     "Avec plaisir ! C’est un plaisir de vous aider. N’hésitez pas à me poser vos questions sur vos cours, votre emploi du temps, vos présences ou votre progression. Je suis votre assistant Al-Ahruf.",
     "العفو! يسعدني مساعدتك. لا تتردد في سؤالي عن حصصك أو جدولك أو حضورك أو تقدمك. أنا مساعدك في أكاديمية الأحرف."
+  );
+
+  const casualCheckIn = /^(what'?s up|whats up|sup|how are you|how'?s it going|how have you been|what'?s new|how are things|you good|all good)[!.?\\s]*$/i.test(q);
+  if (casualCheckIn) return tr(
+    "I'm doing well, thank you! I'm here to help with Al-Ahruf Academy. You can ask me about students, teachers, classes, attendance, Qur’an progress, or any platform feature.",
+    "Je vais bien, merci ! Je suis là pour vous aider avec Al-Ahruf Academy. Vous pouvez me poser des questions sur les élèves, les enseignants, les cours, les présences, la progression coranique ou les fonctionnalités de la plateforme.",
+    "أنا بخير، شكرًا لك! أنا هنا لمساعدتك في أكاديمية الأحرف. يمكنك سؤالي عن الطلاب والمعلمين والحصص والحضور وتقدم القرآن أو أي ميزة في المنصة."
   );
 
   const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening|thanks|thank you|merci|bonjour|bonsoir|salut|bye|goodbye|salam|assalamu alaikum|السلام عليكم|مرحبا|أهلا|شكرا|مع السلامة)[!.?\s]*$/i.test(q);
