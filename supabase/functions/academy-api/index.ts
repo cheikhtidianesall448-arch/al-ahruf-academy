@@ -1460,9 +1460,25 @@ async function academyChat(ctx: any, body: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile || !isActive(profile)) throw new Error("Please sign in again to use the Al-Ahruf assistant.");
   const role = normalizedRole(profile.role);
-  const lang = ["fr", "ar"].includes(lower(body.language)) ? lower(body.language) : "en";
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const latest = [...messages].reverse().find((m: any) => lower(m?.role) === "user");
+  // Detect the language from the user's actual words rather than relying on the UI selector.
+  // Short replies such as "yes", "and teachers?" or "pourquoi ?" inherit the most recent
+  // clearly identifiable conversation language unless they contain a clear language signal.
+  const detectLanguage = (value: any): string => {
+    const sample = text(value).normalize("NFC").toLowerCase();
+    if (/[\\u0600-\\u06ff]/.test(sample)) return "ar";
+    if (/[àâçéèêëîïôùûüÿœæ]/i.test(sample) ||
+      /\\b(bonjour|bonsoir|salut|merci|oui|non|pourquoi|comment|combien|enseignants?|professeurs?|eleves?|élèves|cours|emploi du temps|présence|paiement|je veux|est-ce|s'il vous plaît|qu'est-ce)\\b/i.test(sample)) return "fr";
+    if (/\\b(hello|hi|hey|please|thanks|thank you|yes|no|why|how|what|when|where|teachers?|students?|classes?|attendance|timetable|schedule|payment|help|and|also)\\b/i.test(sample)) return "en";
+    return "";
+  };
+  const latestText = text(latest?.content);
+  const explicitLanguage = detectLanguage(latestText);
+  const lang = explicitLanguage || [...messages].reverse()
+    .filter((m: any) => lower(m?.role) === "user" && text(m?.content))
+    .map((m: any) => detectLanguage(m.content))
+    .find(Boolean) || "en";
   let question = text(latest?.content);
   const lastAssistant = [...messages].reverse().find((m: any) => lower(m?.role) === "assistant");
   let confirmedIntent = false;
@@ -1470,22 +1486,28 @@ async function academyChat(ctx: any, body: any) {
     const previousUser = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content)).slice(-2)[0];
     if (previousUser) { question = text(previousUser.content); confirmedIntent = true; }
   }
-  const q = question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\bhoww+\b/g, "how");
-  // Use recent conversation turns to interpret short follow-ups without letting old topics override a new, complete question.
+  const normalizeQuestion = (value: string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/\\bhoww+\\b/g, "how").trim();
+  const q = normalizeQuestion(question);
+  // Use recent user turns for follow-ups, but don't let an old subject override a complete new question.
   const priorUserTurns = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content) && m !== latest).slice(-4);
-  const previousQuestion = priorUserTurns.length ? text(priorUserTurns[priorUserTurns.length - 1].content).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+  const previousQuestion = priorUserTurns.length ? normalizeQuestion(text(priorUserTurns[priorUserTurns.length - 1].content)) : "";
   const shortFollowup = q.length <= 100 && (
-    /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)\b/.test(q) ||
-    /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\s*[؟?!.]*$/.test(q) ||
-    /^(please i want to know|please tell me|tell me|answer me|i want to know|je veux savoir|s il vous plait|أريد أن أعرف)[!.?\s]*$/.test(q)
+    /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)\\b/.test(q) ||
+    /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\\s*[؟?!.]*$/.test(q) ||
+    /^(please i want to know|please tell me|tell me|answer me|i want to know|je veux savoir|s il vous plait|أريد أن أعرف)[!.?\\s]*$/.test(q)
   );
   let contextQuestion = previousQuestion;
-  // If a follow-up changes the subject (for example, "students?" -> "and teachers?"),
-  // keep the prior question's purpose but avoid carrying the previous subject into the new one.
-  if (/(teacher|enseignant|professeur|معلم|مدرس)/.test(q)) contextQuestion = contextQuestion.replace(/student|learner|eleve|etudiant|طلاب|طالب|تلميذ|course|class|lesson|session|cours|حصص|دروس/gi, " ");
-  else if (/(student|learner|eleve|etudiant|طلاب|طالب|تلميذ)/.test(q)) contextQuestion = contextQuestion.replace(/teacher|enseignant|professeur|معلم|مدرس|course|class|lesson|session|cours|حصص|دروس/gi, " ");
-  else if (/(course|class|lesson|session|cours|حصص|دروس)/.test(q)) contextQuestion = contextQuestion.replace(/teacher|enseignant|professeur|معلم|مدرس|student|learner|eleve|etudiant|طلاب|طالب|تلميذ/gi, " ");
-  const intentQ = shortFollowup && contextQuestion ? q + " " + contextQuestion : q;
+  const subjectPattern = /(teachers?|teaching|enseignants?|professeurs?|معلمين|معلمون|المعلمين|المعلمون|students?|learners?|eleves?|etudiants?|طلاب|طالب|التلاميذ|courses?|classes?|lessons?|sessions?|cours|حصص|دروس)/i;
+  const currentSubject = q.match(subjectPattern)?.[0];
+  // For "how many students?" -> "and teachers?", preserve the intent ("how many")
+  // and replace the old subject instead of appending two conflicting subjects.
+  if (shortFollowup && contextQuestion && currentSubject) {
+    contextQuestion = contextQuestion.replace(subjectPattern, currentSubject);
+  } else if (shortFollowup && contextQuestion) {
+    // Put the previous topic first so the rule-based intent matcher can still see it.
+    contextQuestion = contextQuestion + " " + q;
+  }
+  const intentQ = shortFollowup && contextQuestion ? contextQuestion : q;
   const rawState = await getAcademyState(ctx);
   // Scope data on the server before any assistant handler can read it.
   const state = role === "student" ? studentState(rawState, profile.username) : role === "teacher" ? teacherState(rawState, profile.username) : rawState;
