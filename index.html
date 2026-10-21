@@ -3898,10 +3898,10 @@ function showOutcome(){
  const paid=S.pay.filter(p=>p.st==='paid');
  function period(p){
   const desc=String(p.description||'');
-  const named=desc.match(/\\b(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(20\\d{2})\\b/i);
+  const named=desc.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(20\d{2})\b/i);
   if(named){const m=names.findIndex(n=>n.toLowerCase()===named[1].toLowerCase());return {year:Number(named[2]),month:m,key:named[2]+'-'+String(m+1).padStart(2,'0')};}
   const raw=String(p.paidAt||p.paid_at||p.date||p.due||'');
-  const d=raw.match(/^(20\\d{2})-(\\d{2})/);
+  const d=raw.match(/^(20\d{2})-(\d{2})/);
   if(d){const m=Number(d[2])-1;return {year:Number(d[1]),month:m,key:d[1]+'-'+d[2]};}
   return {year:now.getFullYear(),month:now.getMonth(),key:currentKey};
  }
