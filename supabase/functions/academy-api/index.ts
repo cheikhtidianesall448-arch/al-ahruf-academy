@@ -1363,7 +1363,7 @@ async function recordClassAttendance(ctx: any, body: any) {
     if (error) throw error;
   }
   if (status === "absent") return { status, message: "You are marked absent because you tried to join 30 minutes or more after class started. Please message your teacher to negotiate another day for a catch-up class.", date, state: studentState(state, profile.username) };
-  return { status, message: status === "late" ? "You are late. Your attendance has been recorded." : "You are present. Your attendance has been recorded.", url: meet.url, date, state: studentState(state, profile.username) };
+  return { status, message: status === "late" ? "You are late. Your attendance has been recorded." : "You are present. Your attendance has been recorded.", date, state: studentState(state, profile.username) };
 }
 
 async function saveState(ctx: any, body: any) {
