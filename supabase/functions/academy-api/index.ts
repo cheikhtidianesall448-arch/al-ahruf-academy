@@ -1480,7 +1480,7 @@ async function academyChat(ctx: any, body: any) {
   const tr = (en: string, fr: string, ar: string) => ({ reply: lang === "fr" ? fr : lang === "ar" ? ar : en });
   if (!question) return tr("Ask me about your classes, timetable, attendance, Qur’an progress, or how to use the academy.", "Posez-moi une question sur vos cours, votre emploi du temps, les présences, votre progression coranique ou la plateforme.", "اسألني عن الحصص أو الجدول أو الحضور أو تقدمك في القرآن أو استخدام المنصة.");
 
-  if (/^(hi|hello|hey|salam|assalamu|bonjour|salut|مرحبا|السلام)/.test(q))
+  if (/^(hi|hello|hey|salam|assalamu|bonjour|salut|مرحبا|السلام)[!.?\s]*$/.test(q))
     return tr("Wa alaikum assalam! I can help with classes, your timetable, attendance, Qur’an progress, and platform guidance. What would you like to know?", "Wa alaykoum salam ! Je peux vous aider pour les cours, l’emploi du temps, les présences, la progression coranique et la plateforme. Que souhaitez-vous savoir ?", "وعليكم السلام! أستطيع مساعدتك في الحصص والجدول والحضور وتقدمك في القرآن واستخدام المنصة. ماذا تريد أن تعرف؟");
 
   if (/(what can you help|how can you help|help me|your function|what do you do|كيف تساعد|ماذا تستطيع|que peux tu faire|comment peux tu aider)/.test(q))
