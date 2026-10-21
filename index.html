@@ -2826,9 +2826,10 @@ async function ahrufCreateCall(kind,invitees,options={}){
   await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||user?.username||ahrufMe(),kind});
   ahrufStartRingback(call);
   const sendInvite=async id=>{
-   if(call.ended||call.remoteJoined||call.deliveredInvitees.has(id))return;
+   const alreadyDelivered=call.deliveredInvitees.has(id);
+   if(call.ended||call.remoteJoined||(alreadyDelivered&&!call.automaticClass))return;
    const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),timetableId:call.timetableId||'',sentAt:Date.now()};
-   try{await ahrufBroadcastToUser(call,id,invite);call.deliveredInvitees.add(id);ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn('Call invite message could not be saved:',e))}
+   try{await ahrufBroadcastToUser(call,id,invite);call.deliveredInvitees.add(id);if(!alreadyDelivered)ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn('Call invite message could not be saved:',e))}
    catch(deliveryError){console.warn('Call recipient is not connected yet:',id,deliveryError?.message||deliveryError);if(!call.automaticClass)throw deliveryError}
   };
   for(const id of call.invitees){try{await sendInvite(id)}catch(deliveryError){ahrufStopRingback(call);await ahrufDisposeCall(call,true);ahrufCallToast('The person you’re trying to call is not connected. Please try again.');return}}
