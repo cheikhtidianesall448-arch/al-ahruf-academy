@@ -2073,7 +2073,7 @@ async function login(role,u,p){
      /* Reveal the AI only after the app has finished rendering the signed-in screen. */
      if(window.ahrufSyncChatUser){window.ahrufSyncChatUser();requestAnimationFrame(()=>window.ahrufSyncChatUser());setTimeout(()=>window.ahrufSyncChatUser(),250);}
      setTimeout(ahrufCheckPendingPushCall,250);
-   }catch(e){console.error('Al-Ahruf login failed:',e);toast('Sign-in failed. Check your credentials or contact the administrator.');}
+   }catch(e){console.error('Al-Ahruf login failed:',e);const message=String(e?.message||'').trim();toast(message&&message!=='Invalid username or password.'?message:'Sign-in failed. Please check your username/ID and password, then try again.');}
    finally{onlineBusy=false}
    return;
  }
