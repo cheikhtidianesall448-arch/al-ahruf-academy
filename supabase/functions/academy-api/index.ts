@@ -1464,6 +1464,14 @@ async function academyChat(ctx: any, body: any) {
   const latest = [...messages].reverse().find((m: any) => lower(m?.role) === "user");
   const question = text(latest?.content);
   const q = question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  // Use recent conversation turns to interpret short follow-ups without letting old topics override a new, complete question.
+  const priorUserTurns = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content) && m !== latest).slice(-4);
+  const previousQuestion = priorUserTurns.length ? text(priorUserTurns[priorUserTurns.length - 1].content).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+  const shortFollowup = q.length <= 70 && (
+    /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)\b/.test(intentQ) ||
+    /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\s*[؟?!.]*$/.test(intentQ)
+  );
+  const intentQ = shortFollowup && previousQuestion ? q + " " + previousQuestion : q;
   const state = await getAcademyState(ctx);
   const me = lower(profile.username);
   const isAdmin = role === "admin";
@@ -1483,10 +1491,10 @@ async function academyChat(ctx: any, body: any) {
   if (/^(hi|hello|hey|salam|assalamu|bonjour|salut|مرحبا|السلام)[!.?\s]*$/.test(q))
     return tr("Wa alaikum assalam! I can help with classes, your timetable, attendance, Qur’an progress, and platform guidance. What would you like to know?", "Wa alaykoum salam ! Je peux vous aider pour les cours, l’emploi du temps, les présences, la progression coranique et la plateforme. Que souhaitez-vous savoir ?", "وعليكم السلام! أستطيع مساعدتك في الحصص والجدول والحضور وتقدمك في القرآن واستخدام المنصة. ماذا تريد أن تعرف؟");
 
-  if (/(what can you help|how can you help|help me|your function|what do you do|كيف تساعد|ماذا تستطيع|que peux tu faire|comment peux tu aider)/.test(q))
+  if (/(what can you help|how can you help|help me|your function|what do you do|كيف تساعد|ماذا تستطيع|que peux tu faire|comment peux tu aider)/.test(intentQ))
     return tr("I can answer questions about your classes and timetable, explain attendance and platform features, summarize permitted Qur’an progress data, and help you revise Qur’an, Tajwid, Hifz, and Fiqh.", "Je peux répondre aux questions sur les cours et l’emploi du temps, expliquer les présences et les fonctions de la plateforme, résumer les données de progression coranique autorisées et aider à réviser le Coran, le tajwid, le hifz et le fiqh.", "أستطيع الإجابة عن أسئلة الحصص والجدول والحضور وميزات المنصة، وتلخيص بيانات تقدم القرآن المسموح بها، والمساعدة في مراجعة القرآن والتجويد والحفظ والفقه.");
 
-  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(offer|offers|available|provide|teach|course|courses|class|classes|cours|حصة|حصص|درس|دروس)|(offer|offers|available|provide|teach).*(how many|number|count|course|courses|class|classes)/.test(q) && !/(my timetable|my schedule|in my timetable|emploi du temps|جدولي|جدول)/.test(q)) {
+  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(offer|offers|available|provide|teach|course|courses|class|classes|cours|حصة|حصص|درس|دروس)|(offer|offers|available|provide|teach).*(how many|number|count|course|courses|class|classes)/.test(intentQ) && !/(my timetable|my schedule|in my timetable|emploi du temps|جدولي|جدول)/.test(intentQ)) {
     const catalog = Array.isArray(state.classes) ? state.classes : [];
     const catalogNames = [...new Set(catalog.map((x: any) => text(x?.title || x?.name || x?.course || x?.code)).filter(Boolean))];
     if (catalog.length) return tr("The academy currently lists " + (catalogNames.length || catalog.length) + " course/class option(s)" + (catalogNames.length ? ": " + catalogNames.join(", ") : "") + ". Timetable sessions are counted separately.",
@@ -1494,7 +1502,7 @@ async function academyChat(ctx: any, body: any) {
       "تدرج الأكاديمية حاليًا " + (catalogNames.length || catalog.length) + " من خيارات المقررات/الدروس" + (catalogNames.length ? ": " + catalogNames.join("، ") : "") + ". تُحسب الحصص المجدولة بشكل منفصل.");
   }
 
-  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(class|lesson|session|course|cours|حصص|دروس|حصة|درس)|(class|lesson|session|course|cours|حصص|دروس|حصة|درس).*(how many|count|combien|كم عدد)/.test(q)) {
+  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(class|lesson|session|course|cours|حصص|دروس|حصة|درس)|(class|lesson|session|course|cours|حصص|دروس|حصة|درس).*(how many|count|combien|كم عدد)/.test(intentQ)) {
     const sessions = myTimetable.length;
     const courses = names.length;
     if (lang === "fr") return { reply: "Votre emploi du temps contient " + sessions + " séance(s) programmée(s), pour " + courses + " cours distinct(s). " + (isAdmin ? "Ce nombre correspond aux entrées du planning actuel." : "Il s’agit des séances visibles pour votre compte.") };
@@ -1502,28 +1510,28 @@ async function academyChat(ctx: any, body: any) {
     return { reply: (isAdmin ? "The academy timetable" : "Your timetable") + " contains " + sessions + " scheduled class session(s) across " + courses + " distinct course(s). This counts timetable entries, not students." };
   }
 
-  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(student|learner|eleve|etudiant|طلاب|طالب|الطلاب)/.test(q)) {
+  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(student|learner|eleve|etudiant|طلاب|طالب|الطلاب)/.test(intentQ)) {
     if (!isAdmin && !isTeacher) return tr("I can help you with your own classes and progress, but I can’t share academy-wide student information.", "Je peux vous aider pour vos cours et votre progression, mais je ne peux pas partager les informations globales des élèves.", "يمكنني مساعدتك في حصصك وتقدمك، لكن لا يمكنني مشاركة معلومات جميع الطلاب.");
     const n = (state.students || []).length;
     return tr("There are " + n + " student record(s) in the academy data.", "Il y a " + n + " fiche(s) d’élève dans les données de l’académie.", "يوجد " + n + " سجلًا للطلاب في بيانات الأكاديمية.");
   }
 
-  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(teacher|enseignant|professeur|معلم|مدرس|المعلمين)/.test(q)) {
+  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(teacher|enseignant|professeur|معلم|مدرس|المعلمين)/.test(intentQ)) {
     if (!isAdmin) return tr("Staff-wide information is available only to the administrator. I can help with your own classes and assigned teacher.", "Les informations globales du personnel sont réservées à l’administrateur. Je peux vous aider pour vos cours et votre enseignant attitré.", "معلومات جميع الموظفين متاحة لمسؤول الأكاديمية فقط. يمكنني مساعدتك في حصصك ومعلمك المعيّن.");
     const n = (state.teachers || []).length;
     return tr("There are " + n + " teacher record(s) in the academy data.", "Il y a " + n + " fiche(s) d’enseignant dans les données de l’académie.", "يوجد " + n + " سجلًا للمعلمين في بيانات الأكاديمية.");
   }
 
-  if (/(my timetable|my schedule|next class|when.*class|emploi du temps|prochain cours|جدولي|الحصة القادمة|موعد حصتي)/.test(q)) {
+  if (/(my timetable|my schedule|next class|when.*class|emploi du temps|prochain cours|جدولي|الحصة القادمة|موعد حصتي)/.test(intentQ)) {
     if (!myTimetable.length) return tr("I couldn’t find any timetable sessions assigned to your account. Ask the administrator to check your timetable.", "Je n’ai trouvé aucune séance associée à votre compte. Demandez à l’administrateur de vérifier votre emploi du temps.", "لم أجد حصصًا مرتبطة بحسابك. اطلب من مسؤول الأكاديمية مراجعة جدولك.");
     const lines = myTimetable.slice(0, 10).map((x: any) => text(x.day) + " " + text(x.start) + "–" + text(x.end) + " · " + text(x.course || x.title || "Class") + (x.teacher ? " · " + text(x.teacher) : ""));
     return tr("Scheduled sessions visible to you:\n" + lines.join("\n"), "Séances programmées visibles pour vous :\n" + lines.join("\n"), "الحصص المجدولة المتاحة لك:\n" + lines.join("\n"));
   }
 
-  if (/(attendance|present|absent|late|presence|retard|الحضور|غائب|متأخر)/.test(q))
+  if (/(attendance|present|absent|late|presence|retard|الحضور|غائب|متأخر)/.test(intentQ))
     return tr("Open Attendance in the academy menu to review attendance history. If a class is missing or marked incorrectly, contact your teacher or the administrator.", "Ouvrez « Présences » dans le menu pour consulter l’historique. Si une séance manque ou si un statut est incorrect, contactez votre enseignant ou l’administrateur.", "افتح قسم الحضور في القائمة لمراجعة السجل. إذا كانت حصة مفقودة أو كانت الحالة غير صحيحة، فتواصل مع معلمك أو مسؤول الأكاديمية.");
 
-  if (/(progress|memorized|memorization|surah|surahs|quran progress|mémorisé|sourate|sourates|تقدم|حفظ|سورة|سور)/.test(q)) {
+  if (/(progress|memorized|memorization|surah|surahs|quran progress|mémorisé|sourate|sourates|تقدم|حفظ|سورة|سور)/.test(intentQ)) {
     if (role === "student" && myStudent) {
       const n = Array.isArray(myStudent.sur) ? myStudent.sur.length : 0;
       return tr("Your profile currently records " + n + " memorized surah(s). Open All surahs to review your recorded progress.", "Votre profil indique actuellement " + n + " sourate(s) mémorisée(s). Ouvrez « Toutes les sourates » pour consulter votre progression.", "يسجل ملفك حاليًا " + n + " سورة محفوظة. افتح قسم جميع السور لمراجعة تقدمك.");
@@ -1535,13 +1543,13 @@ async function academyChat(ctx: any, body: any) {
     }
   }
 
-  if (/(payment|invoice|unpaid|paid|fee|amount|paiement|facture|impaye|frais|الدفع|فاتورة|المبلغ)/.test(q)) {
+  if (/(payment|invoice|unpaid|paid|fee|amount|paiement|facture|impaye|frais|الدفع|فاتورة|المبلغ)/.test(intentQ)) {
     if (!isAdmin) return tr("Payment details are restricted to the administrator. I can still help with classes, timetable, attendance, and Qur’an progress.", "Les détails de paiement sont réservés à l’administrateur. Je peux vous aider pour les cours, l’emploi du temps, les présences et la progression coranique.", "تفاصيل الدفع متاحة لمسؤول الأكاديمية فقط. يمكنني مساعدتك في الحصص والجدول والحضور وتقدم القرآن.");
     const n = (state.pay || []).filter((p: any) => !["paid", "collected", "complete", "completed"].includes(lower(p.status))).length;
     return tr("There are " + n + " payment record(s) not marked paid/collected. Open Payments for details.", "Il y a " + n + " paiement(s) non marqué(s) comme payé(s) ou encaissé(s). Ouvrez « Paiements » pour les détails.", "يوجد " + n + " سجل دفع غير محدد كمدفوع أو محصل. افتح قسم المدفوعات للتفاصيل.");
   }
 
-  if (/(tajwid|tajweed|hifz|fiqh|revise|revision|learn quran|memorize|تجويد|حفظ|فقه|مراجعة|تعلم القرآن)/.test(q))
+  if (/(tajwid|tajweed|hifz|fiqh|revise|revision|learn quran|memorize|تجويد|حفظ|فقه|مراجعة|تعلم القرآن)/.test(intentQ))
     return tr("For Tajwid, practise one rule at a time with your teacher. For Hifz, revise previously memorized ayat before adding new ones. For revision, recite and check against a reliable Mushaf. Tell me which surah or rule you are studying.", "Pour le tajwid, travaillez une règle à la fois avec votre enseignant. Pour le hifz, révisez les versets déjà mémorisés avant d’en ajouter. Pour la révision, récitez puis vérifiez avec un mushaf fiable. Quelle sourate ou règle étudiez-vous ?", "في التجويد، تدرب على حكم واحد كل مرة مع معلمك. في الحفظ، راجع الآيات السابقة قبل إضافة آيات جديدة. في المراجعة، اقرأ ثم تحقق من مصحف موثوق. ما السورة أو الحكم الذي تدرسه؟");
 
   const detectedKeywords = q.split(/\s+/).filter((word: string) => word.length > 2).slice(0, 8).join(", ");
