@@ -1492,6 +1492,11 @@ async function academyChat(ctx: any, body: any) {
       : timetable;
   const names = [...new Set(myTimetable.map((x: any) => text(x?.course || x?.title || x?.className)).filter(Boolean))];
   const tr = (en: string, fr: string, ar: string) => ({ reply: lang === "fr" ? fr : lang === "ar" ? ar : en });
+  const offTopicReply = () => tr(
+    "Please keep all your questions related to Al-Ahruf International Academy, such as classes and courses, your timetable, attendance, Qur’an learning and progress, Tajwid, Hifz, Fiqh, teachers, or using the platform.",
+    "Veuillez poser uniquement des questions liées à Al-Ahruf International Academy : cours, emploi du temps, présences, apprentissage et progression dans le Coran, tajwid, hifz, fiqh, enseignants ou utilisation de la plateforme.",
+    "يرجى أن تكون جميع أسئلتك مرتبطة بأكاديمية الأحرف الدولية، مثل الحصص والمقررات والجدول والحضور وتعلم القرآن والتقدم فيه والتجويد والحفظ والفقه والمعلمين أو استخدام المنصة."
+  );
   if (!question) return tr("Ask me about your classes, timetable, attendance, Qur’an progress, or how to use the academy.", "Posez-moi une question sur vos cours, votre emploi du temps, les présences, votre progression coranique ou la plateforme.", "اسألني عن الحصص أو الجدول أو الحضور أو تقدمك في القرآن أو استخدام المنصة.");
 
   if (/^(hi|hello|hey|salam|assalamu|bonjour|salut|مرحبا|السلام)[!.?\s]*$/.test(q))
@@ -1558,8 +1563,9 @@ async function academyChat(ctx: any, body: any) {
   if (/(tajwid|tajweed|hifz|fiqh|revise|revision|learn quran|memorize|تجويد|حفظ|فقه|مراجعة|تعلم القرآن)/.test(intentQ))
     return tr("For Tajwid, practise one rule at a time with your teacher. For Hifz, revise previously memorized ayat before adding new ones. For revision, recite and check against a reliable Mushaf. Tell me which surah or rule you are studying.", "Pour le tajwid, travaillez une règle à la fois avec votre enseignant. Pour le hifz, révisez les versets déjà mémorisés avant d’en ajouter. Pour la révision, récitez puis vérifiez avec un mushaf fiable. Quelle sourate ou règle étudiez-vous ?", "في التجويد، تدرب على حكم واحد كل مرة مع معلمك. في الحفظ، راجع الآيات السابقة قبل إضافة آيات جديدة. في المراجعة، اقرأ ثم تحقق من مصحف موثوق. ما السورة أو الحكم الذي تدرسه؟");
 
-  const detectedKeywords = q.split(/\s+/).filter((word: string) => word.length > 2).slice(0, 8).join(", ");
-  return tr("I could not match this request confidently. Keywords detected: " + (detectedKeywords || "none") + ". Try asking about courses offered, your timetable, attendance, Qur’an progress, Tajwid, Hifz, Fiqh, or platform help. For information not stored in the academy, ask your teacher or administrator.", "Je peux vous aider pour le nombre de cours, l’emploi du temps, les présences, la progression coranique enregistrée et la plateforme. Pour une question nécessitant l’avis d’un enseignant ou une donnée absente du système, contactez votre enseignant ou l’administrateur. Essayez : « Combien de séances figurent dans mon emploi du temps ? »", "يمكنني مساعدتك في عدد الحصص والجدول والحضور وتقدمك المسجل في القرآن واستخدام المنصة. للأسئلة التي تتطلب رأي المعلم أو بيانات غير موجودة، تواصل مع معلمك أو مسؤول الأكاديمية. جرّب: «كم حصة في جدولي؟»");
+  // Keep the assistant focused on academy-related requests when no supported intent matches.
+  return offTopicReply();
+
 }
 
 export default {
