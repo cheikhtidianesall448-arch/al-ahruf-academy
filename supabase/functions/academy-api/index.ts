@@ -1479,7 +1479,9 @@ async function academyChat(ctx: any, body: any) {
   else if (/(student|learner|eleve|etudiant|طلاب|طالب|تلميذ)/.test(q)) contextQuestion = contextQuestion.replace(/teacher|enseignant|professeur|معلم|مدرس|course|class|lesson|session|cours|حصص|دروس/gi, " ");
   else if (/(course|class|lesson|session|cours|حصص|دروس)/.test(q)) contextQuestion = contextQuestion.replace(/teacher|enseignant|professeur|معلم|مدرس|student|learner|eleve|etudiant|طلاب|طالب|تلميذ/gi, " ");
   const intentQ = shortFollowup && contextQuestion ? q + " " + contextQuestion : q;
-  const state = await getAcademyState(ctx);
+  const rawState = await getAcademyState(ctx);
+  // Scope data on the server before any assistant handler can read it.
+  const state = role === "student" ? studentState(rawState, profile.username) : role === "teacher" ? teacherState(rawState, profile.username) : rawState;
   const me = lower(profile.username);
   const isAdmin = role === "admin";
   const isTeacher = role === "teacher";
@@ -1525,13 +1527,15 @@ async function academyChat(ctx: any, body: any) {
   if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(student|learner|eleve|etudiant|طلاب|طالب|الطلاب)/.test(intentQ)) {
     if (!isAdmin && !isTeacher) return tr("I can help you with your own classes and progress, but I can’t share academy-wide student information.", "Je peux vous aider pour vos cours et votre progression, mais je ne peux pas partager les informations globales des élèves.", "يمكنني مساعدتك في حصصك وتقدمك، لكن لا يمكنني مشاركة معلومات جميع الطلاب.");
     const n = (state.students || []).length;
-    return tr("There are " + n + " student record(s) in the academy data.", "Il y a " + n + " fiche(s) d’élève dans les données de l’académie.", "يوجد " + n + " سجلًا للطلاب في بيانات الأكاديمية.");
+    return isTeacher
+      ? tr("You have " + n + " student(s) assigned to you.", "Vous avez " + n + " élève(s) qui vous sont assignés.", "عدد الطلاب المسندين إليك: " + n + ".")
+      : tr("There are " + n + " student record(s) in the academy data.", "Il y a " + n + " fiche(s) d’élève dans les données de l’académie.", "يوجد " + n + " سجلًا للطلاب في بيانات الأكاديمية.");
   }
 
-  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(teacher|enseignant|professeur|معلم|مدرس|المعلمين)/.test(intentQ)) {
-    if (!isAdmin) return tr("Staff-wide information is available only to the administrator. I can help with your own classes and assigned teacher.", "Les informations globales du personnel sont réservées à l’administrateur. Je peux vous aider pour vos cours et votre enseignant attitré.", "معلومات جميع الموظفين متاحة لمسؤول الأكاديمية فقط. يمكنني مساعدتك في حصصك ومعلمك المعيّن.");
+  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(teacher|teachers|teaching|enseignant|professeur|معلم|مدرس|المعلمين|المعلمون)/.test(intentQ)) {
+    // Non-sensitive aggregate only; individual staff records remain administrator-only.
     const n = (state.teachers || []).length;
-    return tr("There are " + n + " teacher record(s) in the academy data.", "Il y a " + n + " fiche(s) d’enseignant dans les données de l’académie.", "يوجد " + n + " سجلًا للمعلمين في بيانات الأكاديمية.");
+    return tr("There are " + n + " teacher record(s) in the academy data. This counts records, not necessarily active teaching assignments.", "Il y a " + n + " fiche(s) d’enseignant dans les données de l’académie. Ce nombre correspond aux dossiers, pas nécessairement aux affectations actives.", "يوجد " + n + " سجلًا للمعلمين في بيانات الأكاديمية. هذا عدد السجلات وليس بالضرورة عدد المعلمين المكلّفين حاليًا بالتدريس.");
   }
 
   if (/(my timetable|my schedule|next class|when.*class|emploi du temps|prochain cours|جدولي|الحصة القادمة|موعد حصتي)/.test(intentQ)) {
@@ -1540,8 +1544,11 @@ async function academyChat(ctx: any, body: any) {
     return tr("Scheduled sessions visible to you:\n" + lines.join("\n"), "Séances programmées visibles pour vous :\n" + lines.join("\n"), "الحصص المجدولة المتاحة لك:\n" + lines.join("\n"));
   }
 
-  if (/(attendance|present|absent|late|presence|retard|الحضور|غائب|متأخر)/.test(intentQ))
-    return tr("Open Attendance in the academy menu to review attendance history. If a class is missing or marked incorrectly, contact your teacher or the administrator.", "Ouvrez « Présences » dans le menu pour consulter l’historique. Si une séance manque ou si un statut est incorrect, contactez votre enseignant ou l’administrateur.", "افتح قسم الحضور في القائمة لمراجعة السجل. إذا كانت حصة مفقودة أو كانت الحالة غير صحيحة، فتواصل مع معلمك أو مسؤول الأكاديمية.");
+  if (/(attendance|present|absent|late|presence|retard|الحضور|غائب|متأخر)/.test(intentQ)) {
+    if (role === "student") return tr("Open Attendance to review your own attendance history. If a record looks incorrect, contact your teacher or the administrator.", "Ouvrez « Présences » pour consulter votre propre historique. Si un enregistrement semble incorrect, contactez votre enseignant ou l’administration.", "افتح قسم الحضور لمراجعة سجل حضورك. إذا بدا السجل غير صحيح، فتواصل مع معلمك أو الإدارة.");
+    if (isTeacher) return tr("Open Attendance to review records for your assigned students only. Check the class and date, and contact the administrator if a correction is needed.", "Ouvrez « Présences » pour consulter uniquement les dossiers de vos élèves assignés. Vérifiez la classe et la date et contactez l’administration si une correction est nécessaire.", "افتح قسم الحضور لمراجعة سجلات الطلاب المسندين إليك فقط. تحقق من الحصة والتاريخ وتواصل مع الإدارة إذا لزم التصحيح.");
+    return tr("Open Attendance to review academy attendance history. Check the class and date before changing a record.", "Ouvrez « Présences » pour consulter l’historique des présences de l’académie. Vérifiez la classe et la date avant toute modification.", "افتح قسم الحضور لمراجعة سجل الحضور في الأكاديمية. تحقق من الحصة والتاريخ قبل تعديل أي سجل.");
+  }
 
   if (/(progress|memorized|memorization|surah|surahs|quran progress|mémorisé|sourate|sourates|تقدم|حفظ|سورة|سور)/.test(intentQ)) {
     if (role === "student" && myStudent) {
@@ -1564,7 +1571,25 @@ async function academyChat(ctx: any, body: any) {
   if (/(tajwid|tajweed|hifz|fiqh|revise|revision|learn quran|memorize|تجويد|حفظ|فقه|مراجعة|تعلم القرآن)/.test(intentQ))
     return tr("For Tajwid, practise one rule at a time with your teacher. For Hifz, revise previously memorized ayat before adding new ones. For revision, recite and check against a reliable Mushaf. Tell me which surah or rule you are studying.", "Pour le tajwid, travaillez une règle à la fois avec votre enseignant. Pour le hifz, révisez les versets déjà mémorisés avant d’en ajouter. Pour la révision, récitez puis vérifiez avec un mushaf fiable. Quelle sourate ou règle étudiez-vous ?", "في التجويد، تدرب على حكم واحد كل مرة مع معلمك. في الحفظ، راجع الآيات السابقة قبل إضافة آيات جديدة. في المراجعة، اقرأ ثم تحقق من مصحف موثوق. ما السورة أو الحكم الذي تدرسه؟");
 
-  // Keep the assistant focused on academy-related requests when no supported intent matches.
+  if (/(who is my teacher|my teacher|assigned teacher|mon enseignant|mon professeur|من معلمي|معلمي)/.test(intentQ) && role === "student") {
+    const student = (state.students || []).find((s: any) => lower(s?.id) === me);
+    const assigned = text(student?.teacher);
+    if (!assigned) return tr("I couldn't find a teacher assigned to your profile. Please ask the administrator to check your assignment.", "Je n’ai trouvé aucun enseignant associé à votre profil. Demandez à l’administration de vérifier votre affectation.", "لم أجد معلمًا معيّنًا في ملفك. يرجى مطالبة الإدارة بمراجعة التعيين.");
+    return tr("Your assigned teacher is " + assigned + ".", "Votre enseignant assigné est " + assigned + ".", "المعلم المعيّن لك هو " + assigned + ".");
+  }
+
+  if (/(login|log in|sign in|connexion|تسجيل الدخول)/.test(intentQ))
+    return tr("Open the academy login page and enter the credentials provided for your account. If sign-in fails, contact the administrator. Never share your password in chat.", "Ouvrez la page de connexion de l’académie et saisissez les identifiants de votre compte. En cas d’échec, contactez l’administration. Ne partagez jamais votre mot de passe dans le chat.", "افتح صفحة تسجيل الدخول وأدخل بيانات حسابك. إذا تعذّر الدخول، تواصل مع الإدارة. لا تشارك كلمة مرورك في المحادثة.");
+
+  if (/(dark mode|light mode|theme|sombre|clair|مظهر|داكن|فاتح)/.test(intentQ))
+    return tr("Use the Theme switch on the platform and choose Light or Dark.", "Utilisez le sélecteur de thème de la plateforme et choisissez Clair ou Sombre.", "استخدم مفتاح المظهر في المنصة واختر الفاتح أو الداكن.");
+
+  if (/(message|reply|call|contact|notification|chat|رسالة|اتصال|مكالمة|إشعار)/.test(intentQ))
+    return tr("Open Messages to read or reply to a conversation. Use the call option when available. If a message or call option is missing, refresh the platform and contact the administrator if the problem persists.", "Ouvrez Messages pour lire ou répondre à une conversation. Utilisez l’option d’appel lorsqu’elle est disponible. Si une option manque, actualisez la plateforme et contactez l’administration si le problème persiste.", "افتح الرسائل لقراءة المحادثة أو الرد عليها. استخدم خيار الاتصال عند توفره. إذا غاب خيار، حدّث المنصة وتواصل مع الإدارة إذا استمرت المشكلة.");
+
+  // If the question mentions the academy but is not specific enough, ask a clarification instead of incorrectly rejecting it.
+  if (/(academy|platform|website|feature|profile|student|teacher|course|class|timetable|schedule|attendance|quran|qur an|surah|tajwid|tajweed|hifz|fiqh|message|call|login|theme|payment|invoice|أكاديمية|منصة|طالب|معلم|درس|جدول|حضور|قرآن|سورة|تجويد|حفظ|فقه|رسالة)/.test(intentQ))
+    return tr("I can help with that academy topic, but I need one more detail. Are you asking about your profile, classes, timetable, attendance, Qur’an progress, messages, or how to use a feature?", "Je peux vous aider sur ce sujet lié à l’académie, mais j’ai besoin d’une précision. Parlez-vous de votre profil, des cours, de l’emploi du temps, des présences, de la progression coranique, des messages ou d’une fonctionnalité ?", "يمكنني مساعدتك في هذا الموضوع المتعلق بالأكاديمية، لكن أحتاج إلى توضيح إضافي. هل تسأل عن ملفك أو الحصص أو الجدول أو الحضور أو تقدم القرآن أو الرسائل أو استخدام إحدى الميزات؟");
   return offTopicReply();
 
 }
