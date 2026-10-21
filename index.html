@@ -1998,7 +1998,7 @@ const surahLabel=(name,i)=>{const m=SUR_META[i??SUR.indexOf(name)];return m?'<sp
 const KEY='ahruf_v2';
 const emptyState=()=>({students:[],teachers:[],messages:[],notifications:[],messagePeers:[],pay:[],att:{},classes:[],timetable:[]});
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!S)S=emptyState();
-function cleanState(x){const y=JSON.parse(JSON.stringify(x||{}));y.students=Array.isArray(y.students)?y.students:[];y.teachers=Array.isArray(y.teachers)?y.teachers:[];y.messages=Array.isArray(y.messages)?y.messages:[];y.notifications=Array.isArray(y.notifications)?y.notifications:[];y.messagePeers=Array.isArray(y.messagePeers)?y.messagePeers:[];y.pay=Array.isArray(y.pay)?y.pay:[];y.classes=Array.isArray(y.classes)?y.classes:[];y.timetable=Array.isArray(y.timetable)?y.timetable:[];y.att=y.att&&typeof y.att==='object'?y.att:{};(y.students||[]).forEach(s=>delete s.pw);return y}
+function cleanState(x){const y=JSON.parse(JSON.stringify(x||{}));y.students=Array.isArray(y.students)?y.students:[];y.teachers=Array.isArray(y.teachers)?y.teachers:[];y.messages=Array.isArray(y.messages)?y.messages:[];y.notifications=Array.isArray(y.notifications)?y.notifications:[];y.messagePeers=Array.isArray(y.messagePeers)?y.messagePeers:[];y.pay=Array.isArray(y.pay)?y.pay:[];y.classes=Array.isArray(y.classes)?y.classes:[];y.timetable=Array.isArray(y.timetable)?y.timetable:[];y.deletedStudentIds=Array.isArray(y.deletedStudentIds)?y.deletedStudentIds.map(id=>String(id||'').toLowerCase()).filter(Boolean):[];const deleted=new Set(y.deletedStudentIds);y.students=y.students.filter(s=>!deleted.has(String(s?.id||'').toLowerCase()));y.att=y.att&&typeof y.att==='object'?y.att:{};(y.students||[]).forEach(s=>delete s.pw);return y}
 S=cleanState(S);
 let saveTimer=null;
 function save(){
@@ -3569,30 +3569,46 @@ function studentProfile(id){
 }
 async function delS(id,b){
  if(user?.role!=='admin'){toast('Only the administrator can delete students.');return}
- const student=(S.students||[]).find(s=>String(s.id||'').toLowerCase()===String(id||'').toLowerCase());
+ const key=String(id||'').toLowerCase();
+ const student=(S.students||[]).find(s=>String(s.id||'').toLowerCase()===key);
  const name=student?.name||id;
  if(!window.confirm('Delete '+name+' ('+id+')? Unpaid invoices will remain in Payments until marked Paid, and you will receive a reminder if payment is pending.'))return;
- b.disabled=true;b.textContent='Deleting…';
- try{
-   if(ONLINE){
-     clearTimeout(saveTimer);
+ // Update the screen immediately; server confirmation happens in the background.
+ clearTimeout(saveTimer);
+ const previousState=S;
+ const next=cleanState(S);
+ next.deletedStudentIds=Array.from(new Set([...(next.deletedStudentIds||[]),key]));
+ next.students=(next.students||[]).filter(s=>String(s.id||'').toLowerCase()!==key);
+ next.pay=(next.pay||[]).map(p=>String(p.sid||'').toLowerCase()===key?{...p,studentName:p.studentName||name,studentDeleted:true}:p);
+ S=next;
+ try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){}
+ render();
+ toast('Student removed. Saving deletion…');
+ if(!ONLINE){save();toast('Student deleted. Unpaid invoices remain in Payments.');return}
+ (async()=>{
+   try{
      const result=await onlineApi('delete_student',{studentId:id});
-     if(!result?.state)throw new Error('The server did not confirm the deletion. Please refresh and check the student list before trying again.');
-     S=cleanState(result.state);
+     let confirmed=result?.state?cleanState(result.state):null;
+     if(!confirmed||confirmed.students.some(s=>String(s.id||'').toLowerCase()===key)){
+       const latest=await onlineApi('get_state');
+       if(latest?.state)confirmed=cleanState(latest.state);
+     }
+     if(!confirmed||confirmed.students.some(s=>String(s.id||'').toLowerCase()===key)){
+       throw new Error('The server has not confirmed this deletion yet.');
+     }
+     S=confirmed;
      try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){}
-     if((S.students||[]).some(s=>String(s.id||'').toLowerCase()===String(id||'').toLowerCase()))throw new Error('The server still returned this student. Please refresh and try again.');
-   }else{
-     S.students=(S.students||[]).filter(s=>String(s.id||'').toLowerCase()!==String(id||'').toLowerCase());
-     S.pay=(S.pay||[]).map(p=>String(p.sid||'').toLowerCase()===String(id||'').toLowerCase()?{...p,studentName:p.studentName||name,studentDeleted:true}:p);
-     save();
+     render();
+     toast('Student deleted. Unpaid invoices remain in Payments.');
+   }catch(e){
+     console.error('Al-Ahruf student deletion failed:',e);
+     // Keep the student hidden locally; never silently restore a deletion that may already have reached the server.
+     S=cleanState(S);
+     try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){}
+     render();
+     toast('Student is hidden on this page, but server confirmation failed. Refresh later to verify.');
    }
-   toast('Student deleted. Any unpaid invoice remains available in Payments.');
-   render();
- }catch(e){
-   console.error('Al-Ahruf student deletion failed:',e);
-   toast(e?.message||'Delete failed. Please try again.');
-   if(b.isConnected){b.disabled=false;b.textContent='Delete';}
- }
+ })();
 }
 function generateStudentId(name,phone,existingId){
  const keep=String(existingId||'').trim();
