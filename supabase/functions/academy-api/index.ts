@@ -1,4 +1,5 @@
 import { withSupabase } from "npm:@supabase/server@^1";
+import { matchChatExample } from "./chatbot-utterances.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -678,13 +679,19 @@ async function authenticateLogin(ctx: any, username: string, password: string, w
     throw new Error("Invalid username or password.");
   }
 
-  // Recover the profile from the authenticated UID. This is the final source
-  // of truth and avoids trusting a stale profile email.
-  profile = await getProfile(ctx, authData.user.id);
+  // The profile lookup above is already tied to the auth UID by
+  // admin.getUserById(profile.id). Avoid a second sequential database query
+  // after password verification; still verify the authenticated UID matches.
+  if (profile && authData.user.id !== profile.id) {
+    await ctx.supabase.auth.signOut();
+    throw new Error("The authenticated account does not match the Academy profile.");
+  }
+
+  // Email-only login can proceed without an initial profile match, so resolve
+  // that profile only in this fallback case.
+  if (!profile) profile = await getProfile(ctx, authData.user.id);
 
   if (!profile) {
-    // An email-authenticated account can still be useful if the profile row
-    // was missing; however, the Academy requires a role, so reject it clearly.
     throw new Error("Your account is missing its Academy profile.");
   }
 
@@ -1118,7 +1125,7 @@ async function recordMissedTimetableClasses(ctx: any, state: any) {
   let changed = false;
 
   for (const item of (state.timetable || [])) {
-    if (lower(item?.day) !== weekday || !text(item?.id)) continue;
+    if (normalizeWeekday(item?.day) !== normalizeWeekday(weekday) || !text(item?.id)) continue;
     const [hour, minute] = text(item?.start).split(":").map(Number);
     if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) continue;
     if (nowMinutes - (hour * 60 + minute) < 30) continue;
@@ -1331,6 +1338,20 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
   return { status: "allowed", allowed: true, timetableId, message: "Access authorized." };
 }
 
+function normalizeWeekday(value: any) {
+  const day = lower(value).replace(/[^a-z]/g, "");
+  const aliases: Record<string, string> = {
+    sun: "sunday", sunday: "sunday",
+    mon: "monday", monday: "monday",
+    tue: "tuesday", tues: "tuesday", tuesday: "tuesday",
+    wed: "wednesday", wednesday: "wednesday",
+    thu: "thursday", thur: "thursday", thurs: "thursday", thursday: "thursday",
+    fri: "friday", friday: "friday",
+    sat: "saturday", saturday: "saturday",
+  };
+  return aliases[day] || day;
+}
+
 async function recordClassAttendance(ctx: any, body: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
@@ -1346,7 +1367,7 @@ async function recordClassAttendance(ctx: any, body: any) {
   const part = (name: string) => parts.find((p) => p.type === name)?.value || "";
   const date = part("year") + "-" + part("month") + "-" + part("day");
   const weekday = part("weekday");
-  if (lower(item.day) !== lower(weekday)) return { status: "not_yet", message: "It is not time for class yet. Your next scheduled class is " + text(item.day) + " at " + text(item.start) + " (Senegal time)." };
+  if (normalizeWeekday(item.day) !== normalizeWeekday(weekday)) return { status: "not_yet", message: "It is not time for class yet. Your next scheduled class is " + text(item.day) + " at " + text(item.start) + " (Senegal time)." };
   const [startHour, startMinute] = text(item.start).split(":").map(Number);
   if (!Number.isFinite(startHour) || !Number.isFinite(startMinute) || startHour < 0 || startHour > 23 || startMinute < 0 || startMinute > 59) throw new Error("The timetable start time is invalid. Please ask your teacher to correct it.");
   const nowMinutes = Number(part("hour")) * 60 + Number(part("minute"));
@@ -1459,23 +1480,26 @@ async function academyChat(ctx: any, body: any) {
   const role = normalizedRole(profile.role);
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const latest = [...messages].reverse().find((m: any) => lower(m?.role) === "user");
-  // Detect the language from the user's actual words rather than relying on the UI selector.
-  // Short replies such as "yes", "and teachers?" or "pourquoi ?" inherit the most recent
-  // clearly identifiable conversation language unless they contain a clear language signal.
-  const detectLanguage = (value: any): string => {
+  // Detect languages in the latest user message itself. If it contains multiple languages,
+  // every reply is returned in each detected language. UI language does not override the message.
+  const detectLanguages = (value: any): string[] => {
     const sample = text(value).normalize("NFC").toLowerCase();
-    if (/[\\u0600-\\u06ff]/.test(sample)) return "ar";
-    if (/[àâçéèêëîïôùûüÿœæ]/i.test(sample) ||
-      /\\b(bonjour|bonsoir|salut|merci|oui|non|pourquoi|comment|combien|enseignants?|professeurs?|eleves?|élèves|cours|emploi du temps|présence|paiement|je veux|est-ce|s'il vous plaît|qu'est-ce)\\b/i.test(sample)) return "fr";
-    if (/\\b(hello|hi|hey|please|thanks|thank you|yes|no|why|how|what|when|where|teachers?|students?|classes?|attendance|timetable|schedule|payment|help|and|also)\\b/i.test(sample)) return "en";
-    return "";
+    const found: string[] = [];
+    if (/[\u0600-\u06ff]/.test(sample)) found.push("ar");
+    const hasFrench = /[àâçéèêëîïôùûüÿœæ]/i.test(sample) ||
+      /\b(bonjour|bonsoir|salut|merci|oui|non|pourquoi|comment|combien|enseignants?|professeurs?|élèves|eleves|cours|emploi du temps|présence|presence|paiement|je veux|est-ce|s'il vous plaît|qu'est-ce|avec|mais|pour|dans|est|les|des|de|du|au|je|suis|c'est|quand|où|ou|nous|ça|langue|répondre|dernière|utilisateur|toutes|chaque|une|mon|ma|mes|votre|vous|ton|ta|quel|quelle|rôle|role|rol|roll|roule|mission|fonction|créé|createur|développe|developpe|combien|comment)\b/i.test(sample);
+    const hasEnglish = /\b(hello|hi|hey|please|thanks|thank you|yes|no|why|how|what|when|where|teachers?|students?|classes?|attendance|timetable|schedule|payment|help|and|also|the|is|are|can|could|would|do|does|my|your|with|but|for|from|about|tell|me|want|need|today|there|many|much|should|response|respond|using|language|last|recent|mixed|every|use|answer|chatbot|user|message|speak|speaking|in)\b/i.test(sample);
+    if (hasFrench) found.push("fr");
+    if (hasEnglish) found.push("en");
+    return found;
   };
   const latestText = text(latest?.content);
-  const explicitLanguage = detectLanguage(latestText);
-  const lang = explicitLanguage || [...messages].reverse()
+  const explicitLanguages = detectLanguages(latestText);
+  const priorLanguages = [...messages].reverse()
     .filter((m: any) => lower(m?.role) === "user" && text(m?.content))
-    .map((m: any) => detectLanguage(m.content))
-    .find(Boolean) || "en";
+    .flatMap((m: any) => detectLanguages(m.content));
+  const replyLanguages = explicitLanguages.length ? explicitLanguages : [priorLanguages[0] || "en"];
+  const lang = replyLanguages[0] || "en";
   let question = text(latest?.content);
   const lastAssistant = [...messages].reverse().find((m: any) => lower(m?.role) === "assistant");
   let confirmedIntent = false;
@@ -1505,8 +1529,15 @@ async function academyChat(ctx: any, body: any) {
     // Put the previous topic first so the rule-based intent matcher can still see it.
     contextQuestion = contextQuestion + " " + q;
   }
-  const intentQ = shortFollowup && contextQuestion ? contextQuestion : q;
-  const rawState = await getAcademyState(ctx);
+  let intentQ = shortFollowup && contextQuestion ? contextQuestion : q;
+  const matchedExample = matchChatExample(intentQ);
+  // Confident multilingual example matches add a canonical topic hint, without bypassing role or ownership checks.
+  if (matchedExample && matchedExample.score >= 0.56) intentQ += " " + matchedExample.canonical;
+  let rawState = await getAcademyState(ctx);
+  // Keep the assistant's answers consistent with the dashboard's attendance rules:
+  // materialize missed classes (30+ minutes after start, with a configured Meet link)
+  // before calculating any attendance summary.
+  rawState = await recordMissedTimetableClasses(ctx, rawState);
   // Scope data on the server before any assistant handler can read it.
   const state = role === "student" ? studentState(rawState, profile.username) : role === "teacher" ? teacherState(rawState, profile.username) : rawState;
   const me = lower(profile.username);
@@ -1521,7 +1552,10 @@ async function academyChat(ctx: any, body: any) {
       ? timetable.filter((item: any) => lower(item?.teacher) === me || lower(item?.teacher) === lower(profileName(profile)) || lower(item?.teacher) === lower(myTeacher?.name))
       : timetable;
   const names = [...new Set(myTimetable.map((x: any) => text(x?.course || x?.title || x?.className)).filter(Boolean))];
-  const tr = (en: string, fr: string, ar: string) => ({ reply: lang === "fr" ? fr : lang === "ar" ? ar : en });
+  const tr = (en: string, fr: string, ar: string) => {
+    const translations: Record<string, string> = { en, fr, ar };
+    return { reply: replyLanguages.map((language: string) => translations[language]).filter(Boolean).join("\\n\\n") };
+  };
   // Answer a student's "who + teacher" question from their own assignment.
   if (/(\\bwho\\b.*\\bteacher\\b|\\bteacher\\b.*\\bwho\\b|\\bwho\\s+teaches\\s+me\\b|\\bmy\\s+teacher\\b|\\bqui\\b.*\\b(enseignant|professeur)\\b|\\bmon\\s+(enseignant|professeur)\\b|من\\s+هو\\s+معلمي|من\\s+معلمك|معلمي|مدرسي)/i.test(intentQ)) {
     if (role === "student" && myStudent) {
@@ -1538,6 +1572,18 @@ async function academyChat(ctx: any, body: any) {
     if (role === "student") {
       return tr("I couldn’t find your student record to confirm your assigned teacher. Please ask the administrator to check your account.", "Je n’ai pas trouvé votre fiche élève pour confirmer votre enseignant. Veuillez demander à l’administrateur de vérifier votre compte.", "لم أتمكن من العثور على سجل الطالب لتأكيد اسم معلمك. يُرجى طلب مراجعة حسابك من مسؤول الأكاديمية.");
     }
+  }
+
+  const nextClassIntent = /(\b(whe?n|whenn|wen)\b.{0,45}\b(next|class|lesson|course|clas|lessson|cours)\b|\b(next|upcoming|nxt)\s+(class|clas|lesson|lessson|course|cours)\b|\bmy\s+(next\s+)?(class|clas|lesson|lessson|course)\b|\bwhat time\b|\bwhen is my\b.{0,25}\b(class|lesson|course)\b)/i.test(q) || /(quand|kan|qand).{0,40}(prochain|prochaine|cours|séance|seance|classe)|prochain(e)?s?\s+(cours|séance|seance|classe)|mon prochain cours|ma prochaine séance|à quelle heure|a quelle heure|quel est mon prochain cours/i.test(q) || /(متى.{0,35}(الحصة|الدرس|القادم|القادمة)|الحصة القادمة|درسي القادم|حصتي القادمة|موعد حصتي|متى درسي)/i.test(q);  if (nextClassIntent) {
+    const p = new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Dakar",weekday:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+    const get = (n:string) => p.find((x:any)=>x.type===n)?.value||"";
+    const days = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+    const today = days.indexOf(get("weekday").toLowerCase()), now = Number(get("hour"))*60+Number(get("minute"));
+    const upcoming = myTimetable.map((x:any)=>{const d=lower(x.day), di=days.findIndex(v=>v===d||v.startsWith(d)||d.startsWith(v.slice(0,3))), hm=text(x.start||x.time).split(":").map(Number); if(di<0||!Number.isFinite(hm[0])||!Number.isFinite(hm[1]))return null;let ahead=(di-today+7)%7;if(!ahead&&hm[0]*60+hm[1]<=now)ahead=7;return {x,ahead,mins:hm[0]*60+hm[1]};}).filter(Boolean).sort((a:any,b:any)=>a.ahead-b.ahead||a.mins-b.mins);
+    if(!upcoming.length)return tr("I couldn't find an upcoming class in your timetable. Please ask the administrator to check it.","Je n’ai trouvé aucun prochain cours dans votre planning. Veuillez demander à l’administrateur de le vérifier.","لم أجد حصة قادمة في جدولك. يُرجى سؤال المسؤول للتحقق منه.");
+    const n:any=upcoming[0], x=n.x, time=String(Math.floor(n.mins/60)).padStart(2,"0")+":"+String(n.mins%60).padStart(2,"0"), day=n.ahead===0?"today":n.ahead===1?"tomorrow":text(x.day), frday=n.ahead===0?"aujourd’hui":n.ahead===1?"demain":text(x.day), arday=n.ahead===0?"اليوم":n.ahead===1?"غدًا":text(x.day);
+    const teacher=text(x.teacher||x.teacherName||"not listed in the timetable"), count=Array.isArray(x.students)?x.students.length:0, course=text(x.course||x.title||"class");
+    return tr("Your next class is "+day+" at "+time+" Senegal time. Course: "+course+". Teacher: "+teacher+". Format: "+(count>1?"group class ("+count+" students)":count===1?"individual class":"not specified in timetable")+".","Votre prochain cours est "+frday+" à "+time+" (heure du Sénégal). Cours : "+course+". Enseignant : "+teacher+". Format : "+(count>1?"cours en groupe ("+count+" élèves)":count===1?"cours individuel":"non précisé")+".","حصتك القادمة "+arday+" الساعة "+time+" بتوقيت السنغال. المقرر: "+course+". المعلم: "+teacher+". النوع: "+(count>1?"حصة جماعية ("+count+" طلاب)":count===1?"حصة فردية":"غير محدد في الجدول")+".");
   }
 
   // Invoice ownership verification is available only to administrators.
@@ -1605,7 +1651,114 @@ async function academyChat(ctx: any, body: any) {
     "Veuillez poser uniquement des questions liées à Al-Ahruf International Academy : cours, emploi du temps, présences, apprentissage et progression dans le Coran, tajwid, hifz, fiqh, enseignants ou utilisation de la plateforme.",
     "يرجى أن تكون جميع أسئلتك مرتبطة بأكاديمية الأحرف الدولية، مثل الحصص والمقررات والجدول والحضور وتعلم القرآن والتقدم فيه والتجويد والحفظ والفقه والمعلمين أو استخدام المنصة."
   );
-  // Answer recognized Academy questions directly. Do not interrupt users with "Do you mean...?" confirmation prompts; use the current question and conversation context to resolve short follow-ups.
+  // Creator/developer and role intent: use multilingual keyword hints plus common phonetic/spelling variants.
+  const asksWhoCreatedAssistant =
+    ((/\b(who|who's|who is|qui|qui est|qui a|من|مَن|مين)\b/i.test(q) &&
+      /\b(you|yourself|toi|tu|vous|te|t'?as|t'?a|vous a|أنت|انت|ـك)\b/i.test(q)) ||
+      /(who created|who made|who developed|who built|your creator|your developer|created you|made you|developed you|built you|qui t.?a créé|qui vous a créé|qui t.?a développé|qui vous a développé|qui a créé|qui est ton créateur|qui est votre créateur|من أنشأك|من صنعك|من طورك|من قام بتطويرك|من هو مطورك|من طور هذا المساعد)/i.test(q));
+  if (asksWhoCreatedAssistant) {
+    return tr(
+      "I was developed by Cheikh Tidiane Sall Al-Hussary, the Administrator of this Academy. Do you have another question related to your progress?",
+      "J’ai été développé par Cheikh Tidiane Sall Al-Hussary, l’administrateur de cette académie. Avez-vous une autre question concernant votre progression ?",
+      "تم تطويري بواسطة Cheikh Tidiane Sall Al-Hussary، مدير هذه الأكاديمية. هل لديك سؤال آخر يتعلق بتقدمك؟"
+    );
+  }
+
+  // Accept common misspellings and sound-alike spellings of "role/rôle" when asking about the assistant.
+  const asksAssistantRole =
+    (/\b(your|you)\b/i.test(q) && /\b(rol|roll|rolle|roal|roule|role|roles|rôle|rôles|rool|roel|rohle)\b/i.test(q)) ||
+    /(what is|what's|whats|tell me|explain|define|whats your|what your).{0,30}\b(role|rol|roll|rolle|roal|rool|roel|rôle|rôles)\b/i.test(q) ||
+    /(quel est|quelle est|c.?est quoi|parle.?moi de|explique.?moi|ton|votre|ta).{0,40}\b(rôle|role|rol|roll|rolle|roal|rool|mission|fonction)\b/i.test(q) ||
+    /\b(rôle|role|rol|roll|rolle|mission|fonction)\b.{0,35}\b(de|du|ton|votre|ta|tes)\b.{0,25}\b(assistant|ia|chatbot|toi|vous|tu|moi)\b/i.test(q) ||
+    /(ما هو دورك|ما دورك|ما هو دورك ك|ما هي وظيفتك|ما وظيفتك|ما مهمتك|ما هي مهمتك|ما دور المساعد|دورك|وظيفتك|مهمتك|شو دورك|ايه دورك)/i.test(q) ||
+    /(ton|votre|ta).{0,30}(r[oô]l|roul|mission|fonction).{0,30}(assistant|toi|vous|ia|chatbot)/i.test(q);
+  if (asksAssistantRole) {
+    return tr(
+      "My role is to assist students, teachers, and the administrator with Al-Ahruf Academy: Qur’an learning and progress, classes, timetables, attendance, and using the platform. I can only provide information allowed for your account role.",
+      "Mon rôle est d’aider les élèves, les enseignants et l’administrateur à utiliser Al-Ahruf Academy : apprentissage et progression dans le Coran, cours, emplois du temps, présences et utilisation de la plateforme. Je ne peux fournir que les informations autorisées pour votre compte.",
+      "دوري هو مساعدة الطلاب والمعلمين والمدير في استخدام أكاديمية الأحرف: تعلّم القرآن ومتابعة التقدم، والحصص والجداول والحضور واستخدام المنصة. ولا أقدّم إلا المعلومات المسموح بها حسب صلاحيات حسابك."
+    );
+  }
+
+  // Master routing and permission hints: classify the complete question before answering.
+  // Never let a harmless word such as "how many" override a sensitive entity or global scope.
+  // Gratitude detection: tolerate common misspellings and English, French, and Arabic variants.
+  const gratitude = /\b(thanks?|thank\s*(you|u|yu|yoo)?|thankyou|thanku|thx|tks|tnx|tank\s*(you|u|yu)?|tanks?|tenks|thanx|thnks|thnk\s*u|appreciate it|much appreciated|many thanks|thanks you|thank you so much|tysm)\b/i.test(q)
+    || /\b(merci+|mercii+|mersi|merçi|mercie|mercy|remercie|remerciement|remerciements|remerciments|je te remercie|je vous remercie|merci beaucoup|merci bien|un grand merci|mille mercis)\b/i.test(q)
+    || /(شكرا|شكرًا|شكراً|شكرا جزيلا|شكرًا جزيلاً|جزاك الله خيرا|جزاك الله خيرًا|بارك الله فيك|أشكرك|اشكرك|متشكر|متشكرة|مشكور|مشكورة|يعطيك العافية|الله يعطيك العافية|تسلم|تسلمي)/i.test(q);
+  if (gratitude) return tr(
+    "You're welcome! It's my pleasure. Feel free to ask me anything about your classes, timetable, attendance, or progress. I'm your Al-Ahruf assistant.",
+    "Avec plaisir ! C’est un plaisir de vous aider. N’hésitez pas à me poser vos questions sur vos cours, votre emploi du temps, vos présences ou votre progression. Je suis votre assistant Al-Ahruf.",
+    "العفو! يسعدني مساعدتك. لا تتردد في سؤالي عن حصصك أو جدولك أو حضورك أو تقدمك. أنا مساعدك في أكاديمية الأحرف."
+  );
+
+  const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening|thanks|thank you|merci|bonjour|bonsoir|salut|bye|goodbye|salam|assalamu alaikum|السلام عليكم|مرحبا|أهلا|شكرا|مع السلامة)[!.?\s]*$/i.test(q);
+  if (isGreeting) {
+    return tr(
+      /^(thanks|thank you)[!.?\s]*$/i.test(q) ? "You're welcome! What would you like to know about Al-Ahruf Academy?" : /^(bye|goodbye|مع السلامة)[!.?\s]*$/i.test(q) ? "Goodbye! I'm here whenever you need help with Al-Ahruf Academy." : "Hello! Welcome to Al-Ahruf Academy. What can I help you with today?",
+      /^(merci)[!.?\s]*$/i.test(q) ? "Avec plaisir ! Que souhaitez-vous savoir sur Al-Ahruf Academy ?" : /^(bye|goodbye|مع السلامة)[!.?\s]*$/i.test(q) ? "Au revoir ! Je reste disponible pour vous aider avec Al-Ahruf Academy." : "Bonjour ! Bienvenue à Al-Ahruf Academy. Comment puis-je vous aider aujourd'hui ?",
+      /^(شكرا)[!.?\s]*$/i.test(q) ? "على الرحب والسعة! ما الذي تريد معرفته عن أكاديمية الأحرف؟" : /^(bye|goodbye|مع السلامة)[!.?\s]*$/i.test(q) ? "مع السلامة! أنا هنا لمساعدتك في أي وقت بشأن أكاديمية الأحرف." : "مرحبًا! أهلًا بك في أكاديمية الأحرف. كيف يمكنني مساعدتك اليوم؟"
+    );
+  }
+
+  const spoofAttempt = /(ignore (all |any )?(previous|prior|earlier) instructions|bypass (the )?(restriction|permission|security)|override permissions|developer mode|pretend (you are|to be) (the )?admin|act as (the )?admin|i am (the )?(administrator|admin)|i'm (the )?(administrator|admin)|أنا المدير|تجاهل التعليمات|تجاوز الصلاحيات|تصرف كأنك المدير)/i.test(q);
+  if (spoofAttempt) {
+    return tr(
+      "I can only provide information allowed by the role on your signed-in account.",
+      "Je peux uniquement fournir les informations autorisées par le rôle de votre compte connecté.",
+      "يمكنني تقديم المعلومات التي يسمح بها دور حسابك المسجل فقط."
+    );
+  }
+
+  const hasOwnScope = /(\bmy\b|\bme\b|\bmine\b|assigned to me|my class|my course|my students|my teacher|my timetable|my schedule|my attendance|my grades|my fees|for my account|dans ma classe|mes cours|mes élèves|mon enseignant|mon emploi du temps|mon compte|pour mon compte|حصتي|دروسي|معلمي|جدولي|حضوري|درجاتي|حسابي|طلابي)/i.test(q);
+  const asksPlatformWide = /(on the platform|across the platform|platform[- ]wide|whole school|across the school|in the whole academy|in this academy|in the academy|throughout the academy|all (users|students|teachers|courses|classes|accounts|registrations)|total (users|students|teachers|courses|classes|accounts)|registered users|new registrations|sur la plateforme|dans cette académie|dans toute l'école|dans toute l'académie|toute la plateforme|في هذه الأكاديمية|جميع مستخدمي المنصة|على مستوى المنصة|في المدرسة كلها|في الأكاديمية كلها|كل الطلاب|كل المعلمين)/i.test(q);
+  const asksRestrictedEntity = /(\b(accounts?|suspended users?|audit logs?|system logs?|login history|failed logins|revenue|budget|financial report|unpaid invoices|payslips?|salary|salaries|earnings|analytics|engagement statistics|dropouts?|new registrations|enrollment_global|admin_lists|other_grades|teacher emails?|student emails?|home address|private contact|all contacts|\bgrades? of (all|other|another|my classmates)|classmates'? grades|students'? unpaid fees|unpaid fees of students)\b|سجلات النظام|سجل الدخول|الإيرادات|الميزانية|رواتب|كشوف الرواتب|التحليلات|بيانات الاتصال الخاصة|عناوين المنازل|درجات الطلاب الآخرين|رسوم الطلاب غير المدفوعة)/i.test(q);
+  const asksPublicAdminIdentity = /(who is (the )?(admin|administrator|principal|director|headmaster)|what is the admin'?s name|who manages this platform|how do i contact the admin|how do i reach the administrator|qui est (l'administrateur|le directeur)|من هو المدير|اسم المسؤول)/i.test(q);
+  const asksOtherStudentPrivateInfo = /(who are my classmates|who is in my class|who are the students in my class|list (the )?students in my class|who got (the )?(highest|lowest) score|who failed|who has the most absences|who was absent|who is always late|who has not submitted|what grade did [a-z][a-z '-]+ get|show [a-z][a-z '-]+'s marks|grades? of (my )?classmates|marks? of (other|another) students|who are the students with unpaid fees|qui sont mes camarades|qui est dans ma classe|qui a eu la meilleure note|من هم زملائي|من في صفي|ما الدرجة التي حصل عليها)/i.test(q);
+  if (!isAdmin && role === "student" && asksOtherStudentPrivateInfo) {
+    return tr(
+      "I can't share other students' names, grades, attendance, or private records. Please ask the administrator if you need an authorized clarification. I can show your own information.",
+      "Je ne peux pas partager les noms, notes, présences ou dossiers privés d'autres élèves. Demandez à l'administrateur si vous avez besoin d'une clarification autorisée. Je peux afficher vos propres informations.",
+      "لا يمكنني مشاركة أسماء الطلاب الآخرين أو درجاتهم أو حضورهم أو سجلاتهم الخاصة. يُرجى سؤال المسؤول عند الحاجة إلى توضيح مصرح به. يمكنني عرض معلوماتك أنت."
+    );
+  }
+  if (!isAdmin && asksRestrictedEntity && !asksPublicAdminIdentity) {
+    return tr(
+      "I can't share that information with your account. Please ask the administrator. I can help with information about your own classes, timetable, attendance, courses, or progress.",
+      "Je ne peux pas partager ces informations avec votre compte. Veuillez demander à l'administrateur. Je peux vous aider concernant vos propres cours, votre emploi du temps, vos présences, vos matières ou votre progression.",
+      "لا يمكنني مشاركة هذه المعلومات مع حسابك. يُرجى سؤال المسؤول. يمكنني مساعدتك بشأن حصصك وجدولك وحضورك ومقرراتك وتقدمك."
+    );
+  }
+  if (!isAdmin && asksPlatformWide && !hasOwnScope && !asksPublicAdminIdentity) {
+    return tr(
+      "Platform-wide information is available to the administrator only. I can help with the information for your own classes, courses, and account.",
+      "Les informations concernant toute la plateforme sont réservées à l'administrateur. Je peux vous aider avec les informations de vos propres cours, matières et compte.",
+      "المعلومات الخاصة بالمنصة كاملة متاحة للمسؤول فقط. يمكنني مساعدتك بمعلومات حصصك ومقرراتك وحسابك."
+    );
+  }
+
+  // Turn informal keywords into a clear confirmation before answering.
+  if (!confirmedIntent && !(shortFollowup && previousQuestion) && question.length < 110 && !/(in this academy|in the academy|on this platform|my assigned|assigned to me|my own|for my account|dans cette academie|sur cette plateforme|في هذه الأكاديمية|في المنصة)/i.test(q)) {
+    const countHint = /(how many|how much|number of|count|total|combien|nombre de|كم عدد|عدد)/i.test(q);
+    const hints = [
+      {re: /(teacher|teachers|teaching|enseignant|professeur|معلم|مدرس)/i,en:"how many teachers are teaching in this Academy",fr:"combien d’enseignants enseignent dans cette académie",ar:"كم عدد المعلمين الذين يدرّسون في هذه الأكاديمية"},
+      {re: /(student|students|learner|eleve|etudiant|طلاب|طالب|تلميذ)/i,en:"how many students are registered in this Academy",fr:"combien d’élèves sont inscrits dans cette académie",ar:"كم عدد الطلاب المسجلين في هذه الأكاديمية"},
+      {re: /(course|class|lesson|session|cours|حصة|درس|دروس)/i,en:"how many courses or class sessions the Academy offers",fr:"combien de cours ou de séances l’académie propose",ar:"كم عدد المقررات أو الحصص التي تقدمها الأكاديمية"},
+      {re: /(timetable|schedule|next class|emploi du temps|planning|جدول|موعد الحصة)/i,en:"you want to check your timetable or next class",fr:"vous souhaitez consulter votre emploi du temps ou votre prochain cours",ar:"أنك تريد الاطلاع على جدولك أو حصتك القادمة"},
+      {re: /(attendance|present|absent|late|presence|retard|الحضور|غائب|متأخر)/i,en:"you want to check your attendance record",fr:"vous souhaitez consulter votre historique de présence",ar:"أنك تريد مراجعة سجل حضورك"},
+      {re: /(quran|qur’an|surah|memor|hifz|tajwid|tajweed|fiqh|coran|sourate|حفظ|قرآن|سورة|التجويد|الفقه)/i,en:"you want help with Qur’an learning or memorization progress",fr:"vous souhaitez de l’aide pour l’apprentissage du Coran ou votre mémorisation",ar:"أنك تريد المساعدة في تعلم القرآن أو متابعة الحفظ"},
+      {re: /(payment|paid|pay|collected|invoice|fee|paiement|facture|مدفوعات|الدفع|الفاتورة)/i,en:"you are asking about payment or collection information",fr:"vous posez une question sur les paiements ou les sommes encaissées",ar:"أنك تسأل عن معلومات الدفع أو المبالغ المحصلة"},
+      {re: /(message|chat|call|voice|video|discussion|appel|رسالة|محادثة|اتصال|مكالمة)/i,en:"you need help with messages or calls on the platform",fr:"vous avez besoin d’aide pour les messages ou les appels sur la plateforme",ar:"أنك تحتاج إلى مساعدة بشأن الرسائل أو المكالمات في المنصة"},
+      {re: /(login|log in|sign in|password|account|connexion|mot de passe|تسجيل الدخول|كلمة المرور|الحساب)/i,en:"you need help signing in or accessing your account",fr:"vous avez besoin d’aide pour vous connecter ou accéder à votre compte",ar:"أنك تحتاج إلى مساعدة في تسجيل الدخول أو الوصول إلى حسابك"},
+      {re: /(dark|light|theme|mode|sombre|clair|thème|الوضع الداكن|الوضع الفاتح|المظهر)/i,en:"you want to change the platform’s light or dark theme",fr:"vous souhaitez changer le thème clair ou sombre de la plateforme",ar:"أنك تريد تغيير مظهر المنصة إلى الوضع الفاتح أو الداكن"}
+    ];
+    const hint = hints.find((x: any) => x.re.test(q));
+    const vague = q.split(/\s+/).length <= 9 && (countHint || !!hint) && !/(who is|what is|where is|when is|how do i|how can i|can you|please explain|explain|tell me about|comment|pourquoi|متى|كيف|ما هو|من هو)/i.test(q);
+    if (hint && vague) {
+      const meaning = lang === "fr" ? hint.fr : lang === "ar" ? hint.ar : hint.en;
+      return tr("Do you mean: “" + meaning + "”? You can answer yes, or rephrase your question.", "Voulez-vous dire : « " + meaning + " » ? Répondez oui ou reformulez votre question.", "هل تقصد: «" + meaning + "»؟ يمكنك الإجابة بنعم أو إعادة صياغة سؤالك.");
+    }
+  }
   if (!question) return tr("Ask me about your classes, timetable, attendance, Qur’an progress, or how to use the academy.", "Posez-moi une question sur vos cours, votre emploi du temps, les présences, votre progression coranique ou la plateforme.", "اسألني عن الحصص أو الجدول أو الحضور أو تقدمك في القرآن أو استخدام المنصة.");
 
   if (/^(hi|hello|hey|salam|assalamu|bonjour|salut|مرحبا|السلام)[!.?\s]*$/.test(q))
@@ -1625,9 +1778,104 @@ async function academyChat(ctx: any, body: any) {
   if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(class|lesson|session|course|cours|حصص|دروس|حصة|درس)|(class|lesson|session|course|cours|حصص|دروس|حصة|درس).*(how many|count|combien|كم عدد)/.test(intentQ)) {
     const sessions = myTimetable.length;
     const courses = names.length;
-    if (lang === "fr") return { reply: "Votre emploi du temps contient " + sessions + " séance(s) programmée(s), pour " + courses + " cours distinct(s). " + (isAdmin ? "Ce nombre correspond aux entrées du planning actuel." : "Il s’agit des séances visibles pour votre compte.") };
-    if (lang === "ar") return { reply: "يتضمن " + (isAdmin ? "الجدول الحالي" : "الجدول المتاح لحسابك") + " " + sessions + " حصة مجدولة ضمن " + courses + " مقررًا مختلفًا." };
-    return { reply: (isAdmin ? "The academy timetable" : "Your timetable") + " contains " + sessions + " scheduled class session(s) across " + courses + " distinct course(s). This counts timetable entries, not students." };
+    return tr(
+      (isAdmin ? "The academy timetable" : "Your timetable") + " contains " + sessions + " scheduled class session(s) across " + courses + " distinct course(s). This counts timetable entries, not students.",
+      "Votre emploi du temps contient " + sessions + " séance(s) programmée(s), pour " + courses + " cours distinct(s). " + (isAdmin ? "Ce nombre correspond aux entrées du planning actuel." : "Il s’agit des séances visibles pour votre compte."),
+      "يتضمن " + (isAdmin ? "الجدول الحالي" : "الجدول المتاح لحسابك") + " " + sessions + " حصة مجدولة ضمن " + courses + " مقررًا مختلفًا."
+    );
+  }
+
+  // Al-Ahruf-specific answers use the role-scoped state above.
+  const asksCount = /(how many|how much|number of|count|total|combien|nombre de|كم عدد|عدد|كم)/i.test(intentQ);
+  // Flatten the exact same nested per-date/per-student/per-timetable-session
+  // structure used by the Attendance screen. Do not count the wrapper record as a session.
+  const attendanceRecords = Object.entries(state.att || {}).flatMap(([date, day]: [string, any]) =>
+    day && typeof day === "object" ? Object.entries(day).flatMap(([sid, entry]: [string, any]) => {
+      const sessions = entry?.sessions && typeof entry.sessions === "object" ? entry.sessions : {};
+      return Object.entries(sessions).flatMap(([sessionId, record]: [string, any]) => {
+        if (!record || !["present", "late", "absent"].includes(lower(record.status))) return [];
+        const timetableItem = (state.timetable || []).find((item: any) => text(item?.id) === text(record.timetableId || sessionId));
+        return [{
+          date, studentId: sid, sessionId, status: lower(record.status),
+          course: text(record.course || timetableItem?.course || "Quran class"),
+          day: text(record.day || timetableItem?.day),
+          start: text(record.start || timetableItem?.start),
+          time: text(record.time)
+        }];
+      });
+    }) : []
+  );
+  const ownAttendance = attendanceRecords.filter((record: any) => lower(record.studentId) === me);
+  const ownSurahs = Array.isArray(myStudent?.sur) ? myStudent.sur : [];
+
+  if (asksCount && /(memorized|memorised|how many surahs|surahs have i|hifz progress|sourates mémorisées|combien de sourates|كم سورة|كم حفظت|السور المحفوظة)/i.test(intentQ) && role === "student") {
+    return tr("Your profile records " + ownSurahs.length + " memorized surah(s) out of 114.", "Votre profil indique " + ownSurahs.length + " sourate(s) mémorisée(s) sur 114.", "يسجل ملفك حفظ " + ownSurahs.length + " سورة من أصل 114.");
+  }
+  const asksAttendance = /(attendance|presence|présence|présences|retard|absent|present|late|الحضور|حضور|غياب|غائب|متأخر)/i.test(intentQ);
+  if (asksAttendance && (asksCount || /(my attendance|attendance record|attendance history|attendance status|how am i doing|mon historique|mes présences|mon présence|سجل حضوري|حضوري|حالتي في الحضور)/i.test(intentQ) || role !== "student")) {
+    const scopeRecords = role === "student" ? ownAttendance : attendanceRecords;
+    const presentCount = scopeRecords.filter((x: any) => x.status === "present").length;
+    const lateCount = scopeRecords.filter((x: any) => x.status === "late").length;
+    const absentCount = scopeRecords.filter((x: any) => x.status === "absent").length;
+    const total = scopeRecords.length;
+    const recent = [...scopeRecords].sort((a: any, b: any) => String(b.date).localeCompare(String(a.date)) || String(b.time).localeCompare(String(a.time))).slice(0, 4);
+    const scopeLabel = role === "student" ? "Your" : role === "teacher" ? "Your assigned students’" : "Academy";
+    const recentText = recent.length ? " Recent records: " + recent.map((x: any) => x.date + " — " + x.course + " (" + x.status + ")").join("; ") + "." : " No attendance sessions have been recorded yet.";
+    return tr(
+      scopeLabel + " attendance records contain " + total + " session(s): " + presentCount + " present, " + lateCount + " late, and " + absentCount + " absent." + recentText,
+      (role === "student" ? "Votre historique" : role === "teacher" ? "Les dossiers de présence de vos élèves assignés" : "L’historique de l’académie") + " contient " + total + " séance(s) : " + presentCount + " présent(s), " + lateCount + " en retard et " + absentCount + " absent(s)." + (recent.length ? " Dossiers récents : " + recent.map((x: any) => x.date + " — " + x.course + " (" + (x.status === "present" ? "présent" : x.status === "late" ? "en retard" : "absent") + ")").join(" ; ") + "." : " Aucune séance n’a encore été enregistrée."),
+      (role === "student" ? "يحتوي سجل حضورك" : role === "teacher" ? "تحتوي سجلات حضور الطلاب المعيّنين لك" : "يحتوي سجل حضور الأكاديمية") + " على " + total + " حصة: " + presentCount + " حاضر، و" + lateCount + " متأخر، و" + absentCount + " غائب." + (recent.length ? " أحدث السجلات: " + recent.map((x: any) => x.date + " — " + x.course + " (" + (x.status === "present" ? "حاضر" : x.status === "late" ? "متأخر" : "غائب") + ")").join("؛ ") + "." : " لم تُسجّل أي حصة حضور حتى الآن.")
+    );
+  }
+  if (asksCount && /(unread messages?|messages? non lus|inbox|رسائل غير مقروءة|الرسائل)/i.test(intentQ)) {
+    const ownMessages = (state.messages || []).filter((m:any) => lower(m?.from) === me || lower(m?.to) === me);
+    const unread = ownMessages.filter((m:any) => lower(m?.to) === me && !(m?.read === true || lower(m?.status) === "read")).length;
+    return tr("Your account has " + unread + " message(s) not marked as read.", "Votre compte contient " + unread + " message(s) non marqué(s) comme lu(s).", "لديك " + unread + " رسالة غير محددة كمقروءة.");
+  }
+  if (asksCount && /(notification|announcements?|notifications|annonces|إشعار|إشعارات|الإشعارات)/i.test(intentQ)) {
+    const visible = (state.notifications || []).filter((n:any) => (!n?.target || lower(n.target) === me) && (!n?.targetRole || lower(n.targetRole) === role));
+    const unread = visible.filter((n:any) => !n?.read).length;
+    return tr("Your account can see " + visible.length + " notification(s), including " + unread + " unread.", "Votre compte peut consulter " + visible.length + " notification(s), dont " + unread + " non lue(s).", "يمكن لحسابك عرض " + visible.length + " إشعارًا، منها " + unread + " غير مقروء.");
+  }
+  if (/(who are my students|list my students|names of my students|mes élèves|liste de mes élèves|طلابي|أسماء طلابي)/i.test(intentQ) && role === "teacher") {
+    const roster = (state.students || []).map((student:any) => text(student.name || student.id)).filter(Boolean);
+    return tr(roster.length ? "Your assigned students (" + roster.length + "): " + roster.join(", ") : "No students are currently assigned to your teacher account.",
+      roster.length ? "Vos élèves assignés (" + roster.length + ") : " + roster.join(", ") : "Aucun élève n’est actuellement associé à votre compte enseignant.",
+      roster.length ? "طلابك المسندون (" + roster.length + "): " + roster.join("، ") : "لا يوجد طلاب مسندون حاليًا إلى حسابك كمعلم.");
+  }
+  if (asksCount && /(students?|learners?|pupils?|élèves|eleves|étudiants|etudiants|طلاب|الطلاب)/i.test(intentQ) && role === "student" && /(my class|my course|my group|classmates|in my class|dans ma classe|mes camarades|زملائي|صفي|حصتي)/i.test(intentQ)) {
+    const peers = Array.isArray(state.messagePeers) ? state.messagePeers.length : 0;
+    return tr("Your assigned class group has " + (peers + 1) + " student(s), including you. I can provide the count without disclosing classmates' private details.",
+      "Votre groupe de cours compte " + (peers + 1) + " élève(s), vous compris, sans révéler les informations privées des autres élèves.",
+      "تضم مجموعتك الدراسية " + (peers + 1) + " طالبًا بمن فيهم أنت، دون كشف البيانات الخاصة للآخرين.");
+  }
+  if (/(who is my teacher|my teacher|assigned teacher|mon enseignant|mon professeur|qui est mon enseignant|من معلمي|من هو معلمي)/i.test(intentQ) && role === "student") {
+    const assigned = text(myStudent?.teacher);
+    return tr(assigned ? "Your assigned teacher is " + assigned + "." : "No teacher is listed on your profile. Please ask the administrator to check your assignment.",
+      assigned ? "Votre enseignant assigné est " + assigned + "." : "Aucun enseignant n’est indiqué sur votre profil. Demandez à l’administration de vérifier votre affectation.",
+      assigned ? "المعلم المعيّن لك هو " + assigned + "." : "لا يظهر معلم معيّن في ملفك. يرجى سؤال الإدارة للتحقق من التعيين.");
+  }
+  if (/(course list|my courses|courses i teach|which courses|what courses|mes cours|المقررات|موادي|مقرراتي)/i.test(intentQ)) {
+    const courseNames = [...new Set(myTimetable.map((x:any) => text(x.course || x.title || x.className)).filter(Boolean))];
+    return tr(courseNames.length ? "Courses visible in your timetable: " + courseNames.join(", ") + "." : "I couldn't find course names in the timetable available to your account. Ask the administrator to check your assignments.",
+      courseNames.length ? "Cours visibles dans votre emploi du temps : " + courseNames.join(", ") + "." : "Je n’ai pas trouvé de cours dans le planning accessible à votre compte. Demandez à l’administration de vérifier vos affectations.",
+      courseNames.length ? "المقررات الظاهرة في جدولك: " + courseNames.join("، ") + "." : "لم أجد مقررات في الجدول المتاح لحسابك. يرجى سؤال الإدارة للتحقق من التكليفات.");
+  }
+  if (/(my profile|view my profile|my account details|mon profil|mon compte|ملفي الشخصي|حسابي)/i.test(intentQ)) {
+    if (role === "student" && myStudent) return tr("Your profile: " + text(myStudent.name) + "; student ID " + text(myStudent.id) + "; assigned teacher " + (text(myStudent.teacher) || "not listed") + "; recorded memorized surahs " + ownSurahs.length + ". Private credentials are never displayed.",
+      "Votre profil : " + text(myStudent.name) + " ; ID élève " + text(myStudent.id) + " ; enseignant assigné " + (text(myStudent.teacher) || "non indiqué") + " ; sourates mémorisées " + ownSurahs.length + ". Les identifiants privés ne sont jamais affichés.",
+      "ملفك: " + text(myStudent.name) + "؛ رقم الطالب " + text(myStudent.id) + "؛ المعلم المعيّن " + (text(myStudent.teacher) || "غير محدد") + "؛ السور المحفوظة " + ownSurahs.length + ". لا يتم عرض بيانات الدخول الخاصة.");
+    if (role === "teacher" && myTeacher) return tr("Your teacher profile is " + text(myTeacher.name) + ". Your account is scoped to your assigned students, timetable, attendance, and messages.",
+      "ملفك كمعلم هو " + text(myTeacher.name) + ". يقتصر حسابك على الطلاب المسندين إليك والجدول والحضور والرسائل.",
+      "ملفك كمعلم هو " + text(myTeacher.name) + ". يقتصر حسابك على الطلاب المسندين إليك والجدول والحضور والرسائل.");
+    return tr("Your signed-in role is administrator. Available areas include students, teachers, timetable, attendance, payments, messages, and Qur’an progress.",
+      "دور حسابك هو المسؤول. تشمل الأقسام المتاحة الطلاب والمعلمين والجدول والحضور والمدفوعات والرسائل وتقدم القرآن.",
+      "دور حسابك هو المسؤول. تشمل الأقسام المتاحة الطلاب والمعلمين والجدول والحضور والمدفوعات والرسائل وتقدم القرآن.");
+  }
+  if (/(how do i reset|forgot my password|can't log in|cannot log in|change my password|verification code|mot de passe oublié|réinitialiser|نسيت كلمة المرور|تغيير كلمة المرور)/i.test(intentQ)) {
+    return tr("Use the password-recovery option on the sign-in page if available. Otherwise, contact the administrator. Never share your password or verification code in chat.",
+      "Utilisez l’option de récupération du mot de passe sur la page de connexion si elle est disponible. Sinon, contactez l’administrateur. Ne partagez jamais votre mot de passe ni votre code de vérification dans le chat.",
+      "استخدم خيار استعادة كلمة المرور في صفحة الدخول إن كان متاحًا، وإلا فتواصل مع المسؤول. لا تشارك كلمة المرور أو رمز التحقق في المحادثة.");
   }
 
   if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(student|learner|eleve|etudiant|طلاب|طالب|الطلاب)/.test(intentQ)) {
@@ -1639,7 +1887,10 @@ async function academyChat(ctx: any, body: any) {
   }
 
   if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(teacher|teachers|teaching|enseignant|professeur|معلم|مدرس|المعلمين|المعلمون)/.test(intentQ)) {
-    // Non-sensitive aggregate only; individual staff records remain administrator-only.
+    if (!isAdmin) {
+      if (role === "student" && text(myStudent?.teacher)) return tr("Your profile lists one assigned teacher: " + text(myStudent.teacher) + ".", "Votre profil indique un enseignant assigné : " + text(myStudent.teacher) + ".", "يظهر في ملفك معلم واحد معيّن: " + text(myStudent.teacher) + ".");
+      return tr("The total number of teachers is platform-wide information reserved for the administrator. Please ask the administrator.", "Le nombre total d’enseignants est une information globale réservée à l’administrateur. Veuillez lui demander.", "العدد الإجمالي للمعلمين معلومة تخص المنصة كاملة ومتاح للمسؤول فقط. يرجى سؤال المسؤول.");
+    }
     const n = (state.teachers || []).length;
     return tr("There are " + n + " teacher record(s) in the academy data. This counts records, not necessarily active teaching assignments.", "Il y a " + n + " fiche(s) d’enseignant dans les données de l’académie. Ce nombre correspond aux dossiers, pas nécessairement aux affectations actives.", "يوجد " + n + " سجلًا للمعلمين في بيانات الأكاديمية. هذا عدد السجلات وليس بالضرورة عدد المعلمين المكلّفين حاليًا بالتدريس.");
   }
@@ -1695,10 +1946,42 @@ async function academyChat(ctx: any, body: any) {
     }
   }
 
+  if (/(payment|invoice|unpaid|paid|fee|amount|paiement|facture|impaye|impayé|frais|مدفوعات|الدفع|فاتورة|المبلغ|رسوم)/i.test(intentQ) && role === "student") {
+    const ownInvoices = (state.pay || []);
+    const unpaid = ownInvoices.filter((p:any) => lower(p?.st || p?.status) !== "paid");
+    const paid = ownInvoices.filter((p:any) => lower(p?.st || p?.status) === "paid");
+    if (/(how many|number of|count|combien|كم عدد|عدد)/i.test(intentQ)) {
+      return tr("Your account has " + ownInvoices.length + " invoice(s): " + unpaid.length + " unpaid and " + paid.length + " paid. These are only your own records.",
+        "Votre compte comporte " + ownInvoices.length + " facture(s) : " + unpaid.length + " impayée(s) et " + paid.length + " payée(s). Il s’agit uniquement de vos dossiers.",
+        "يحتوي حسابك على " + ownInvoices.length + " فاتورة: " + unpaid.length + " غير مدفوعة و" + paid.length + " مدفوعة. هذه سجلاتك فقط.");
+    }
+    const list = ownInvoices.slice(0,10).map((p:any) => text(p?.inv || "Invoice") + " — " + text(p?.description || "Tuition") + " — " + text(p?.amt ?? "") + " " + text(p?.currency || "FCFA") + " — " + text(p?.st || "pending") + (p?.due ? " — due " + text(p.due) : "")).join("\\n");
+    return tr(list ? "Your invoices only:\\n" + list : "No invoices have been issued to your account yet. Ask the administrator if you think this is incorrect.",
+      list ? "Vos factures uniquement :\\n" + list : "Aucune facture n’a encore été émise pour votre compte. Demandez à l’administration si cela vous semble incorrect.",
+      list ? "فواتيرك فقط:\\n" + list : "لم تصدر فواتير لحسابك بعد. اسأل الإدارة إذا كنت تعتقد أن هناك خطأ.");
+  }
   if (/(payment|invoice|unpaid|paid|fee|amount|paiement|facture|impaye|frais|الدفع|فاتورة|المبلغ)/.test(intentQ)) {
     if (!isAdmin) return tr("Payment details are restricted to the administrator. Please ask the administrator for those details. I can still help with classes, timetable, attendance, and Qur’an progress.", "Les détails de paiement sont réservés à l’administrateur. Veuillez lui demander ces informations. Je peux aussi vous aider pour les cours, l’emploi du temps, les présences et la progression coranique.", "تفاصيل الدفع متاحة لمسؤول الأكاديمية فقط. يرجى سؤال المسؤول عنها. ويمكنني مساعدتك في الحصص والجدول والحضور وتقدم القرآن.");
-    const n = (state.pay || []).filter((p: any) => !["paid", "collected", "complete", "completed"].includes(lower(p.status))).length;
-    return tr("There are " + n + " payment record(s) not marked paid/collected. Open Payments for details.", "Il y a " + n + " paiement(s) non marqué(s) comme payé(s) ou encaissé(s). Ouvrez « Paiements » pour les détails.", "يوجد " + n + " سجل دفع غير محدد كمدفوع أو محصل. افتح قسم المدفوعات للتفاصيل.");
+    const invoices = state.pay || [];
+    const isPaid = (p: any) => ["paid", "collected", "complete", "completed"].includes(lower(p?.st || p?.status));
+    const paidInvoices = invoices.filter(isPaid);
+    const unpaidInvoices = invoices.filter((p: any) => !isPaid(p));
+    const currencyTotals = (items: any[]) => {
+      const totals: Record<string, number> = {};
+      for (const p of items) {
+        const currency = text(p?.currency || "XOF").toUpperCase();
+        totals[currency] = (totals[currency] || 0) + Number(p?.amt ?? p?.amount ?? 0);
+      }
+      return Object.entries(totals).map(([currency, amount]) => amount.toLocaleString("en-US", {maximumFractionDigits:2}) + " " + (currency === "XOF" ? "FCFA" : currency)).join(", ") || "0 FCFA";
+    };
+    if (/(how much|total collected|collected amount|encaissé|montant encaissé|المبلغ المحصل|كم تم تحصيل)/i.test(intentQ)) {
+      return tr("Collected amount from invoices marked Paid: " + currencyTotals(paidInvoices) + ". This is based on invoice status, not a bank reconciliation.",
+        "Montant encaissé selon les factures marquées Payée : " + currencyTotals(paidInvoices) + ". Ce total repose sur le statut des factures et ne constitue pas un rapprochement bancaire.",
+        "المبلغ المحصل حسب الفواتير المحددة كمدفوعة: " + currencyTotals(paidInvoices) + ". يعتمد هذا الإجمالي على حالة الفواتير وليس تسوية مصرفية.");
+    }
+    return tr("Payments summary: " + invoices.length + " invoice(s); " + paidInvoices.length + " marked Paid (" + currencyTotals(paidInvoices) + "); " + unpaidInvoices.length + " unpaid/pending (" + currencyTotals(unpaidInvoices) + "). Open Payments for details.",
+      "Résumé des paiements : " + invoices.length + " facture(s) ; " + paidInvoices.length + " marquée(s) Payée (" + currencyTotals(paidInvoices) + ") ; " + unpaidInvoices.length + " impayée(s/en attente) (" + currencyTotals(unpaidInvoices) + "). Ouvrez Paiements pour les détails.",
+      "ملخص المدفوعات: " + invoices.length + " فاتورة؛ " + paidInvoices.length + " محددة كمدفوعة (" + currencyTotals(paidInvoices) + ")؛ " + unpaidInvoices.length + " غير مدفوعة أو معلقة (" + currencyTotals(unpaidInvoices) + "). افتح قسم المدفوعات للتفاصيل.");
   }
 
   if (/(tajwid|tajweed|hifz|fiqh|revise|revision|learn quran|memorize|تجويد|حفظ|فقه|مراجعة|تعلم القرآن)/.test(intentQ))
