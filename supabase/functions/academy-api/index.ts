@@ -1501,6 +1501,39 @@ async function academyChat(ctx: any, body: any) {
       : timetable;
   const names = [...new Set(myTimetable.map((x: any) => text(x?.course || x?.title || x?.className)).filter(Boolean))];
   const tr = (en: string, fr: string, ar: string) => ({ reply: lang === "fr" ? fr : lang === "ar" ? ar : en });
+  // Invoice ownership verification is available only to administrators.
+  const invoiceMatch = question.match(/\\bINV-\\d{6,}\\b/i);
+  if (invoiceMatch && /(invoice|owner|whose|who.s|belongs|facture|proprietaire|à qui|الفاتورة|صاحب|لمن)/i.test(question)) {
+    if (!isAdmin) {
+      return tr(
+        "Only the administrator can verify invoice ownership.",
+        "Seul l’administrateur peut vérifier le propriétaire d’une facture.",
+        "يمكن للمسؤول فقط التحقق من صاحب الفاتورة."
+      );
+    }
+    const invoiceNumber = invoiceMatch[0].toUpperCase();
+    const invoice = (state.pay || []).find((p: any) => text(p?.inv).toUpperCase() === invoiceNumber);
+    if (!invoice) {
+      return tr(
+        "Unknown invoice, not registered!",
+        "Facture inconnue, non enregistrée !",
+        "فاتورة غير معروفة، غير مسجلة!"
+      );
+    }
+    const owner = (state.students || []).find((student: any) => lower(student?.id) === lower(invoice?.sid));
+    if (!owner) {
+      return tr(
+        "Invoice " + invoiceNumber + " is registered, but its student owner record could not be found.",
+        "La facture " + invoiceNumber + " est enregistrée, mais le dossier de l’élève propriétaire est introuvable.",
+        "الفاتورة " + invoiceNumber + " مسجلة، لكن تعذر العثور على سجل الطالب صاحبها."
+      );
+    }
+    return tr(
+      "Invoice " + invoiceNumber + " belongs to " + text(owner.name || "Unknown student") + " (Student ID: " + text(owner.id) + ").",
+      "La facture " + invoiceNumber + " appartient à " + text(owner.name || "Élève inconnu") + " (ID élève : " + text(owner.id) + ").",
+      "الفاتورة " + invoiceNumber + " تخص " + text(owner.name || "طالب غير معروف") + " (رقم الطالب: " + text(owner.id) + ")."
+    );
+  }
   const offTopicReply = () => tr(
     "Please keep all your questions related to Al-Ahruf International Academy, such as classes and courses, your timetable, attendance, Qur’an learning and progress, Tajwid, Hifz, Fiqh, teachers, or using the platform.",
     "Veuillez poser uniquement des questions liées à Al-Ahruf International Academy : cours, emploi du temps, présences, apprentissage et progression dans le Coran, tajwid, hifz, fiqh, enseignants ou utilisation de la plateforme.",
