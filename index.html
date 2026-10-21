@@ -2862,9 +2862,10 @@ async function ahrufBroadcastToUser(call,target,payload){
   // Only declare the recipient offline after Supabase confirms Presence has synchronized.
   await Promise.race([presenceSyncedPromise,new Promise(resolve=>setTimeout(resolve,2500))]);
   const presence=channel.presenceState?.()||{};
-  const online=Object.values(presence).some(entries=>(Array.isArray(entries)?entries:[]).some(entry=>
-   String(entry?.username||'').trim().toLowerCase()===targetKey&&entry?.online===true
-  ));
+  // This is the target user's private inbox topic, so any online presence
+  // tracked there confirms that the recipient's academy session is connected.
+  // Do not require username equality: contact IDs and login usernames can differ.
+  const online=Object.values(presence).some(entries=>(Array.isArray(entries)?entries:[]).some(entry=>entry?.online===true));
   if(presenceSynced&&!online)throw new Error('Recipient is not connected');
   // If Presence did not synchronize, don't falsely label a possibly connected user offline.
   const result=await channel.send({type:'broadcast',event:'call_invite',payload});
