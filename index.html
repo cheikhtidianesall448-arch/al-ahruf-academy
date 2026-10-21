@@ -2789,7 +2789,24 @@ function ahrufApplyClassCallDeadline(call){
   }
  }
 }
+function ahrufStudentHasLiveScheduledClass(){
+ if(user?.role!=='student')return false;
+ const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Dakar',weekday:'long',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+ const get=n=>parts.find(p=>p.type===n)?.value||'';
+ const day=get('weekday').toLowerCase(),minutes=Number(get('hour'))*60+Number(get('minute'));
+ const me=ahrufMe();
+ const profile=(S.students||[]).find(st=>[st.id,st.username,st.name].some(v=>String(v||'').trim().toLowerCase()===me));
+ const ids=new Set([me,user.id,user.username,user.name,profile?.id,profile?.username,profile?.name].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean));
+ return (S.timetable||[]).some(item=>{
+  if(String(item.day||'').trim().toLowerCase()!==day)return false;
+  const assigned=Array.isArray(item.students)?item.students:[];
+  if(!assigned.some(v=>ids.has(String(v||'').trim().toLowerCase())))return false;
+  const [sh,sm]=String(item.start||'').split(':').map(Number),[eh,em]=String(item.end||'').split(':').map(Number);
+  return [sh,sm,eh,em].every(Number.isFinite)&&minutes>=sh*60+sm&&minutes<eh*60+em;
+ });
+}
 async function ahrufCreateCall(kind,invitees,options={}){
+ if(user?.role==='student'&&ahrufStudentHasLiveScheduledClass())return ahrufCallToast('During scheduled class time, only Oustaz can initiate calls. Please answer the incoming class call.');
  if(ahrufActiveCall)return ahrufCallToast('A call is already open.');
  if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)return ahrufCallToast('Calls require a modern browser, HTTPS, and microphone/camera permission.');
  const room=String(options.room||('ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10))),key=String(activeMessageConversationKey||''),peer=invitees[0]||ahrufCallPeer(key);
