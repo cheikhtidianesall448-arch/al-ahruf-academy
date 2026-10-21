@@ -2067,6 +2067,8 @@ async function login(role,u,p){
        throw new Error('Account role does not match the selected login.');
      }
      user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
+     /* Make the AI launcher visible at the exact point authentication succeeds. */
+     if(window.ahrufSyncChatUser)window.ahrufSyncChatUser();
      toast('Signed in securely');render();openCurtains();
      /* Reveal the AI only after the app has finished rendering the signed-in screen. */
      if(window.ahrufSyncChatUser){window.ahrufSyncChatUser();requestAnimationFrame(()=>window.ahrufSyncChatUser());setTimeout(()=>window.ahrufSyncChatUser(),250);}
