@@ -1486,6 +1486,14 @@ async function academyChat(ctx: any, body: any) {
   if (/(what can you help|how can you help|help me|your function|what do you do|كيف تساعد|ماذا تستطيع|que peux tu faire|comment peux tu aider)/.test(q))
     return tr("I can answer questions about your classes and timetable, explain attendance and platform features, summarize permitted Qur’an progress data, and help you revise Qur’an, Tajwid, Hifz, and Fiqh.", "Je peux répondre aux questions sur les cours et l’emploi du temps, expliquer les présences et les fonctions de la plateforme, résumer les données de progression coranique autorisées et aider à réviser le Coran, le tajwid, le hifz et le fiqh.", "أستطيع الإجابة عن أسئلة الحصص والجدول والحضور وميزات المنصة، وتلخيص بيانات تقدم القرآن المسموح بها، والمساعدة في مراجعة القرآن والتجويد والحفظ والفقه.");
 
+  if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(offer|offers|available|provide|teach|course|courses|class|classes|cours|حصة|حصص|درس|دروس)|(offer|offers|available|provide|teach).*(how many|number|count|course|courses|class|classes)/.test(q) && !/(my timetable|my schedule|in my timetable|emploi du temps|جدولي|جدول)/.test(q)) {
+    const catalog = Array.isArray(state.classes) ? state.classes : [];
+    const catalogNames = [...new Set(catalog.map((x: any) => text(x?.title || x?.name || x?.course || x?.code)).filter(Boolean))];
+    if (catalog.length) return tr("The academy currently lists " + (catalogNames.length || catalog.length) + " course/class option(s)" + (catalogNames.length ? ": " + catalogNames.join(", ") : "") + ". Timetable sessions are counted separately.",
+      "L’académie répertorie actuellement " + (catalogNames.length || catalog.length) + " cours/option(s)" + (catalogNames.length ? " : " + catalogNames.join(", ") : "") + ". Les séances du planning sont comptées séparément.",
+      "تدرج الأكاديمية حاليًا " + (catalogNames.length || catalog.length) + " من خيارات المقررات/الدروس" + (catalogNames.length ? ": " + catalogNames.join("، ") : "") + ". تُحسب الحصص المجدولة بشكل منفصل.");
+  }
+
   if (/(how many|number of|count|total|combien|nombre de|كم عدد|عدد).*(class|lesson|session|course|cours|حصص|دروس|حصة|درس)|(class|lesson|session|course|cours|حصص|دروس|حصة|درس).*(how many|count|combien|كم عدد)/.test(q)) {
     const sessions = myTimetable.length;
     const courses = names.length;
