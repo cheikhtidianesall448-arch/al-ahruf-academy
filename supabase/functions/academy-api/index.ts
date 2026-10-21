@@ -1492,7 +1492,7 @@ async function academyChat(ctx: any, body: any) {
   const priorUserTurns = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content) && m !== latest).slice(-4);
   const previousQuestion = priorUserTurns.length ? normalizeQuestion(text(priorUserTurns[priorUserTurns.length - 1].content)) : "";
   const shortFollowup = q.length <= 100 && (
-    /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)\\b/.test(q) ||
+    /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)(?:\\b|\\s|[؟?!.،]|$)/.test(q) ||
     /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\\s*[؟?!.]*$/.test(q) ||
     /^(please i want to know|please tell me|tell me|answer me|i want to know|je veux savoir|s il vous plait|أريد أن أعرف)[!.?\\s]*$/.test(q)
   );
