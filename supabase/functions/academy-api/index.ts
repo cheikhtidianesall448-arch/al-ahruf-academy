@@ -1544,6 +1544,33 @@ async function academyChat(ctx: any, body: any) {
   }
 
   // Invoice ownership verification is available only to administrators.
+  // Combination-based Academy intents: resolve common question patterns from role-scoped data.
+  const asksTeacherList = /(list|show|name|who are|all|which|liste|montre|noms?|quels sont|قائمة|أسماء|من هم).{0,45}(teachers?|enseignants?|professeurs?|معلمين|مدرسين)|(teachers?|enseignants?|professeurs?|معلمين|مدرسين).{0,45}(list|names?|who|liste|noms?|قائمة|أسماء)/i.test(intentQ);
+  if (asksTeacherList) {
+    const rows = Array.isArray(state.teachers) ? state.teachers : [];
+    const names = [...new Set(rows.map((t: any) => text(t?.name || t?.fullName || t?.username)).filter(Boolean))];
+    return names.length ? tr("Teachers listed in academy records: " + names.join(", ") + ".", "Enseignants répertoriés : " + names.join(", ") + ".", "المعلمون المسجلون: " + names.join("، ") + ".") : tr("I couldn't find teacher names in the available records. Please ask the administrator to check the teacher list.", "Je n’ai trouvé aucun nom d’enseignant. Demandez à l’administrateur de vérifier la liste.", "لم أجد أسماء معلمين في السجلات المتاحة. يُرجى سؤال المسؤول.");
+  }
+  const asksStudentRoster = /(list|show|names?|who are|all|liste|montre|noms?|quels sont|قائمة|أسماء|من هم).{0,45}(students?|learners?|élèves?|étudiants?|طلاب|تلاميذ)|(students?|learners?|élèves?|étudiants?|طلاب|تلاميذ).{0,45}(list|names?|who|liste|noms?|قائمة|أسماء)/i.test(intentQ);
+  const asksStudentCount = /(how many|number of|count|total|combien|nombre de|كم عدد|عدد).{0,45}(students?|learners?|élèves?|étudiants?|طلاب|تلاميذ)|(students?|learners?|élèves?|étudiants?|طلاب|تلاميذ).{0,45}(how many|count|combien|كم عدد)/i.test(intentQ);
+  if (asksStudentRoster || asksStudentCount) {
+    if (role !== "admin" && role !== "teacher") return tr("For student privacy, only authorized administrators and teachers can view the student roster or total count.", "Pour protéger la vie privée, seuls les administrateurs et enseignants autorisés peuvent consulter la liste ou le nombre d’élèves.", "حفاظًا على الخصوصية، يمكن للمسؤولين والمعلمين المخولين فقط عرض قائمة الطلاب أو عددهم.");
+    const rows = Array.isArray(state.students) ? state.students : [];
+    if (asksStudentCount) return tr("There are " + rows.length + " student record(s) available to your account.", "Votre compte peut consulter " + rows.length + " fiche(s) élève.", "يتاح لحسابك الاطلاع على " + rows.length + " سجل(ات) طالب.");
+    const names = rows.map((s: any) => text(s?.name || s?.fullName)).filter(Boolean);
+    return tr(names.length ? "Students in records available to your account: " + names.join(", ") + "." : "No student names are available to your account.", names.length ? "Élèves dans les données accessibles à votre compte : " + names.join(", ") + "." : "Aucun nom d’élève n’est disponible pour votre compte.", names.length ? "الطلاب في السجلات المتاحة لحسابك: " + names.join("، ") + "." : "لا تتوفر أسماء طلاب لحسابك.");
+  }
+  if (/(what|which|list|show|available|offer|offers|teach|quels|quelles|liste|montre|propose|ماذا|ما هي|اذكر|قائمة).{0,45}(courses?|classes|lessons?|subjects?|cours|matières|matiere|الدورات|المقررات|الدروس|المواد)|(courses?|classes|lessons?|subjects?|cours|matières|matiere|الدورات|المقررات|الدروس|المواد).{0,45}(available|offer|list|what|which|propose|liste|ما هي)/i.test(intentQ)) {
+    const catalog = Array.isArray(state.classes) ? state.classes : [];
+    const names = [...new Set(catalog.map((x: any) => text(x?.title || x?.name || x?.course || x?.code)).filter(Boolean))];
+    if (names.length) return tr("Courses/classes listed in academy records: " + names.join(", ") + ".", "Cours répertoriés : " + names.join(", ") + ".", "المقررات/الدروس المسجلة: " + names.join("، ") + ".");
+  }
+  if (/(how do|how does|how are|how is|explain|comment fonctionne|comment se déroulent|كيف تعمل|كيف تتم).{0,45}(class|classes|lesson|lessons|course|courses|cours|séances|seances|الحصص|الدروس)|(class|classes|lesson|lessons|course|courses|cours|séances|seances|الحصص|الدروس).{0,45}(work|working|fonctionne|déroulent|تعمل)/i.test(intentQ)) return tr("Lessons follow the course and timetable assigned to your account. Sign in to view your classes, teacher, schedule and meeting link. If a class or link is missing, ask the administrator to check your assignment.", "Les cours suivent le cours et l’emploi du temps attribués à votre compte. Connectez-vous pour voir vos cours, votre enseignant, les horaires et le lien de réunion. Si un cours ou un lien manque, demandez à l’administrateur de vérifier votre affectation.", "تتبع الدروس المقرر والجدول المخصصين لحسابك. سجّل الدخول لرؤية الحصص والمعلم والمواعيد ورابط الاجتماع. إذا غابت حصة أو وصلة، فاطلب من المسؤول التحقق من تعيينك.");
+  if (/(my|view|show|open|mon|ma|mes|ملفي|حسابي).{0,25}(profile|account|profil|compte|ملف|حساب)|(profile|profil|ملف شخصي).{0,25}(my|me|mon|ma|حسابي)/i.test(intentQ)) {
+    const displayName = text(profile?.name || profile?.full_name || profile?.username || myStudent?.name || myTeacher?.name);
+    if (displayName) return tr("Your account name is " + displayName + " (role: " + text(role || profile?.role || "user") + "). I can only share profile information available to your account.", "Le nom de votre compte est " + displayName + " (rôle : " + text(role || profile?.role || "utilisateur") + "). Je ne peux partager que les informations accessibles à votre compte.", "اسم حسابك هو " + displayName + " (الدور: " + text(role || profile?.role || "مستخدم") + "). يمكنني عرض المعلومات المتاحة لحسابك فقط.");
+  }
+
   const invoiceMatch = question.match(/\\bINV-\\d{6,}\\b/i);
   if (invoiceMatch && /(invoice|owner|whose|who.s|belongs|facture|proprietaire|à qui|الفاتورة|صاحب|لمن)/i.test(question)) {
     if (!isAdmin) {
