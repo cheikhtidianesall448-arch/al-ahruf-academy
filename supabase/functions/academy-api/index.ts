@@ -1463,13 +1463,14 @@ async function academyChat(ctx: any, body: any) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const latest = [...messages].reverse().find((m: any) => lower(m?.role) === "user");
   const question = text(latest?.content);
-  const q = question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const q = question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\bhoww+\b/g, "how");
   // Use recent conversation turns to interpret short follow-ups without letting old topics override a new, complete question.
   const priorUserTurns = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content) && m !== latest).slice(-4);
   const previousQuestion = priorUserTurns.length ? text(priorUserTurns[priorUserTurns.length - 1].content).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
   const shortFollowup = q.length <= 70 && (
     /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)\b/.test(q) ||
-    /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\s*[؟?!.]*$/.test(q)
+    /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\s*[؟?!.]*$/.test(q) ||
+    /^(please i want to know|please tell me|tell me|answer me|i want to know|je veux savoir|s il vous plait|أريد أن أعرف)[!.?\s]*$/.test(q)
   );
   let contextQuestion = previousQuestion;
   // If a follow-up changes the subject (for example, "students?" -> "and teachers?"),
