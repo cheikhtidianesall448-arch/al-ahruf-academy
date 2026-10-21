@@ -3891,41 +3891,38 @@ function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not f
 function invoiceCurrencyCode(p){const v=String(p?.currency||'USD').toUpperCase();return ['XOF','USD','EUR','GBP'].includes(v)?v:'USD'}
 function invoiceCurrencyLabel(code){return ({XOF:'CFA (XOF)',USD:'US Dollar (USD)',EUR:'Euro (EUR)',GBP:'Pound Sterling (GBP)'})[String(code||'USD').toUpperCase()]||'US Dollar (USD)'}
 function invoiceMoney(p){const code=invoiceCurrencyCode(p),amount=Number(p?.amt||0);try{return new Intl.NumberFormat('en-US',{style:'currency',currency:code,maximumFractionDigits:code==='XOF'?0:2,useGrouping:true}).format(amount)}catch(_){return (code==='XOF'?'CFA ':code+' ')+amount.toLocaleString('en-US')}}
-function collectedByCurrency(){
- if(user.role!=='admin')return toast('Only the administrator can view collected payments.');
- const currencies=['XOF','USD','EUR','GBP'], paid=S.pay.filter(p=>p.st==='paid');
- const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
- const monthIndex=name=>monthNames.findIndex(m=>m.toLowerCase()===String(name||'').toLowerCase());
- function paymentPeriod(p){
+function showOutcome(){
+ if(user.role!=='admin')return toast('Only the administrator can view outcomes.');
+ const names=['January','February','March','April','May','June','July','August','September','October','November','December'];
+ const now=new Date(), currentKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+ const paid=S.pay.filter(p=>p.st==='paid');
+ function period(p){
   const desc=String(p.description||'');
   const named=desc.match(/\\b(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(20\\d{2})\\b/i);
-  if(named)return {year:Number(named[2]),month:monthIndex(named[1])};
-  const dated=String(p.date||p.paidAt||p.paid_at||p.due||'').match(/^(20\\d{2})-(\\d{2})/);
-  if(dated)return {year:Number(dated[1]),month:Number(dated[2])-1};
-  return {year:new Date().getFullYear(),month:0};
+  if(named){const m=names.findIndex(n=>n.toLowerCase()===named[1].toLowerCase());return {year:Number(named[2]),month:m,key:named[2]+'-'+String(m+1).padStart(2,'0')};}
+  const raw=String(p.paidAt||p.paid_at||p.date||p.due||'');
+  const d=raw.match(/^(20\\d{2})-(\\d{2})/);
+  if(d){const m=Number(d[2])-1;return {year:Number(d[1]),month:m,key:d[1]+'-'+d[2]};}
+  return {year:now.getFullYear(),month:now.getMonth(),key:currentKey};
  }
- const periods=paid.map(p=>({p,...paymentPeriod(p)}));
- const years=[...new Set([...periods.map(x=>x.year),new Date().getFullYear()])].sort((a,b)=>b-a);
- const selectedYear=years[0]||new Date().getFullYear();
- const fmt=(currency,amount)=>currency==='XOF'?Number(amount||0).toLocaleString('en-US',{maximumFractionDigits:0})+' FCFA':invoiceMoney({currency,amt:amount});
- const currencyCards=currencies.map(currency=>{
-  const list=periods.filter(x=>invoiceCurrencyCode(x.p)===currency);
-  const total=list.reduce((sum,x)=>sum+Number(x.p.amt||0),0);
-  const yearRows=years.map(year=>{
-   const yearly=list.filter(x=>x.year===year);
-   const yearlyTotal=yearly.reduce((sum,x)=>sum+Number(x.p.amt||0),0);
-   const monthly=monthNames.map((month,index)=>{
-    const items=yearly.filter(x=>x.month===index), amount=items.reduce((sum,x)=>sum+Number(x.p.amt||0),0);
-    return '<div class="row between" style="padding:9px 12px;border-bottom:1px solid #e5edf3;gap:10px"><span>'+month+' <span class="mute">('+items.length+' paid)</span></span><b>'+esc(fmt(currency,amount))+'</b></div>';
-   }).join('');
-   return '<details style="margin:8px 0;border:1px solid #b7def8;border-radius:10px;padding:10px 12px;background:#f7fbff" '+(year===selectedYear?'open':'')+'><summary style="cursor:pointer;font-weight:800;color:#17456b">'+year+' — '+esc(fmt(currency,yearlyTotal))+'</summary><div style="margin-top:8px">'+monthly+'</div></details>';
+ const rows=paid.map(p=>({p,...period(p)}));
+ const keys=[...new Set([currentKey,...rows.map(x=>x.key)])].sort((a,b)=>b.localeCompare(a));
+ const money=(currency,n)=>currency==='XOF'?Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0})+' FCFA':invoiceMoney({currency,amt:n});
+ const html=keys.map(key=>{
+  const [year,mm]=key.split('-').map(Number), month=mm-1, entries=rows.filter(x=>x.key===key);
+  const hasPaid=entries.length>0;
+  const currencies=['XOF','USD','EUR','GBP'].map(currency=>{
+   const list=entries.filter(x=>invoiceCurrencyCode(x.p)===currency);
+   if(!list.length)return '';
+   const total=list.reduce((sum,x)=>sum+Number(x.p.amt||0),0);
+   return '<div class="row between" style="padding:10px 12px;margin-top:7px;background:#f7fbff;border:1px solid #d7eaf8;border-radius:8px;gap:10px"><span>'+esc(invoiceCurrencyLabel(currency))+' <span class="mute">('+list.length+' paid)</span></span><b>'+esc(money(currency,total))+'</b></div>';
   }).join('');
-  return '<section style="margin:14px 0;padding:14px;border:1px solid #b7def8;border-radius:12px;background:#eaf6ff;color:#17456b"><div class="row between" style="gap:12px;flex-wrap:wrap"><div><b>'+esc(invoiceCurrencyLabel(currency))+'</b><div style="font-size:12px;color:#47677f">'+list.length+' paid invoice(s) · all years</div></div><b>'+esc(fmt(currency,total))+'</b></div>'+yearRows+'</section>';
+  return '<details '+(key===currentKey?'open':'')+' style="margin:10px 0;padding:12px;border:1px solid '+(hasPaid?'#b7def8':'#d5dbe1')+';border-radius:10px;background:'+(hasPaid?'#eaf6ff':'#f8fafc')+'"><summary style="cursor:pointer;font-weight:800;color:#17456b">'+esc(names[month]+' '+year)+' — '+(hasPaid?'Paid outcome':'Waiting for paid invoices')+'</summary><div style="margin-top:10px">'+(hasPaid?currencies:'<p class="mute">No paid invoices recorded for this month yet. This month is created automatically and will update when invoices are marked paid.</p>')+'</div></details>';
  }).join('');
- modal('Collected — Monthly & Yearly Outcome',currencyCards+'<p class="mute" style="margin-top:14px">Only paid invoices are counted. Monthly totals use the month and year written in Description / Month (for example, October 2026 tuition). If no month and year are written there, the invoice date is used. Edit an invoice to correct its amount, status, or month; the report recalculates automatically. Different currencies are kept separate and are never converted.</p>',()=>{const dialog=document.getElementById('dlg');if(dialog&&dialog.open)dialog.close();},'Close');
+ modal('Outcome',html+'<p class="mute" style="margin-top:12px">Monthly outcomes are generated automatically. Only invoices marked Paid are included. Add or edit invoices, or mark an invoice paid, then open Outcome again to see the updated totals. Different currencies are shown separately without conversion.</p>',()=>{const dialog=document.getElementById('dlg');if(dialog&&dialog.open)dialog.close();},'Close');
 }
 function payments(){if(user.role!=='admin')return '<div class="card"><b>Permission denied.</b></div>';const nm=id=>(S.students.find(s=>s.id===id)||{}).name||id;
- return `<div class="card"><div class="row between" style="flex-wrap:wrap;gap:12px"><h3>Payments & Invoices</h3><div class="row" style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn" style="background:#d9efff!important;color:#17456b!important;border:1px solid #a9d7f5!important" onclick="collectedByCurrency()">Collected by currency</button><button class="btn gold" onclick="newInv()">New invoice</button></div></div><p class="mute">Each invoice belongs to the selected student. Open an invoice to review its details.</p><br><div class="tw"><table><thead><tr><th>Invoice</th><th>Student</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${S.pay.map((p,i)=>`<tr><td>${esc(p.inv)}</td><td>${esc(nm(p.sid))}</td><td>${esc(invoiceMoney(p))}</td><td>${esc(p.due)}</td><td><span class="badge ${p.st}">${p.st}</span></td><td><button class="btn ghost sm" onclick="viewInvoice(${i})">View invoice</button> <button class="btn ghost sm" onclick="editInv(${i})">Edit invoice</button>${p.st!=='paid'?` <button class="btn ghost sm" onclick="markPaid(${i})">Mark paid</button>`:''}</td></tr>`).join('')}</tbody></table></div></div>`}
+ return `<div class="card"><div class="row between" style="flex-wrap:wrap;gap:12px"><h3>Payments & Invoices</h3><div class="row" style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn" style="background:#d9efff!important;color:#17456b!important;border:1px solid #a9d7f5!important" onclick="showOutcome()">Outcome</button><button class="btn gold" onclick="newInv()">New invoice</button></div></div><p class="mute">Each invoice belongs to the selected student. Open an invoice to review its details.</p><br><div class="tw"><table><thead><tr><th>Invoice</th><th>Student</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${S.pay.map((p,i)=>`<tr><td>${esc(p.inv)}</td><td>${esc(nm(p.sid))}</td><td>${esc(invoiceMoney(p))}</td><td>${esc(p.due)}</td><td><span class="badge ${p.st}">${p.st}</span></td><td><button class="btn ghost sm" onclick="viewInvoice(${i})">View invoice</button> <button class="btn ghost sm" onclick="editInv(${i})">Edit invoice</button>${p.st!=='paid'?` <button class="btn ghost sm" onclick="markPaid(${i})">Mark paid</button>`:''}</td></tr>`).join('')}</tbody></table></div></div>`}
 function markPaid(i){if(user.role!=='admin')return toast('Only the administrator can edit payments.');const p=S.pay[i];p.st='paid';const s=S.students.find(x=>x.id===p.sid);if(s)s.pay='paid';save();toast('Marked as paid');render()}
 function newInv(){if(user.role!=='admin')return toast('Only the administrator can create invoices.');if(!S.students.length)return toast('Add a student first');const today=new Date().toISOString().slice(0,10),due=new Date(Date.now()+2592e6).toISOString().slice(0,10);
  modal('New invoice',`<label>Student</label><select name="s">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><label>Currency</label><select name="currency"><option value="XOF">CFA Franc (XOF) — CFA</option><option value="USD" selected>US Dollar (USD) — $</option><option value="EUR">Euro (EUR) — €</option><option value="GBP">Pound Sterling (GBP) — £</option></select><label>Amount</label><input name="a" type="number" min="1" step="0.01" value="50" required><label>Description / Month</label><input name="desc" placeholder="e.g. October 2026 tuition" required><label>Due date</label><input name="d" type="date" required value="${due}">`,f=>{const inv='INV-'+new Date().getFullYear()+String(Date.now()).slice(-6);S.pay.push({inv,sid:f.s.value,amt:+f.a.value,currency:['XOF','USD','EUR','GBP'].includes(f.currency.value)?f.currency.value:'USD',due:f.d.value,date:today,description:f.desc.value.trim(),st:'pending'});save();toast('Invoice created and saved for the selected student');render()},'Create')}
