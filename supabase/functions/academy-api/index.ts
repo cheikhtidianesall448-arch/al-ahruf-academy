@@ -1614,7 +1614,7 @@ async function academyChat(ctx: any, body: any) {
     return tr("Open Attendance to review academy attendance history. Check the class and date before changing a record.", "Ouvrez « Présences » pour consulter l’historique des présences de l’académie. Vérifiez la classe et la date avant toute modification.", "افتح قسم الحضور لمراجعة سجل الحضور في الأكاديمية. تحقق من الحصة والتاريخ قبل تعديل أي سجل.");
   }
 
-  const rankingQuestion = /\\b(rank|ranking|ranked|rankin|raking|position|place|leaderboard|ahead|behind|above|below|before|after|top student|best memor|who is in front|who comes before|who comes after)\\b|classment|classement|rang|devant|derriere|pr[eé]c[eè]de|suit|ترتيب|ترتيبي|ترتيبك|المتصدر|قبلي|بعدي|أمامي|خلفي|من يتقدمني|من خلفي|من أمامي|من بعدي/.test(intentQ);
+  const rankingQuestion = /\b(rank|ranking|ranked|rankin|raking|position|place|leaderboard|ahead|behind|above|below|before|after|top student|best memor|who is in front|who comes before|who comes after)\b|classment|classement|rang|devant|derriere|pr[eé]c[eè]de|suit|ترتيب|ترتيبي|ترتيبك|المتصدر|قبلي|بعدي|أمامي|خلفي|من يتقدمني|من خلفي|من أمامي|من بعدي/.test(intentQ);
   const progressQuestion = /progress|memorized|memorization|surah|surahs|quran progress|hifz|mémoris|sourate|sourates|تقدم|حفظ|سورة|سور/.test(intentQ);
   const getSurahCount = (value: any) => {
     if (Array.isArray(value)) return value.length;
@@ -1660,11 +1660,11 @@ async function academyChat(ctx: any, body: any) {
       );
     }
     if (isAdmin || isTeacher) {
-      const list = leaderboard.map((student: any, index: number) => (index + 1) + ". " + student.name + ": " + student.n + " surah(s)").join("\\n") || "No student progress records found.";
+      const list = leaderboard.map((student: any, index: number) => (index + 1) + ". " + student.name + ": " + student.n + " surah(s)").join("\n") || "No student progress records found.";
       return tr(
-        (rankingQuestion ? "Qur’an memorization ranking by recorded surah count:\\n" : "Recorded Qur’an memorization progress:\\n") + list,
-        (rankingQuestion ? "Classement de mémorisation du Coran selon les sourates enregistrées :\\n" : "Progression de mémorisation du Coran enregistrée :\\n") + list,
-        (rankingQuestion ? "ترتيب حفظ القرآن حسب عدد السور المسجلة:\\n" : "تقدم حفظ القرآن المسجل:\\n") + list
+        (rankingQuestion ? "Qur’an memorization ranking by recorded surah count:\n" : "Recorded Qur’an memorization progress:\n") + list,
+        (rankingQuestion ? "Classement de mémorisation du Coran selon les sourates enregistrées :\n" : "Progression de mémorisation du Coran enregistrée :\n") + list,
+        (rankingQuestion ? "ترتيب حفظ القرآن حسب عدد السور المسجلة:\n" : "تقدم حفظ القرآن المسجل:\n") + list
       );
     }
   }
