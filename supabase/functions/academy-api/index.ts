@@ -1563,7 +1563,7 @@ async function academyChat(ctx: any, body: any) {
     "يرجى أن تكون جميع أسئلتك مرتبطة بأكاديمية الأحرف الدولية، مثل الحصص والمقررات والجدول والحضور وتعلم القرآن والتقدم فيه والتجويد والحفظ والفقه والمعلمين أو استخدام المنصة."
   );
   // Turn informal keywords into a clear confirmation before answering.
-  if (!confirmedIntent && question.length < 110 && !/(in this academy|in the academy|on this platform|my assigned|assigned to me|my own|for my account|dans cette academie|sur cette plateforme|في هذه الأكاديمية|في المنصة)/i.test(q)) {
+  if (!confirmedIntent && !(shortFollowup && previousQuestion) && question.length < 110 && !/(in this academy|in the academy|on this platform|my assigned|assigned to me|my own|for my account|dans cette academie|sur cette plateforme|في هذه الأكاديمية|في المنصة)/i.test(q)) {
     const countHint = /(how many|how much|number of|count|total|combien|nombre de|كم عدد|عدد)/i.test(q);
     const hints = [
       {re: /(teacher|teachers|teaching|enseignant|professeur|معلم|مدرس)/i,en:"how many teachers are teaching in this Academy",fr:"combien d’enseignants enseignent dans cette académie",ar:"كم عدد المعلمين الذين يدرّسون في هذه الأكاديمية"},
