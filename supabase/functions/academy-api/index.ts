@@ -1504,8 +1504,10 @@ async function academyChat(ctx: any, body: any) {
   const lastAssistant = [...messages].reverse().find((m: any) => lower(m?.role) === "assistant");
   let confirmedIntent = false;
   if (/^(yes|yes please|yeah|yep|correct|exactly|that is right|that's right|go ahead|please do|oui|oui svp|exactement|c'est ça|نعم|أجل|صحيح)[!.?\s]*$/i.test(question) && /do you mean|voulez-vous dire|هل تقصد/.test(text(lastAssistant?.content).toLowerCase())) {
-    const previousUser = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content)).slice(-2)[0];
-    if (previousUser) { question = text(previousUser.content); confirmedIntent = true; }
+    // Resolve confirmation from the assistant's proposed interpretation, not from the user's
+    // previous short fragment (e.g. "teachers?"), which loses the original question intent.
+    const clarification = text(lastAssistant?.content).match(/(?:do you mean|voulez-vous dire\s*:\s*|هل تقصد\s*[:：]?\s*)[“"«]?(.+?)[”"»]?(?:\?|\.|\s*you can answer|\s*répondez|\s*يمكنك الإجابة|$)/i);
+    if (clarification?.[1]) { question = clarification[1].trim().replace(/[”"»]+$/g, ""); confirmedIntent = true; }
   }
   const normalizeQuestion = (value: string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/\\bhoww+\\b/g, "how").trim();
   const q = normalizeQuestion(question);
@@ -1783,6 +1785,37 @@ async function academyChat(ctx: any, body: any) {
       "Votre emploi du temps contient " + sessions + " séance(s) programmée(s), pour " + courses + " cours distinct(s). " + (isAdmin ? "Ce nombre correspond aux entrées du planning actuel." : "Il s’agit des séances visibles pour votre compte."),
       "يتضمن " + (isAdmin ? "الجدول الحالي" : "الجدول المتاح لحسابك") + " " + sessions + " حصة مجدولة ضمن " + courses + " مقررًا مختلفًا."
     );
+  }
+
+  // Role-aware demographic analytics: use the same student records as the admin dashboard.
+  // Accept natural wording such as "male percentage", "what percent are boys?", and equivalents.
+  const asksGenderShare = /(?:\b(?:percentage|percent|proportion|share|ratio|how many percent)\b|\bwhat\s+%|\b%\s*(?:of|are)?|pourcentage|proportion|نسبة|٪|%)/i.test(intentQ)
+    && /(?:\b(?:male|males|men|boys|female|females|women|girls|gender|sex|students?|learners?|pupils?)\b|garçons?|filles?|élèves?|étudiants?|masculin|féminin|ذكور|إناث|طلاب|طالبات|الطلاب|الطالبات)/i.test(intentQ);
+  if (asksGenderShare) {
+    if (!isAdmin && !isTeacher) {
+      return tr("I can show your own profile details, but academy-wide student demographics are restricted to authorized staff.",
+        "Je peux afficher les informations de votre profil, mais les statistiques globales des élèves sont réservées au personnel autorisé.",
+        "يمكنني عرض معلومات ملفك الشخصي، لكن إحصاءات الطلاب العامة متاحة للموظفين المخولين فقط.");
+    }
+    const demographicStudents = Array.isArray(state.students) ? state.students : [];
+    const sexOf = (student: any) => lower(student?.sex || student?.gender || student?.sexAtRegistration || student?.studentGender);
+    const maleCount = demographicStudents.filter((student: any) => /^(male|m|boy|boys|masculin|garçon|garcons|ذكر|ذكور)$/.test(sexOf(student))).length;
+    const femaleCount = demographicStudents.filter((student: any) => /^(female|f|girl|girls|féminin|feminin|fille|filles|أنثى|إناث)$/.test(sexOf(student))).length;
+    const totalGenderRecorded = maleCount + femaleCount;
+    const asksFemale = /\b(female|females|women|girls|female students|girls)\b|filles?|féminin|feminin|إناث|الطالبات/i.test(intentQ);
+    const asksMale = /\b(male|males|men|boys|male students|boys)\b|garçons?|masculin|ذكور|الطلاب الذكور/i.test(intentQ);
+    const requestedCount = asksFemale && !asksMale ? femaleCount : asksMale && !asksFemale ? maleCount : null;
+    const requestedPercent = requestedCount === null || totalGenderRecorded === 0 ? null : (requestedCount / totalGenderRecorded * 100);
+    const percentText = (n: number) => (Math.round(n * 10) / 10).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "%";
+    const summary = "Student gender records: " + maleCount + " male (" + (totalGenderRecorded ? percentText(maleCount / totalGenderRecorded * 100) : "not calculable") + "), " + femaleCount + " female (" + (totalGenderRecorded ? percentText(femaleCount / totalGenderRecorded * 100) : "not calculable") + "), out of " + demographicStudents.length + " student records. " + (demographicStudents.length - totalGenderRecorded) + " record(s) have no recognized gender value.";
+    if (requestedCount !== null && requestedPercent !== null) {
+      const label = asksFemale ? "female" : "male";
+      return tr("There are " + requestedCount + " " + label + " student(s): " + percentText(requestedPercent) + " of students with a recorded gender (" + totalGenderRecorded + "). " + summary,
+        "Il y a " + requestedCount + " élève(s) " + (asksFemale ? "de sexe féminin" : "de sexe masculin") + " : " + percentText(requestedPercent) + " des élèves dont le sexe est renseigné (" + totalGenderRecorded + "). " + summary,
+        "عدد الطلاب " + (asksFemale ? "الإناث" : "الذكور") + " هو " + requestedCount + "، أي " + percentText(requestedPercent) + " من الطلاب المسجل جنسهم (" + totalGenderRecorded + "). " + summary);
+    }
+    return tr(summary, "Répartition des élèves : " + maleCount + " garçons (" + (totalGenderRecorded ? percentText(maleCount / totalGenderRecorded * 100) : "non calculable") + "), " + femaleCount + " filles (" + (totalGenderRecorded ? percentText(femaleCount / totalGenderRecorded * 100) : "non calculable") + "), sur " + demographicStudents.length + " dossiers. " + (demographicStudents.length - totalGenderRecorded) + " dossier(s) sans sexe reconnu.",
+      "توزيع الطلاب: " + maleCount + " ذكور، و" + femaleCount + " إناث، من أصل " + demographicStudents.length + " سجلًا. " + (demographicStudents.length - totalGenderRecorded) + " سجلًا لا يحتوي على جنس معروف.");
   }
 
   // Al-Ahruf-specific answers use the role-scoped state above.
