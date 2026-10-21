@@ -3571,18 +3571,22 @@ async function delS(id,b){
  if(user?.role!=='admin'){toast('Only the administrator can delete students.');return}
  const student=(S.students||[]).find(s=>String(s.id||'').toLowerCase()===String(id||'').toLowerCase());
  const name=student?.name||id;
- if(!window.confirm('Delete '+name+' ('+id+')? Any existing invoice records will be kept, and the administrator will be notified about unpaid invoices.'))return;
+ if(!window.confirm('Delete '+name+' ('+id+')? Unpaid invoices will remain in Payments until marked Paid, and you will receive a reminder if payment is pending.'))return;
  b.disabled=true;b.textContent='Deleting…';
  try{
    if(ONLINE){
+     clearTimeout(saveTimer);
      const result=await onlineApi('delete_student',{studentId:id});
      if(!result?.state)throw new Error('The server did not confirm the deletion. Please refresh and check the student list before trying again.');
      S=cleanState(result.state);
+     try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){}
+     if((S.students||[]).some(s=>String(s.id||'').toLowerCase()===String(id||'').toLowerCase()))throw new Error('The server still returned this student. Please refresh and try again.');
    }else{
      S.students=(S.students||[]).filter(s=>String(s.id||'').toLowerCase()!==String(id||'').toLowerCase());
+     S.pay=(S.pay||[]).map(p=>String(p.sid||'').toLowerCase()===String(id||'').toLowerCase()?{...p,studentName:p.studentName||name,studentDeleted:true}:p);
      save();
    }
-   toast('Student deleted. Invoice records were preserved.');
+   toast('Student deleted. Any unpaid invoice remains available in Payments.');
    render();
  }catch(e){
    console.error('Al-Ahruf student deletion failed:',e);
@@ -3939,13 +3943,14 @@ function showOutcome(){
  modal('Outcome',html+'<p class="mute" style="margin-top:12px">Monthly outcomes are generated automatically. Only invoices marked Paid are included. Add or edit invoices, or mark an invoice paid, then open Outcome again to see the updated totals. Different currencies are shown separately without conversion.</p>',()=>{const dialog=document.getElementById('dlg');if(dialog&&dialog.open)dialog.close();},'Close');
 }
 function payments(){if(user.role!=='admin')return '<div class="card"><b>Permission denied.</b></div>';const nm=id=>(S.students.find(s=>s.id===id)||{}).name||id;
- return `<div class="card"><div class="row between" style="flex-wrap:wrap;gap:12px"><h3>Payments & Invoices</h3><div class="row" style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn" style="background:#d9efff!important;color:#17456b!important;border:1px solid #a9d7f5!important" onclick="showOutcome()">Outcome</button><button class="btn gold" onclick="newInv()">New invoice</button></div></div><p class="mute">Each invoice belongs to the selected student. Open an invoice to review its details.</p><br><div class="tw"><table><thead><tr><th>Invoice</th><th>Student</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${S.pay.map((p,i)=>`<tr><td>${esc(p.inv)}</td><td>${esc(nm(p.sid))}</td><td>${esc(invoiceMoney(p))}</td><td>${esc(p.due)}</td><td><span class="badge ${p.st}">${p.st}</span></td><td><button class="btn ghost sm" onclick="viewInvoice(${i})">View invoice</button> <button class="btn ghost sm" onclick="editInv(${i})">Edit invoice</button> <button class="btn ghost sm" style="color:#b42318;border-color:#f0b7b3" onclick="deleteInv(${i})">Delete</button>${p.st!=='paid'?` <button class="btn ghost sm" onclick="markPaid(${i})">Mark paid</button>`:''}</td></tr>`).join('')}</tbody></table></div></div>`}
+ return `<div class="card"><div class="row between" style="flex-wrap:wrap;gap:12px"><h3>Payments & Invoices</h3><div class="row" style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn" style="background:#d9efff!important;color:#17456b!important;border:1px solid #a9d7f5!important" onclick="showOutcome()">Outcome</button><button class="btn gold" onclick="newInv()">New invoice</button></div></div><p class="mute">Each invoice belongs to the selected student. Open an invoice to review its details.</p><br><div class="tw"><table><thead><tr><th>Invoice</th><th>Student</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${S.pay.map((p,i)=>`<tr><td>${esc(p.inv)}</td><td>${esc(p.studentName||nm(p.sid))}</td><td>${esc(invoiceMoney(p))}</td><td>${esc(p.due)}</td><td><span class="badge ${p.st}">${p.st}</span></td><td><button class="btn ghost sm" onclick="viewInvoice(${i})">View invoice</button> <button class="btn ghost sm" onclick="editInv(${i})">Edit invoice</button> ${p.st==='paid'?'<button class="btn ghost sm" style="color:#b42318;border-color:#f0b7b3" onclick="deleteInv('+i+')">Delete</button>':'<span class="mute">Keep until paid</span>'}${p.st!=='paid'?` <button class="btn ghost sm" onclick="markPaid(${i})">Mark paid</button>`:''}</td></tr>`).join('')}</tbody></table></div></div>`}
 function markPaid(i){if(user.role!=='admin')return toast('Only the administrator can edit payments.');const p=S.pay[i];p.st='paid';const s=S.students.find(x=>x.id===p.sid);if(s)s.pay='paid';save();toast('Marked as paid');render()}
 function newInv(){if(user.role!=='admin')return toast('Only the administrator can create invoices.');if(!S.students.length)return toast('Add a student first');const today=new Date().toISOString().slice(0,10),due=new Date(Date.now()+2592e6).toISOString().slice(0,10);
  modal('New invoice',`<label>Student</label><select name="s">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><label>Currency</label><select name="currency"><option value="XOF">CFA Franc (XOF) — CFA</option><option value="USD" selected>US Dollar (USD) — $</option><option value="EUR">Euro (EUR) — €</option><option value="GBP">Pound Sterling (GBP) — £</option></select><label>Amount</label><input name="a" type="number" min="1" step="0.01" placeholder="Enter amount" required><label>Description / Month</label><input name="desc" placeholder="e.g. October 2026 tuition" required><label>Due date</label><input name="d" type="date" required value="${due}">`,f=>{const studentId=String(f.s.value),invoiceMonth=today.slice(0,7);const duplicate=S.pay.some(p=>String(p.sid||'')===studentId&&String(p.date||'').slice(0,7)===invoiceMonth);if(duplicate){toast('This student already has an invoice for this month and year.');return false;}let inv='',stamp=Date.now(),year=new Date().getFullYear();do{inv='INV-'+year+String(stamp).slice(-6);stamp++;}while(S.pay.some(p=>String(p.inv||'').toLowerCase()===inv.toLowerCase()));S.pay.push({inv,sid:studentId,amt:+f.a.value,currency:['XOF','USD','EUR','GBP'].includes(f.currency.value)?f.currency.value:'USD',due:f.d.value,date:today,description:f.desc.value.trim(),st:'pending'});save();toast('Invoice created and saved for the selected student');render()},'Create')}
 function deleteInv(i){
  if(user.role!=='admin')return toast('Only the administrator can delete invoices.');
  const p=S.pay[i];if(!p)return toast('Invoice not found.');
+ if(p.st!=='paid')return toast('This invoice is still unpaid. Keep it available until payment is received and marked Paid.');
  if(!confirm('Delete invoice '+String(p.inv||'')+'? This action cannot be undone.'))return;
  const sid=String(p.sid||''),wasPaid=p.st==='paid';
  S.pay.splice(i,1);
