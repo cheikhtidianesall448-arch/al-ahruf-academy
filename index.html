@@ -4226,9 +4226,9 @@ function ahrufStartTeacherScheduleMonitor(){
    const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Dakar',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
    const key=String(item.id)+'|'+date;
    if(window._ahrufAutoCalled.has(key))continue;
-   window._ahrufAutoCalled.add(key);
-   await startScheduledClassCall(item.id,'','video');
-   if(ahrufActiveCall)break;
+   // Start the shared automatic class room so the student receives an Answer prompt.
+   await startScheduledClassCall(item.id,'','video',true);
+   if(ahrufActiveCall){window._ahrufAutoCalled.add(key);break;}
   }
  };
  check();window._ahrufTeacherScheduleTimer=setInterval(check,5000);
