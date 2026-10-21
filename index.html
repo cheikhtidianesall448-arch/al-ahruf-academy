@@ -3510,7 +3510,7 @@ function profilePhotoForPerson(personOrId,roleHint=''){
  const id=String(raw?(raw.id||raw.username||raw.studentId||raw.student_id||raw.userId||raw.user_id||''):personOrId||'').trim().toLowerCase();
  const role=String(roleHint||raw?.role||raw?.fromRole||raw?.toRole||'').trim().toLowerCase();
  const records=[...(Array.isArray(S.messagePeers)?S.messagePeers:[]),...(Array.isArray(S.students)?S.students:[]),...(Array.isArray(S.teachers)?S.teachers:[])];
- const matches=raw?[raw]:records.filter(p=>[p.id,p.username,p.studentId,p.student_id,p.userId,p.user_id,p.email].some(v=>String(v||'').trim().toLowerCase()===id));
+ const matches=[...(raw?[raw]:[]),...records.filter(p=>[p.id,p.username,p.studentId,p.student_id,p.userId,p.user_id,p.email].some(v=>String(v||'').trim().toLowerCase()===id))];
  let picture=String(matches.find(p=>p.picture)?.picture||'');
  if(!picture){const p=matches.find(x=>x.profilePicture||x.profile_picture||x.photo);picture=String(p?.profilePicture||p?.profile_picture||p?.photo||'')}
  if(!picture&&id&&S.profilePictures&&typeof S.profilePictures==='object'){
