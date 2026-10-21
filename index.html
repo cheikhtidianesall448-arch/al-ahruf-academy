@@ -2069,7 +2069,7 @@ async function login(role,u,p){
      user=d.user;tab=user.role==='student'?'home':'overview';
      /* Make the AI launcher visible at the exact point authentication succeeds. */
      if(window.ahrufSyncChatUser)window.ahrufSyncChatUser();
-     toast('Signed in securely');render();window.setTimeout(openCurtains,2000);
+     toast('Signed in securely');render();openCurtains();
      /* Fetch the larger dashboard state after authentication so the login screen can disappear promptly. */
      const signedInAs=String(user?.username||user?.id||'');
      loadOnlineState().then(ok=>{if(ok&&user&&String(user.username||user.id||'')===signedInAs)render();}).catch(e=>console.warn('Background academy state load:',e));
