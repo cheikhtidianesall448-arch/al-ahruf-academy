@@ -2773,8 +2773,16 @@ async function ahrufCreateCall(kind,invitees,options={}){
   ahrufStartRingback(call);
   for(const id of call.invitees){
    const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),timetableId:call.timetableId||'',sentAt:Date.now()};
-   ahrufBroadcastToUser(call,id,invite).catch(e=>console.warn('Instant call alert failed; using message fallback:',e));
-   ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn('Call invite message could not be saved:',e));
+   try{
+    await ahrufBroadcastToUser(call,id,invite);
+    ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn('Call invite message could not be saved:',e));
+   }catch(deliveryError){
+    console.warn('Call recipient is not connected:',id,deliveryError?.message||deliveryError);
+    ahrufStopRingback(call);
+    await ahrufDisposeCall(call,true);
+    ahrufCallToast('The person you’re trying to call is not connected. Please try again.');
+    return;
+   }
   }
   ahrufRenderCallTiles(call);
   ahrufSetCallStatus(call,'Ringing '+call.invitees.length+' participant'+(call.invitees.length===1?'':'s')+'…');
@@ -2822,8 +2830,19 @@ function ahrufRenderCallTiles(call){
 }
 async function ahrufBroadcast(call,event,payload){if(!call?.channel)return;return call.channel.send({type:'broadcast',event,payload:{...payload,from:ahrufMe(),room:call.room}})}
 async function ahrufBroadcastToUser(call,target,payload){
- const channel=call.client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{private:true,broadcast:{self:false}}});
- try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Invite channel timeout')),6000);channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Invite channel unavailable'))}})});await channel.send({type:'broadcast',event:'call_invite',payload});}finally{setTimeout(()=>{try{call.client.removeChannel(channel)}catch(_){}},1500)}
+ const targetKey=String(target).trim().toLowerCase();
+ const channel=call.client.channel('ahruf-user-'+targetKey.replace(/[^a-z0-9_-]/g,'_'),{config:{private:true,broadcast:{self:false},presence:{key:'caller-'+ahrufMe()+'-'+Date.now()}}});
+ try{
+  await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Invite channel timeout')),6000);channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Invite channel unavailable'))}})});
+  // Give Supabase Presence a moment to reveal whether the recipient has the academy open.
+  await new Promise(resolve=>setTimeout(resolve,1200));
+  const presence=channel.presenceState?.()||{};
+  const online=Object.values(presence).some(entries=>(Array.isArray(entries)?entries:[]).some(entry=>String(entry?.username||'').trim().toLowerCase()===targetKey&&entry?.online===true));
+  if(!online)throw new Error('Recipient is not connected');
+  const result=await channel.send({type:'broadcast',event:'call_invite',payload});
+  if(result==='error')throw new Error('Could not deliver the call invitation');
+  return true;
+ }finally{try{await call.client.removeChannel(channel)}catch(_){}}
 }
 function ahrufDirectConversationId(target){
  const me=ahrufMe(),peer=String(target||'').trim().toLowerCase();
@@ -2905,7 +2924,7 @@ function ensureAhrufCallInbox(){
   if(ahrufCallInbox&&ahrufCallInboxUser===me)return;
   if(ahrufCallInbox)try{client.removeChannel(ahrufCallInbox)}catch(_){}
   const topic='ahruf-user-'+me.replace(/[^a-z0-9_-]/g,'_');
-  ahrufCallInbox=client.channel(topic,{config:{private:true,broadcast:{self:false}}});
+  ahrufCallInbox=client.channel(topic,{config:{private:true,broadcast:{self:false},presence:{key:me}}});
   ahrufCallInboxUser=me;
   ahrufCallInbox.on('broadcast',{event:'call_invite'},({payload})=>{if(payload?.type==='invite'&&!ahrufCancelledCallRooms.has(String(payload.room||''))&&(!payload.sentAt||Date.now()-Number(payload.sentAt)<60000))ahrufShowIncomingCall(payload)});
   ahrufCallInbox.on('broadcast',{event:'call_response'},({payload})=>{
@@ -2922,7 +2941,10 @@ function ensureAhrufCallInbox(){
     ahrufDisposeCall(call,true).catch(e=>console.warn('Could not close declined call:',e));
    }
   });
-  ahrufCallInbox.subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('Call inbox signalling status:',status)});
+  ahrufCallInbox.subscribe(status=>{
+   if(status==='SUBSCRIBED'){ahrufCallInbox.track({username:me,online:true,updatedAt:Date.now()}).catch(e=>console.warn('Call presence tracking unavailable:',e));}
+   if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('Call inbox signalling status:',status)
+  });
  }).catch(e=>console.warn('Call inbox unavailable:',e.message));
 }
 let ahrufCancelIncomingCall=null;
@@ -4046,7 +4068,19 @@ function myclass(){
  }).sort((a,b)=>String(a.day||'').localeCompare(String(b.day||''))||String(a.start||'').localeCompare(String(b.start||'')));
  let notice='';
  if(student){const next=nextScheduledClass(schedule);if(next)notice='<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="mute">UPCOMING CLASS · SENEGAL TIME (UTC+0)</div><b>'+esc(next.item.course||'Quran class')+'</b><div data-next-class-timestamp="'+next.date.getTime()+'" data-prefix="Your next class in " style="margin-top:5px;font-weight:750">Calculating…</div><div class="mute">'+esc(next.item.day||'')+' · '+esc(next.item.start||'')+' · Teacher: '+esc(teacherName(next.item.teacher))+'</div></div>';}
- else if(teacher)notice=nextClassNotice(nextScheduledClass(schedule),'Your next class');
+ else if(teacher){
+  const now=new Date(),day=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getUTCDay()],minutes=now.getUTCHours()*60+now.getUTCMinutes();
+  const active=schedule.find(item=>{
+   if(String(item.day||'').toLowerCase()!==day.toLowerCase())return false;
+   const [sh,sm]=String(item.start||'').split(':').map(Number),[eh,em]=String(item.end||'').split(':').map(Number);
+   return [sh,sm,eh,em].every(Number.isFinite)&&minutes>=sh*60+sm&&minutes<eh*60+em;
+  });
+  if(active){
+   notice='<div class="card" style="margin-bottom:12px;background:#e8f7e9;border:1px solid #9bd6a2;color:#185c2b"><b style="font-size:1.08em">Class time!</b><div style="margin-top:4px;font-weight:700">'+esc(active.course||'Quran class')+'</div><div style="margin-top:3px">Ends at '+esc(active.end||'')+' · Senegal time (UTC+0)</div></div>';
+   const next=nextScheduledClass(schedule.filter(item=>String(item.id)!==String(active.id)));
+   if(next)notice+=nextClassNotice(next,'Your next class');
+  }else notice=nextClassNotice(nextScheduledClass(schedule),'Your next class');
+ }
  else if(admin)notice=(S.teachers||[]).map(tr=>nextClassNotice(nextScheduledClass((S.timetable||[]).filter(x=>[tr.username,tr.name,tr.id].some(v=>String(x.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase()))),"Teacher "+(tr.name||tr.username)+"’s next class")).join('');
  if(window._nextClassTimer){clearInterval(window._nextClassTimer);window._nextClassTimer=null}
  if(teacher)ahrufStartTeacherScheduleMonitor();
