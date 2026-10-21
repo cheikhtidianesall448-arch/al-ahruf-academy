@@ -1591,7 +1591,7 @@ async function academyChat(ctx: any, body: any) {
   }
 
   if (/(payment|invoice|unpaid|paid|fee|amount|paiement|facture|impaye|frais|الدفع|فاتورة|المبلغ)/.test(intentQ)) {
-    if (!isAdmin) return tr("Payment details are restricted to the administrator. I can still help with classes, timetable, attendance, and Qur’an progress.", "Les détails de paiement sont réservés à l’administrateur. Je peux vous aider pour les cours, l’emploi du temps, les présences et la progression coranique.", "تفاصيل الدفع متاحة لمسؤول الأكاديمية فقط. يمكنني مساعدتك في الحصص والجدول والحضور وتقدم القرآن.");
+    if (!isAdmin) return tr("Payment details are restricted to the administrator. Please ask the administrator for those details. I can still help with classes, timetable, attendance, and Qur’an progress.", "Les détails de paiement sont réservés à l’administrateur. Veuillez lui demander ces informations. Je peux aussi vous aider pour les cours, l’emploi du temps, les présences et la progression coranique.", "تفاصيل الدفع متاحة لمسؤول الأكاديمية فقط. يرجى سؤال المسؤول عنها. ويمكنني مساعدتك في الحصص والجدول والحضور وتقدم القرآن.");
     const n = (state.pay || []).filter((p: any) => !["paid", "collected", "complete", "completed"].includes(lower(p.status))).length;
     return tr("There are " + n + " payment record(s) not marked paid/collected. Open Payments for details.", "Il y a " + n + " paiement(s) non marqué(s) comme payé(s) ou encaissé(s). Ouvrez « Paiements » pour les détails.", "يوجد " + n + " سجل دفع غير محدد كمدفوع أو محصل. افتح قسم المدفوعات للتفاصيل.");
   }
