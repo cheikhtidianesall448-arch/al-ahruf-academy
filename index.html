@@ -2985,7 +2985,7 @@ function ensureAhrufCallInbox(){
   });
   ahrufCallInbox.subscribe(status=>{
    if(status==='SUBSCRIBED'){ahrufCallInbox.track({username:me,online:true,updatedAt:Date.now()}).catch(e=>console.warn('Call presence tracking unavailable:',e));}
-   if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('Call inbox signalling status:',status)
+   if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){console.warn('Call inbox signalling status:',status);const failedChannel=ahrufCallInbox;try{client.removeChannel(failedChannel)}catch(_){};setTimeout(()=>{if(ahrufCallInbox===failedChannel){ahrufCallInbox=null;ahrufCallInboxUser=''}if(user&&ahrufMe()===me)ensureAhrufCallInbox()},2000)}
   });
  }).catch(e=>console.warn('Call inbox unavailable:',e.message));
 }
