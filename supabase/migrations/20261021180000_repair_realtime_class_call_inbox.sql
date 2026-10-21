@@ -58,3 +58,40 @@ on realtime.messages using (
     )
   )
 );
+
+-- Keep call-room SELECT authorization working even when participant rows are hidden by RLS.
+create or replace function private.can_join_class_call_room(room_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select auth.uid() is not null
+     and exists (
+       select 1
+       from public.academy_call_participants p
+       where p.room = room_name
+         and p.user_id = auth.uid()
+     );
+$$;
+grant execute on function private.can_join_class_call_room(text) to public;
+
+alter policy "Ahruf users can receive own call inbox"
+on realtime.messages using (
+  extension in ('broadcast', 'presence')
+  and (
+    (
+      realtime.topic() like 'ahruf-user-%'
+      and exists (
+        select 1 from public.profiles p
+        where p.id = auth.uid()
+          and regexp_replace(lower(coalesce(p.username, '')), '[^a-z0-9_-]', '_', 'g') = substring(realtime.topic() from 12)
+      )
+    )
+    or (
+      realtime.topic() like 'ahruf-call-%'
+      and private.can_join_class_call_room(substring(realtime.topic() from 12))
+    )
+  )
+);
