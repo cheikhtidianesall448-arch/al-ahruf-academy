@@ -3567,7 +3567,7 @@ function studentProfile(id){
  const html='<div style="display:flex;align-items:center;gap:20px;margin-bottom:22px;flex-wrap:wrap">'+userIdAvatar(s,'student',120)+'<div><h2 style="margin:0 0 8px;font-size:1.6rem">'+esc(s.name||'Student')+'</h2><div class="mute" style="font-size:1.05rem">'+esc(s.id||'')+'</div></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px">'+row('Phone',esc(s.phone))+row('Email',esc(s.email))+row('Age',s.age==null?'—':esc(String(s.age)))+row('Sex',esc(s.sex))+row('Level',esc(s.level))+row('Teacher',esc(teacherName(s.teacher)))+row('Payment status',esc(s.pay))+row('Quran progress',progress.length+' / 114 surahs')+'</div><div style="margin-top:16px"><div class="row between" style="margin-bottom:6px"><b>Memorization progress</b><span class="mute">'+Math.round(progress.length/114*100)+'%</span></div><div class="bar2"><i style="width:'+Math.min(100,progress.length/114*100)+'%"></i></div><div class="mute" style="margin-top:8px;font-size:12px">'+(progress.length?progress.map(x=>esc(String(x))).join(', '):'No memorized surahs recorded yet.')+'</div></div>';
  const d=$('#dlg');d.innerHTML=`<h2>Student profile</h2>${html}<div class="row end" style="margin-top:18px"><button type="button" class="btn" onclick="document.getElementById('dlg').close()">OK</button></div>`;d.showModal();
 }
-async async function delS(id,b){
+async function delS(id,b){
  if(user?.role!=='admin'){toast('Only the administrator can delete students.');return}
  if(b.dataset.s){
    if(ONLINE){
