@@ -2958,7 +2958,7 @@ function ensureAhrufCallInbox(){
    const responder=String(payload.from||'').trim().toLowerCase();
    // The unguessable active room is the primary correlation key. Do not ignore a
    // valid decline merely because usernames/IDs were normalized differently.
-   if((payload.type==='declined'||payload.type==='missed')&&call.automaticClass)return;
+   if((payload.type==='declined'||payload.type==='missed')&&call.automaticClass){call.deliveredInvitees?.delete(String(payload.from||'').trim().toLowerCase());return;}
    if(payload.type==='declined'||payload.type==='missed'){
     ahrufStopRingback(call);
     ahrufSetCallStatus(call,payload.type==='declined'?'Call declined':'No answer');
@@ -4191,8 +4191,9 @@ function ahrufStartStudentScheduleMonitor(){
    window._ahrufStudentAutoCalled=window._ahrufStudentAutoCalled||new Set();
    const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Dakar',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),key=String(item.id)+'|'+date;
    if(window._ahrufStudentAutoCalled.has(key))return;
-   window._ahrufStudentAutoCalled.add(key);
-   await startScheduledClassCall(item.id,'','video',true);break;
+   await startScheduledClassCall(item.id,'','video',true);
+   if(ahrufActiveCall)window._ahrufStudentAutoCalled.add(key);
+   break;
   }
  };
  check();window._ahrufStudentScheduleTimer=setInterval(check,15000);
@@ -4224,7 +4225,7 @@ async function startScheduledTeacherCall(timetableId,automatic=false){
  const key=String(timetableId)+'|'+new Date().toLocaleDateString('en-CA',{timeZone:'Africa/Dakar'});
  window._ahrufAutoCalled=window._ahrufAutoCalled||new Set();
  if(automatic&&window._ahrufAutoCalled.has(key))return;
- if(automatic)window._ahrufAutoCalled.add(key);
+ // Mark the daily attempt only after the call has actually started.
  const dateKey=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Dakar',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const room=automatic?'ahruf-class-'+String(timetableId).replace(/[^a-zA-Z0-9_-]/g,'_')+'-'+dateKey:'ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
  try{
@@ -4233,6 +4234,7 @@ async function startScheduledTeacherCall(timetableId,automatic=false){
   const invitees=(result.students||[]).map(x=>String(x.username||'').trim().toLowerCase()).filter(Boolean);
   if(!invitees.length){if(!automatic)ahrufCallToast('No students are eligible for this class call.');return}
   await ahrufCreateCall('video',invitees,{room,timetableId:String(timetableId),automaticClass:automatic});
+  if(automatic&&ahrufActiveCall)window._ahrufAutoCalled.add(key);
  }catch(e){console.warn('Scheduled teacher call could not start:',e);if(!automatic)ahrufCallToast(e?.message||'Could not start the scheduled class call.')}
 }
 function ahrufStartTeacherScheduleMonitor(){
