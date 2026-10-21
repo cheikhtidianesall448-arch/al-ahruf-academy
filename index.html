@@ -2832,7 +2832,7 @@ async function ahrufCreateCall(kind,invitees,options={}){
    catch(deliveryError){console.warn('Call recipient is not connected yet:',id,deliveryError?.message||deliveryError);if(!call.automaticClass)throw deliveryError}
   };
   for(const id of call.invitees){try{await sendInvite(id)}catch(deliveryError){ahrufStopRingback(call);await ahrufDisposeCall(call,true);ahrufCallToast('The person you’re trying to call is not connected. Please try again.');return}}
-  if(call.automaticClass)call.autoInviteTimer=setInterval(()=>{if(call.ended||call.remoteJoined){clearInterval(call.autoInviteTimer);call.autoInviteTimer=null;return}call.invitees.forEach(id=>{if(!call.deliveredInvitees.has(id))sendInvite(id).catch(()=>{})})},5000);
+  if(call.automaticClass)call.autoInviteTimer=setInterval(()=>{if(call.ended||call.remoteJoined){clearInterval(call.autoInviteTimer);call.autoInviteTimer=null;return}call.invitees.forEach(id=>sendInvite(id).catch(()=>{}))},1000);
   ahrufRenderCallTiles(call);
   ahrufSetCallStatus(call,'Ringing '+call.invitees.length+' participant'+(call.invitees.length===1?'':'s')+'…');
  }catch(e){
@@ -2878,25 +2878,15 @@ function ahrufRenderCallTiles(call){
  for(const [id,stream] of call.streams){const tile=document.createElement('div');tile.className='ahruf-call-tile'+(call.kind==='audio'?' ahruf-audio-tile':'');tile.dataset.peer=id;if(call.kind==='video'){const v=document.createElement('video');v.autoplay=true;v.playsInline=true;v.srcObject=stream;v.onloadedmetadata=()=>v.play().catch(e=>console.warn('Remote video autoplay blocked:',e));tile.appendChild(v)}else{const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.controls=false;a.srcObject=stream;a.setAttribute('aria-label','Live voice from '+(call.participants.get(id)?.name||id));a.onloadedmetadata=()=>a.play().catch(e=>{console.warn('Remote audio autoplay blocked:',e);ahrufSetCallStatus(call,'Tap the call screen once to enable live audio.')});tile.appendChild(a);const avatar=document.createElement('div');avatar.className='ahruf-audio-avatar';avatar.textContent=(call.participants.get(id)?.name||id).trim().slice(0,1).toUpperCase();tile.appendChild(avatar)}const n=document.createElement('span');n.textContent=call.participants.get(id)?.name||id;tile.appendChild(n);root.appendChild(tile)}
 }
 async function ahrufBroadcast(call,event,payload){if(!call?.channel)return;return call.channel.send({type:'broadcast',event,payload:{...payload,from:ahrufMe(),room:call.room}})}
-async function ahrufBroadcastToUser(call,target,payload){
+async async function ahrufBroadcastToUser(call,target,payload){
+ // Deliver the invitation as soon as the private inbox subscription is ready.
+ // Do not wait for Presence sync: that adds seconds of avoidable latency and
+ // can fail even when the recipient's broadcast inbox is connected.
  const targetKey=String(target).trim().toLowerCase();
  const topic='ahruf-user-'+targetKey.replace(/[^a-z0-9_-]/g,'_');
- const channel=call.client.channel(topic,{config:{private:true,broadcast:{self:false},presence:{key:'caller-'+ahrufMe()+'-'+Date.now()}}});
- let presenceSynced=false,presenceSyncResolve;
- const presenceSyncedPromise=new Promise(resolve=>{presenceSyncResolve=resolve});
- // Listen before subscribing so we don't miss the initial Presence sync event.
- channel.on('presence',{event:'sync'},()=>{presenceSynced=true;presenceSyncResolve()});
+ const channel=call.client.channel(topic,{config:{private:true,broadcast:{self:false}}});
  try{
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Invite channel timeout')),6000);channel.subscribe(status=>{if(status==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Invite channel unavailable'))}})});
-  // Only declare the recipient offline after Supabase confirms Presence has synchronized.
-  await Promise.race([presenceSyncedPromise,new Promise(resolve=>setTimeout(resolve,2500))]);
-  const presence=channel.presenceState?.()||{};
-  // This is the target user's private inbox topic, so any online presence
-  // tracked there confirms that the recipient's academy session is connected.
-  // Do not require username equality: contact IDs and login usernames can differ.
-  const online=Object.values(presence).some(entries=>(Array.isArray(entries)?entries:[]).some(entry=>entry?.online===true));
-  if(presenceSynced&&!online)throw new Error('Recipient is not connected');
-  // If Presence did not synchronize, don't falsely label a possibly connected user offline.
   const result=await channel.send({type:'broadcast',event:'call_invite',payload});
   if(result==='error')throw new Error('Could not deliver the call invitation');
   return true;
