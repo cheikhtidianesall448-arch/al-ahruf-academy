@@ -2066,10 +2066,13 @@ async function login(role,u,p){
        await sb.auth.signOut();
        throw new Error('Account role does not match the selected login.');
      }
-     user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
+     user=d.user;tab=user.role==='student'?'home':'overview';
      /* Make the AI launcher visible at the exact point authentication succeeds. */
      if(window.ahrufSyncChatUser)window.ahrufSyncChatUser();
      toast('Signed in securely');render();openCurtains();
+     /* Fetch the larger dashboard state after authentication so the login screen can disappear promptly. */
+     const signedInAs=String(user?.username||user?.id||'');
+     loadOnlineState().then(ok=>{if(ok&&user&&String(user.username||user.id||'')===signedInAs)render();}).catch(e=>console.warn('Background academy state load:',e));
      /* Reveal the AI only after the app has finished rendering the signed-in screen. */
      if(window.ahrufSyncChatUser){window.ahrufSyncChatUser();requestAnimationFrame(()=>window.ahrufSyncChatUser());setTimeout(()=>window.ahrufSyncChatUser(),250);}
      setTimeout(ahrufCheckPendingPushCall,250);
