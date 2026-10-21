@@ -1826,10 +1826,10 @@ Object.assign(I18N.ar,{
 });
 I18N.fr['Please wait. Your class will start in']='Veuillez patienter. Votre cours commencera dans';I18N.ar['Please wait. Your class will start in']='يرجى الانتظار. سيبدأ درسك خلال';I18N.fr['Class not started yet']='Le cours n’a pas encore commencé';I18N.fr['Your class will start in']='Votre cours commencera dans';I18N.fr.day='jour';I18N.fr.days='jours';I18N.fr.hour='heure';I18N.fr.hours='heures';I18N.fr.minute='minute';I18N.fr.minutes='minutes';I18N.ar['Class not started yet']='لم يبدأ الدرس بعد';I18N.ar['Your class will start in']='سيبدأ درسك خلال';I18N.ar.day='يوم';I18N.ar.days='أيام';I18N.ar.hour='ساعة';I18N.ar.hours='ساعات';I18N.ar.minute='دقيقة';I18N.ar.minutes='دقائق';
 Object.assign(I18N.fr,{
- 'You missed this class because you tried to join more than 30 minutes after it started. Please open Messages and contact your teacher to negotiate a make-up lesson or agree on how to catch up.':'Vous avez manqué ce cours car vous avez essayé de le rejoindre plus de 30 minutes après son début. Ouvrez Messages et contactez votre enseignant pour négocier un cours de rattrapage ou convenir d’une façon de rattraper le contenu.'
+ 'You missed the class, so you cannot join right now. Please contact your Oustaz in Messages to arrange a make-up lesson or ask how to catch up.':'Vous avez manqué ce cours car vous avez essayé de le rejoindre plus de 30 minutes après son début. Ouvrez Messages et contactez votre enseignant pour négocier un cours de rattrapage ou convenir d’une façon de rattraper le contenu.'
 });
 Object.assign(I18N.ar,{
- 'You missed this class because you tried to join more than 30 minutes after it started. Please open Messages and contact your teacher to negotiate a make-up lesson or agree on how to catch up.':'لقد فاتك هذا الدرس لأنك حاولت الانضمام بعد أكثر من 30 دقيقة من بدايته. افتح الرسائل وتواصل مع معلمك للاتفاق على درس تعويضي أو خطة لتعويض ما فاتك.'
+ 'You missed the class, so you cannot join right now. Please contact your Oustaz in Messages to arrange a make-up lesson or ask how to catch up.':'لقد فاتك هذا الدرس لأنك حاولت الانضمام بعد أكثر من 30 دقيقة من بدايته. افتح الرسائل وتواصل مع معلمك للاتفاق على درس تعويضي أو خطة لتعويض ما فاتك.'
 });
 function t(key){return (I18N[currentLang]&&I18N[currentLang][key])||key}
 function setLanguage(lang){
@@ -2771,6 +2771,18 @@ function ahrufApplyClassCallDeadline(call){
   ahrufCallToast('The scheduled class call has ended. The 10-minute lateness allowance is over.');
   closeAhrufCall(true);
  },remaining);
+ // If nobody answers, stop the automatic call 30 minutes after the scheduled start.
+ if(call.automaticClass){
+  const [sh,sm]=String(item.start).split(':').map(Number);
+  if([sh,sm].every(Number.isFinite)){
+   const noAnswerRemaining=Math.max(0,Math.ceil(((sh*60+sm+30)-nowMinutes)*60000));
+   call.noAnswerTimer=setTimeout(()=>{
+    if(ahrufActiveCall!==call||call.ended||call.remoteJoined)return;
+    ahrufCallToast('The class call stopped because nobody answered within 30 minutes of the scheduled start.');
+    closeAhrufCall(true);
+   },noAnswerRemaining);
+  }
+ }
 }
 async function ahrufCreateCall(kind,invitees,options={}){
  if(ahrufActiveCall)return ahrufCallToast('A call is already open.');
@@ -3068,7 +3080,7 @@ async function ahrufDisposeCall(call,sendSignal){
  for(const track of call.localStream?.getTracks?.()||[])try{track.stop()}catch(_){}
  call.overlay?.remove();document.getElementById('ahrufCallMiniBar')?.remove();if(ahrufActiveCall===call)ahrufActiveCall=null;
  if(call.classEndTimer){clearTimeout(call.classEndTimer);call.classEndTimer=null;}
- if(call.autoInviteTimer){clearInterval(call.autoInviteTimer);call.autoInviteTimer=null;}
+ if(call.autoInviteTimer){clearInterval(call.autoInviteTimer);call.autoInviteTimer=null;}if(call.noAnswerTimer){clearTimeout(call.noAnswerTimer);call.noAnswerTimer=null;}
  try{if(call.channel)await call.client.removeChannel(call.channel)}catch(_){}
  const elapsed=Math.max(0,Math.floor((Date.now()-call.startedAt)/1000));
  if(sendSignal&&call.key)ahrufSaveCallHistory(call.peer,call.key,call.kind,elapsed,call.remoteJoined,call.participants.size+1,call.inviteMessageId);
@@ -4161,7 +4173,7 @@ async function startScheduledClassCall(timetableId,studentUsername='',kind='vide
   if(user.role==='student'){
    result=await onlineApi('authorize_student_class_call',{timetableId:String(timetableId),room});
    if(result?.status!=='allowed'){
-    if(result?.code==='CLASS_MISSED')throw new Error(t('You missed this class because you tried to join more than 30 minutes after it started. Please open Messages and contact your teacher to negotiate a make-up lesson or agree on how to catch up.'));
+    if(result?.code==='CLASS_MISSED')throw new Error(t('You missed the class, so you cannot join right now. Please contact your Oustaz in Messages to arrange a make-up lesson or ask how to catch up.'));
     throw new Error(result?.message||'This class call is not available now.');
    }
    const attendance=await onlineApi('record_class_attendance',{timetableId:String(timetableId)});
@@ -4182,12 +4194,14 @@ function ahrufStartStudentScheduleMonitor(){
  const check=async()=>{
   if(!user||user.role!=='student'||document.hidden||ahrufActiveCall||document.querySelector('.ahruf-incoming-overlay'))return;
   const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Dakar',weekday:'long',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),get=n=>parts.find(p=>p.type===n)?.value||'';
-  const day=get('weekday').toLowerCase(),minutes=Number(get('hour'))*60+Number(get('minute'));
+  const day=get('weekday').toLowerCase(),minutes=Number(get('hour'))*60+Number(get('minute')),seconds=Number(get('second')||0);
   const me=String(user.username||user.id||'').trim().toLowerCase(),rec=currentStudent(),ids=studentTimetableIds(rec);
   const schedule=(S.timetable||[]).filter(item=>(Array.isArray(item.students)?item.students:[]).some(v=>ids.includes(String(v||'').trim().toLowerCase())||String(v||'').trim().toLowerCase()===me)&&String(item.day||'').toLowerCase()===day);
   for(const item of schedule){
    const [sh,sm]=String(item.start||'').split(':').map(Number),[eh,em]=String(item.end||'').split(':').map(Number);
    if(![sh,sm,eh,em].every(Number.isFinite)||minutes<sh*60+sm||minutes>=eh*60+em)continue;
+   // Give the Oustaz's monitor first chance to initiate the scheduled call.
+   if((minutes-(sh*60+sm))*60+seconds<10)continue;
    window._ahrufStudentAutoCalled=window._ahrufStudentAutoCalled||new Set();
    const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Dakar',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),key=String(item.id)+'|'+date;
    if(window._ahrufStudentAutoCalled.has(key))return;
@@ -4217,7 +4231,7 @@ function ahrufStartTeacherScheduleMonitor(){
    if(ahrufActiveCall)break;
   }
  };
- check();window._ahrufTeacherScheduleTimer=setInterval(check,30000);
+ check();window._ahrufTeacherScheduleTimer=setInterval(check,5000);
 }
 
 async function startScheduledTeacherCall(timetableId,automatic=false){
