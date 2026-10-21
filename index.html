@@ -4166,12 +4166,7 @@ async function startScheduledClassCall(timetableId,studentUsername='',kind='vide
  if(automatic&&document.querySelector('.ahruf-incoming-overlay'))return;
  if(!user||!['student','teacher'].includes(user.role))return ahrufCallToast('Only the assigned student or teacher can start a scheduled class call.');
  if(ahrufActiveCall)return ahrufCallToast('End your current call before starting another.');
- if(user.role==='student'){
-  return ahrufCallToast('During scheduled classes, only Oustaz can initiate the call. Please stay signed in to receive the incoming call.');
-  const scheduled=(S.timetable||[]).find(x=>String(x.id)===String(timetableId));
-  const waitMessage=ahrufStudentClassWaitMessage(scheduled);
-  if(waitMessage)return ahrufCallToast(waitMessage);
- }
+ if(user.role==='student')return ahrufCallToast('During scheduled classes, only Oustaz can initiate the call. Please stay signed in to receive the incoming call.');
  const dateKey=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Dakar',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const room=automatic?'ahruf-class-'+String(timetableId).replace(/[^a-zA-Z0-9_-]/g,'_')+'-'+dateKey:'ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
  try{
