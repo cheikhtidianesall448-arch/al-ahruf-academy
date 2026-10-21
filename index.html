@@ -3098,7 +3098,26 @@ async function ahrufDisposeCall(call,sendSignal){
  const elapsed=Math.max(0,Math.floor((Date.now()-call.startedAt)/1000));
  if(sendSignal&&call.key)ahrufSaveCallHistory(call.peer,call.key,call.kind,elapsed,call.remoteJoined,call.participants.size+1,call.inviteMessageId);
 }
-function closeAhrufCall(log=true){const call=ahrufActiveCall;if(!call)return;ahrufDisposeCall(call,log).catch(e=>console.warn('Call cleanup error:',e))}
+function closeAhrufCall(log=true){
+ const call=ahrufActiveCall;
+ if(!call)return;
+ // Close the local UI synchronously so a slow Realtime/channel cleanup can never
+ // leave the End Call button appearing unresponsive.
+ try{call.overlay?.remove()}catch(_){}
+ try{document.getElementById('ahrufCallMiniBar')?.remove()}catch(_){}
+ try{ahrufStopRingback(call)}catch(_){}
+ if(ahrufActiveCall===call)ahrufActiveCall=null;
+ ahrufDisposeCall(call,log).catch(e=>console.warn('Call cleanup error:',e));
+}
+// Capture the end action at document level as a fallback if a rerender replaces
+// the call controls or a nested handler fails to fire.
+document.addEventListener('click',event=>{
+ const button=event.target?.closest?.('.ahruf-call-end,.ahruf-call-close,.ahruf-call-mini-end');
+ if(!button)return;
+ event.preventDefault();
+ event.stopPropagation();
+ closeAhrufCall(true);
+},true);
 async function ahrufSaveCallHistory(peer,key,kind,seconds,answered,people,inviteMessageId){
  if(!peer||!key)return;
  const message=AHRUF_CALL_HISTORY_PREFIX+[kind,answered?'answered':'missed',Math.max(0,Math.round(seconds)),Math.max(1,people||1)].join('|');
