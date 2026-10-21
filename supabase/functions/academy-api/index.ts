@@ -1258,11 +1258,11 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
     const endMinutes = endHour * 60 + endMinute;
     const duration = endMinutes > startMinutes ? endMinutes - startMinutes : 60;
     const elapsed = nowMinutes - startMinutes;
-    if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || elapsed < 0 || elapsed >= duration) {
+    if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || elapsed < 0) {
       return { status: "denied", allowed: false, message: "This class call is outside the scheduled lesson time." };
     }
-    // Students may join only during the first 30 minutes. After that, direct them
-    // to contact their teacher to negotiate a make-up lesson or catch-up plan.
+    // Once 30 minutes have elapsed, keep the specific missed-class response even
+    // if the scheduled lesson's end time has also passed.
     if (role === "student" && elapsed >= 30) {
       return {
         status: "denied",
@@ -1270,6 +1270,9 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
         code: "CLASS_MISSED",
         message: "You missed the class, so you cannot join right now. Please contact your Oustaz in Messages to arrange a make-up lesson or ask how to catch up.",
       };
+    }
+    if (elapsed >= duration) {
+      return { status: "denied", allowed: false, message: "This class call is outside the scheduled lesson time." };
     }
   }
   const teacherRecord = (state.teachers || []).find((t: any) =>
