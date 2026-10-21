@@ -2067,8 +2067,10 @@ async function login(role,u,p){
        throw new Error('Account role does not match the selected login.');
      }
      user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
-     if(window.ahrufSyncChatUser)window.ahrufSyncChatUser();
-     toast('Signed in securely');render();openCurtains();setTimeout(ahrufCheckPendingPushCall,250);
+     toast('Signed in securely');render();openCurtains();
+     /* Reveal the AI only after the app has finished rendering the signed-in screen. */
+     if(window.ahrufSyncChatUser){window.ahrufSyncChatUser();requestAnimationFrame(()=>window.ahrufSyncChatUser());setTimeout(()=>window.ahrufSyncChatUser(),250);}
+     setTimeout(ahrufCheckPendingPushCall,250);
    }catch(e){console.error('Al-Ahruf login failed:',e);toast('Sign-in failed. Check your credentials or contact the administrator.');}
    finally{onlineBusy=false}
    return;
