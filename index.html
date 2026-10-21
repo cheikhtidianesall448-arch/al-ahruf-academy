@@ -2851,14 +2851,22 @@ function ahrufRenderCallTiles(call){
 async function ahrufBroadcast(call,event,payload){if(!call?.channel)return;return call.channel.send({type:'broadcast',event,payload:{...payload,from:ahrufMe(),room:call.room}})}
 async function ahrufBroadcastToUser(call,target,payload){
  const targetKey=String(target).trim().toLowerCase();
- const channel=call.client.channel('ahruf-user-'+targetKey.replace(/[^a-z0-9_-]/g,'_'),{config:{private:true,broadcast:{self:false},presence:{key:'caller-'+ahrufMe()+'-'+Date.now()}}});
+ const topic='ahruf-user-'+targetKey.replace(/[^a-z0-9_-]/g,'_');
+ const channel=call.client.channel(topic,{config:{private:true,broadcast:{self:false},presence:{key:'caller-'+ahrufMe()+'-'+Date.now()}}});
+ let presenceSynced=false,presenceSyncResolve;
+ const presenceSyncedPromise=new Promise(resolve=>{presenceSyncResolve=resolve});
+ // Listen before subscribing so we don't miss the initial Presence sync event.
+ channel.on('presence',{event:'sync'},()=>{presenceSynced=true;presenceSyncResolve()});
  try{
-  await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Invite channel timeout')),6000);channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Invite channel unavailable'))}})});
-  // Give Supabase Presence a moment to reveal whether the recipient has the academy open.
-  await new Promise(resolve=>setTimeout(resolve,1200));
+  await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Invite channel timeout')),6000);channel.subscribe(status=>{if(status==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Invite channel unavailable'))}})});
+  // Only declare the recipient offline after Supabase confirms Presence has synchronized.
+  await Promise.race([presenceSyncedPromise,new Promise(resolve=>setTimeout(resolve,2500))]);
   const presence=channel.presenceState?.()||{};
-  const online=Object.values(presence).some(entries=>(Array.isArray(entries)?entries:[]).some(entry=>String(entry?.username||'').trim().toLowerCase()===targetKey&&entry?.online===true));
-  if(!online)throw new Error('Recipient is not connected');
+  const online=Object.values(presence).some(entries=>(Array.isArray(entries)?entries:[]).some(entry=>
+   String(entry?.username||'').trim().toLowerCase()===targetKey&&entry?.online===true
+  ));
+  if(presenceSynced&&!online)throw new Error('Recipient is not connected');
+  // If Presence did not synchronize, don't falsely label a possibly connected user offline.
   const result=await channel.send({type:'broadcast',event:'call_invite',payload});
   if(result==='error')throw new Error('Could not deliver the call invitation');
   return true;
