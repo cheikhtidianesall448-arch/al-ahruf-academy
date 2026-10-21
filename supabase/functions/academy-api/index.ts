@@ -1525,6 +1525,24 @@ async function academyChat(ctx: any, body: any) {
       : timetable;
   const names = [...new Set(myTimetable.map((x: any) => text(x?.course || x?.title || x?.className)).filter(Boolean))];
   const tr = (en: string, fr: string, ar: string) => ({ reply: lang === "fr" ? fr : lang === "ar" ? ar : en });
+  // Answer a student's "who + teacher" question from their own assignment.
+  if (/(\\bwho\\b.*\\bteacher\\b|\\bteacher\\b.*\\bwho\\b|\\bwho\\s+teaches\\s+me\\b|\\bmy\\s+teacher\\b|\\bqui\\b.*\\b(enseignant|professeur)\\b|\\bmon\\s+(enseignant|professeur)\\b|من\\s+هو\\s+معلمي|من\\s+معلمك|معلمي|مدرسي)/i.test(intentQ)) {
+    if (role === "student" && myStudent) {
+      const assignment = text(myStudent.teacher);
+      if (!assignment) {
+        return tr("No teacher is assigned to your student account yet. Please ask the administrator to check your teacher assignment.", "Aucun enseignant n’est encore associé à votre compte élève. Veuillez demander à l’administrateur de vérifier votre affectation.", "لم يتم تعيين معلم لحسابك بعد. يُرجى طلب مراجعة تعيين المعلم من مسؤول الأكاديمية.");
+      }
+      const assigned = (state.teachers || []).find((t: any) =>
+        lower(t?.username) === lower(assignment) || lower(t?.name) === lower(assignment)
+      );
+      const displayName = text(assigned?.name) || assignment;
+      return tr("Your assigned teacher is " + displayName + ".", "Votre enseignant assigné est " + displayName + ".", "المعلم المعيّن لك هو " + displayName + ".");
+    }
+    if (role === "student") {
+      return tr("I couldn’t find your student record to confirm your assigned teacher. Please ask the administrator to check your account.", "Je n’ai pas trouvé votre fiche élève pour confirmer votre enseignant. Veuillez demander à l’administrateur de vérifier votre compte.", "لم أتمكن من العثور على سجل الطالب لتأكيد اسم معلمك. يُرجى طلب مراجعة حسابك من مسؤول الأكاديمية.");
+    }
+  }
+
   // Invoice ownership verification is available only to administrators.
   const invoiceMatch = question.match(/\\bINV-\\d{6,}\\b/i);
   if (invoiceMatch && /(invoice|owner|whose|who.s|belongs|facture|proprietaire|à qui|الفاتورة|صاحب|لمن)/i.test(question)) {
