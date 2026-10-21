@@ -2772,7 +2772,7 @@ async function ahrufCreateCall(kind,invitees,options={}){
   await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||user?.username||ahrufMe(),kind});
   ahrufStartRingback(call);
   for(const id of call.invitees){
-   const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),timetableId:call.timetableId||''};
+   const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),timetableId:call.timetableId||'',sentAt:Date.now()};
    ahrufBroadcastToUser(call,id,invite).catch(e=>console.warn('Instant call alert failed; using message fallback:',e));
    ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn('Call invite message could not be saved:',e));
   }
@@ -2896,7 +2896,7 @@ async function ahrufInviteDuringCall(call){
  const available=ahrufCallPeople().filter(p=>!call.invitees.includes(String(p.id).toLowerCase())&&!call.participants.has(String(p.id).toLowerCase()));
  if(!available.length)return ahrufCallToast('No additional participants are available.');
  const body='<p class="mute">Select academy users to invite to this active call.</p><div class="ahruf-call-invite-list">'+available.map(p=>'<label><input type="checkbox" name="invitee" value="'+esc(p.id)+'"><span><b>'+esc(p.name)+'</b><small>'+esc(p.role)+'</small></span></label>').join('')+'</div>';
- modal('Invite participants',body,async form=>{const ids=[...Array.from(form).filter(x=>x.name==='invitee'&&x.checked)].map(x=>x.value);if(!ids.length)return ahrufCallToast('Choose at least one participant.');for(const id of ids){call.invitees.push(String(id).toLowerCase());const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),timetableId:call.timetableId||''};ahrufBroadcastToUser(call,id,invite).catch(e=>console.warn('Instant call alert failed:',e));ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn(e))}ahrufSetCallStatus(call,'Invitation sent to '+ids.length+' participant'+(ids.length===1?'':'s'));},'Send invitations');
+ modal('Invite participants',body,async form=>{const ids=[...Array.from(form).filter(x=>x.name==='invitee'&&x.checked)].map(x=>x.value);if(!ids.length)return ahrufCallToast('Choose at least one participant.');for(const id of ids){call.invitees.push(String(id).toLowerCase());const invite={type:'invite',room:call.room,kind:call.kind,from:ahrufMe(),fromName:user?.name||user?.username||ahrufMe(),timetableId:call.timetableId||'',sentAt:Date.now()};ahrufBroadcastToUser(call,id,invite).catch(e=>console.warn('Instant call alert failed:',e));ahrufAppendCallInviteMessage(call,id).catch(e=>console.warn(e))}ahrufSetCallStatus(call,'Invitation sent to '+ids.length+' participant'+(ids.length===1?'':'s'));},'Send invitations');
 }
 function ensureAhrufCallInbox(){
  const me=ahrufMe();if(!me)return;
@@ -2907,9 +2907,9 @@ function ensureAhrufCallInbox(){
   const topic='ahruf-user-'+me.replace(/[^a-z0-9_-]/g,'_');
   ahrufCallInbox=client.channel(topic,{config:{private:true,broadcast:{self:false}}});
   ahrufCallInboxUser=me;
-  ahrufCallInbox.on('broadcast',{event:'call_invite'},({payload})=>{if(payload?.type==='invite')ahrufShowIncomingCall(payload)});
+  ahrufCallInbox.on('broadcast',{event:'call_invite'},({payload})=>{if(payload?.type==='invite'&&!ahrufCancelledCallRooms.has(String(payload.room||''))&&(!payload.sentAt||Date.now()-Number(payload.sentAt)<60000))ahrufShowIncomingCall(payload)});
   ahrufCallInbox.on('broadcast',{event:'call_response'},({payload})=>{
-   if(payload?.type==='cancelled'&&payload.room){const incoming=document.querySelector('.ahruf-incoming-overlay');if(incoming&&incoming.dataset.callRoom===String(payload.room)&&typeof ahrufCancelIncomingCall==='function')ahrufCancelIncomingCall(payload.room);return}
+   if(payload?.type==='cancelled'&&payload.room){ahrufCancelledCallRooms.add(String(payload.room));const incoming=document.querySelector('.ahruf-incoming-overlay');if(incoming&&incoming.dataset.callRoom===String(payload.room)&&typeof ahrufCancelIncomingCall==='function')ahrufCancelIncomingCall(payload.room);return}
    const call=ahrufActiveCall;
    if(!call||call.ended||!payload||payload.room!==call.room)return;
    const responder=String(payload.from||'').toLowerCase();
@@ -2925,6 +2925,7 @@ function ensureAhrufCallInbox(){
  }).catch(e=>console.warn('Call inbox unavailable:',e.message));
 }
 let ahrufCancelIncomingCall=null;
+const ahrufCancelledCallRooms=new Set();
 let ahrufRingtoneContext=null;
 function ahrufUnlockRingtone(){
  try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return Promise.resolve(null);if(!ahrufRingtoneContext)ahrufRingtoneContext=new AC();if(ahrufRingtoneContext.state==='suspended')return ahrufRingtoneContext.resume().then(()=>ahrufRingtoneContext).catch(()=>ahrufRingtoneContext);return Promise.resolve(ahrufRingtoneContext)}catch(_){return Promise.resolve(null)}
@@ -3007,14 +3008,18 @@ async function ahrufJoinCall(invite){
 }
 async function ahrufDisposeCall(call,sendSignal){
  if(!call||call.ended)return;call.ended=true;ahrufStopRingback(call);
- // If the caller hangs up before anyone answers, notify every invitee so their
- // incoming ringtone and call screen stop instead of continuing to ring.
- if(sendSignal&&!call.remoteJoined&&Array.isArray(call.invitees)&&call.invitees.length){await Promise.allSettled(call.invitees.map(id=>ahrufSendInboxSignal(id,{type:'cancelled',room:call.room,from:ahrufMe()})))}
- if(sendSignal&&call.channel){try{await ahrufBroadcast(call,'peer_leave',{id:ahrufMe()});await ahrufBroadcast(call,'call_end',{id:ahrufMe(),name:user?.name||ahrufMe()})}catch(_){}}
+ // Signal cancellation without waiting for network setup: ending the caller UI must be immediate.
+ if(sendSignal&&!call.remoteJoined&&Array.isArray(call.invitees)&&call.invitees.length){
+  call.invitees.forEach(id=>ahrufSendInboxSignal(id,{type:'cancelled',room:call.room,from:ahrufMe()}).catch(e=>console.warn('Call cancellation signal failed:',e)));
+ }
+ if(sendSignal&&call.channel){
+  ahrufBroadcast(call,'peer_leave',{id:ahrufMe()}).catch(()=>{});
+  ahrufBroadcast(call,'call_end',{id:ahrufMe(),name:user?.name||ahrufMe()}).catch(()=>{});
+ }
  for(const pc of call.pcs?.values?.()||[])try{pc.ontrack=null;pc.close()}catch(_){}
  for(const track of call.localStream?.getTracks?.()||[])try{track.stop()}catch(_){}
- try{if(call.channel)await call.client.removeChannel(call.channel)}catch(_){}
  call.overlay?.remove();document.getElementById('ahrufCallMiniBar')?.remove();if(ahrufActiveCall===call)ahrufActiveCall=null;
+ try{if(call.channel)await call.client.removeChannel(call.channel)}catch(_){}
  const elapsed=Math.max(0,Math.floor((Date.now()-call.startedAt)/1000));
  if(sendSignal&&call.key)ahrufSaveCallHistory(call.peer,call.key,call.kind,elapsed,call.remoteJoined,call.participants.size+1,call.inviteMessageId);
 }
