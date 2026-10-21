@@ -1462,8 +1462,14 @@ async function academyChat(ctx: any, body: any) {
   const lang = ["fr", "ar"].includes(lower(body.language)) ? lower(body.language) : "en";
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const latest = [...messages].reverse().find((m: any) => lower(m?.role) === "user");
-  const question = text(latest?.content);
-  const q = question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\bhoww+\b/g, "how");
+  let question = text(latest?.content);
+  const lastAssistant = [...messages].reverse().find((m: any) => lower(m?.role) === "assistant");
+  let confirmedIntent = false;
+  if (/^(yes|yes please|yeah|yep|correct|exactly|oui|exactement|نعم|صحيح)[!.?\\s]*$/i.test(question) && /do you mean|voulez-vous dire|هل تقصد/.test(text(lastAssistant?.content).toLowerCase())) {
+    const previousUser = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content)).slice(-2)[0];
+    if (previousUser) { question = text(previousUser.content); confirmedIntent = true; }
+  }
+  const q = question.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/\\bhoww+\\b/g, "how");
   // Use recent conversation turns to interpret short follow-ups without letting old topics override a new, complete question.
   const priorUserTurns = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content) && m !== latest).slice(-4);
   const previousQuestion = priorUserTurns.length ? text(priorUserTurns[priorUserTurns.length - 1].content).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
@@ -1500,6 +1506,28 @@ async function academyChat(ctx: any, body: any) {
     "Veuillez poser uniquement des questions liées à Al-Ahruf International Academy : cours, emploi du temps, présences, apprentissage et progression dans le Coran, tajwid, hifz, fiqh, enseignants ou utilisation de la plateforme.",
     "يرجى أن تكون جميع أسئلتك مرتبطة بأكاديمية الأحرف الدولية، مثل الحصص والمقررات والجدول والحضور وتعلم القرآن والتقدم فيه والتجويد والحفظ والفقه والمعلمين أو استخدام المنصة."
   );
+  // Turn informal keywords into a clear confirmation before answering.
+  if (!confirmedIntent && question.length < 110 && !/(in this academy|in the academy|on this platform|my assigned|assigned to me|my own|for my account|dans cette academie|sur cette plateforme|في هذه الأكاديمية|في المنصة)/i.test(q)) {
+    const countHint = /(how many|how much|number of|count|total|combien|nombre de|كم عدد|عدد)/i.test(q);
+    const hints = [
+      {re: /(teacher|teachers|teaching|enseignant|professeur|معلم|مدرس)/i,en:"how many teachers are teaching in this Academy",fr:"combien d’enseignants enseignent dans cette académie",ar:"كم عدد المعلمين الذين يدرّسون في هذه الأكاديمية"},
+      {re: /(student|students|learner|eleve|etudiant|طلاب|طالب|تلميذ)/i,en:"how many students are registered in this Academy",fr:"combien d’élèves sont inscrits dans cette académie",ar:"كم عدد الطلاب المسجلين في هذه الأكاديمية"},
+      {re: /(course|class|lesson|session|cours|حصة|درس|دروس)/i,en:"how many courses or class sessions the Academy offers",fr:"combien de cours ou de séances l’académie propose",ar:"كم عدد المقررات أو الحصص التي تقدمها الأكاديمية"},
+      {re: /(timetable|schedule|next class|emploi du temps|planning|جدول|موعد الحصة)/i,en:"you want to check your timetable or next class",fr:"vous souhaitez consulter votre emploi du temps ou votre prochain cours",ar:"أنك تريد الاطلاع على جدولك أو حصتك القادمة"},
+      {re: /(attendance|present|absent|late|presence|retard|الحضور|غائب|متأخر)/i,en:"you want to check your attendance record",fr:"vous souhaitez consulter votre historique de présence",ar:"أنك تريد مراجعة سجل حضورك"},
+      {re: /(quran|qur’an|surah|memor|hifz|tajwid|tajweed|fiqh|coran|sourate|حفظ|قرآن|سورة|التجويد|الفقه)/i,en:"you want help with Qur’an learning or memorization progress",fr:"vous souhaitez de l’aide pour l’apprentissage du Coran ou votre mémorisation",ar:"أنك تريد المساعدة في تعلم القرآن أو متابعة الحفظ"},
+      {re: /(payment|paid|pay|collected|invoice|fee|paiement|facture|مدفوعات|الدفع|الفاتورة)/i,en:"you are asking about payment or collection information",fr:"vous posez une question sur les paiements ou les sommes encaissées",ar:"أنك تسأل عن معلومات الدفع أو المبالغ المحصلة"},
+      {re: /(message|chat|call|voice|video|discussion|appel|رسالة|محادثة|اتصال|مكالمة)/i,en:"you need help with messages or calls on the platform",fr:"vous avez besoin d’aide pour les messages ou les appels sur la plateforme",ar:"أنك تحتاج إلى مساعدة بشأن الرسائل أو المكالمات في المنصة"},
+      {re: /(login|log in|sign in|password|account|connexion|mot de passe|تسجيل الدخول|كلمة المرور|الحساب)/i,en:"you need help signing in or accessing your account",fr:"vous avez besoin d’aide pour vous connecter ou accéder à votre compte",ar:"أنك تحتاج إلى مساعدة في تسجيل الدخول أو الوصول إلى حسابك"},
+      {re: /(dark|light|theme|mode|sombre|clair|thème|الوضع الداكن|الوضع الفاتح|المظهر)/i,en:"you want to change the platform’s light or dark theme",fr:"vous souhaitez changer le thème clair ou sombre de la plateforme",ar:"أنك تريد تغيير مظهر المنصة إلى الوضع الفاتح أو الداكن"}
+    ];
+    const hint = hints.find((x: any) => x.re.test(q));
+    const vague = q.split(/\\s+/).length <= 9 && (countHint || !!hint) && !/(who is|what is|where is|when is|how do i|how can i|can you|please explain|explain|tell me about|comment|pourquoi|متى|كيف|ما هو|من هو)/i.test(q);
+    if (hint && vague) {
+      const meaning = lang === "fr" ? hint.fr : lang === "ar" ? hint.ar : hint.en;
+      return tr("Do you mean: “" + meaning + "”? You can answer yes, or rephrase your question.", "Voulez-vous dire : « " + meaning + " » ? Répondez oui ou reformulez votre question.", "هل تقصد: «" + meaning + "»؟ يمكنك الإجابة بنعم أو إعادة صياغة سؤالك.");
+    }
+  }
   if (!question) return tr("Ask me about your classes, timetable, attendance, Qur’an progress, or how to use the academy.", "Posez-moi une question sur vos cours, votre emploi du temps, les présences, votre progression coranique ou la plateforme.", "اسألني عن الحصص أو الجدول أو الحضور أو تقدمك في القرآن أو استخدام المنصة.");
 
   if (/^(hi|hello|hey|salam|assalamu|bonjour|salut|مرحبا|السلام)[!.?\s]*$/.test(q))
