@@ -1614,25 +1614,17 @@ async function academyChat(ctx: any, body: any) {
     return tr("Open Attendance to review academy attendance history. Check the class and date before changing a record.", "Ouvrez « Présences » pour consulter l’historique des présences de l’académie. Vérifiez la classe et la date avant toute modification.", "افتح قسم الحضور لمراجعة سجل الحضور في الأكاديمية. تحقق من الحصة والتاريخ قبل تعديل أي سجل.");
   }
 
-  const rankingQuestion = /\b(rank|ranking|ranked|rankin|raking|position|place|leaderboard|ahead|behind|above|below|before|after|top student|best memor|who is in front|who comes before|who comes after)\b|classment|classement|rang|devant|derriere|pr[eé]c[eè]de|suit|ترتيب|ترتيبي|ترتيبك|المتصدر|قبلي|بعدي|أمامي|خلفي|من يتقدمني|من خلفي|من أمامي|من بعدي/.test(intentQ);
+  const rankingQuestion = /\\b(rank|ranking|ranked|rankin|raking|position|place|leaderboard|ahead|behind|above|below|before|after|top student|best memor|who is in front|who comes before|who comes after|what is ranking|what does ranking mean|ranking mean)\\b|classment|classement|rang|devant|derriere|pr[eé]c[eè]de|suit|ترتيب|ترتيبي|ترتيبك|المتصدر|قبلي|بعدي|أمامي|خلفي|من يتقدمني|من خلفي|من أمامي|من بعدي/.test(intentQ);
   const progressQuestion = /progress|memorized|memorization|surah|surahs|quran progress|hifz|mémoris|sourate|sourates|تقدم|حفظ|سورة|سور/.test(intentQ);
-  const getSurahCount = (value: any) => {
-    if (Array.isArray(value)) return value.length;
-    if (value && typeof value === "object") return Object.keys(value).length;
-    return 0;
-  };
+  const getSurahCount = (value: any) => Array.isArray(value) ? value.length : value && typeof value === "object" ? Object.keys(value).length : 0;
   if (rankingQuestion || progressQuestion) {
-    // Student ranking is deliberately limited to public progress fields; never include payments, contact details, or account credentials.
     const sourceRanking = Array.isArray(state.ranking) && state.ranking.length
       ? state.ranking
       : (state.students || []).map((student: any) => ({ id: student?.id, name: student?.name, surahCount: getSurahCount(student?.sur) }));
-    const leaderboard = sourceRanking
-      .map((student: any) => ({
-        id: lower(student?.id),
-        name: text(student?.name || student?.id || "Student"),
-        n: Math.max(0, Number(student?.surahCount ?? getSurahCount(student?.sur)) || 0),
-      }))
-      .filter((student: any) => student.id && student.name)
+    const leaderboard = sourceRanking.map((student: any) => ({
+      id: lower(student?.id), name: text(student?.name || student?.id || "Student"),
+      n: Math.max(0, Number(student?.surahCount ?? getSurahCount(student?.sur)) || 0),
+    })).filter((student: any) => student.id && student.name)
       .sort((a: any, b: any) => b.n - a.n || a.name.localeCompare(b.name));
     if (role === "student" && myStudent) {
       const myId = lower(myStudent.id || profile.username);
@@ -1643,29 +1635,21 @@ async function academyChat(ctx: any, body: any) {
         const ahead = leaderboard.filter((student: any) => student.id !== myId && student.n > n);
         const tied = leaderboard.filter((student: any) => student.id !== myId && student.n === n);
         const behind = leaderboard.filter((student: any) => student.id !== myId && student.n < n);
-        const rank = 1 + ahead.length;
         const aheadText = ahead.length ? ahead.map((student: any) => student.name + " (" + student.n + ")").join(", ") : (lang === "fr" ? "Personne n’est devant vous" : lang === "ar" ? "لا يوجد طالب أمامك" : "No students are ahead of you");
         const behindText = behind.length ? behind.map((student: any) => student.name + " (" + student.n + ")").join(", ") : (lang === "fr" ? "Personne n’est derrière vous" : lang === "ar" ? "لا يوجد طالب خلفك" : "No students are behind you");
         const tiedText = tied.length ? (lang === "fr" ? " À égalité avec vous : " : lang === "ar" ? " متعادلون معك: " : " Tied with you: ") + tied.map((student: any) => student.name + " (" + student.n + ")").join(", ") + "." : "";
-        return tr(
-          "Your Qur’an memorization ranking is " + rank + " of " + leaderboard.length + " students (you: " + myName + "; recorded surahs: " + n + "). Students ahead of you: " + aheadText + ". Students behind you: " + behindText + "." + tiedText,
-          "Votre classement de mémorisation du Coran est " + rank + " sur " + leaderboard.length + " élèves (vous : " + myName + " ; sourates enregistrées : " + n + "). Élèves devant vous : " + aheadText + ". Élèves derrière vous : " + behindText + "." + tiedText,
-          "ترتيبك في حفظ القرآن هو " + rank + " من أصل " + leaderboard.length + " طالبًا (أنت: " + myName + "؛ عدد السور المسجلة: " + n + "). الطلاب الذين أمامك: " + aheadText + ". الطلاب الذين خلفك: " + behindText + "." + tiedText
-        );
+        const meaning = lang === "fr" ? "Le classement indique votre position par rapport aux autres élèves selon le nombre de sourates enregistrées. " : lang === "ar" ? "الترتيب يوضح موقعك مقارنةً بالطلاب الآخرين حسب عدد السور المسجلة. " : "Ranking means your position compared with other students, based on recorded memorized surahs. ";
+        return tr(meaning + "Your position is " + (1 + ahead.length) + " of " + leaderboard.length + " students. Your recorded surahs: " + n + ". Ahead of you: " + aheadText + ". Behind you: " + behindText + "." + tiedText,
+          meaning + "Votre position est " + (1 + ahead.length) + " sur " + leaderboard.length + " élèves. Sourates enregistrées : " + n + ". Devant vous : " + aheadText + ". Derrière vous : " + behindText + "." + tiedText,
+          meaning + "ترتيبك هو " + (1 + ahead.length) + " من أصل " + leaderboard.length + " طالبًا. عدد السور المسجلة لك: " + n + ". أمامك: " + aheadText + ". خلفك: " + behindText + "." + tiedText);
       }
-      return tr(
-        "Your profile records " + n + " memorized surah(s). Ask for your ranking, who is ahead of you, or who is behind you to compare your position with other students.",
-        "Votre profil indique " + n + " sourate(s) mémorisée(s). Demandez votre classement ou qui est devant ou derrière vous pour comparer votre position à celle des autres élèves.",
-        "يسجل ملفك " + n + " سورة محفوظة. اسأل عن ترتيبك أو من يتقدمك أو من يأتي بعدك لمقارنة ترتيبك بالطلاب الآخرين."
-      );
+      return tr("Your profile records " + n + " memorized surah(s). Ask for your ranking to see your position and who is ahead of or behind you.", "Votre profil indique " + n + " sourate(s) mémorisée(s). Demandez votre classement pour connaître votre position et qui est devant ou derrière vous.", "يسجل ملفك " + n + " سورة محفوظة. اسأل عن ترتيبك لمعرفة موقعك ومن يتقدمك ومن يأتي بعدك.");
     }
     if (isAdmin || isTeacher) {
-      const list = leaderboard.map((student: any, index: number) => (index + 1) + ". " + student.name + ": " + student.n + " surah(s)").join("\n") || "No student progress records found.";
-      return tr(
-        (rankingQuestion ? "Qur’an memorization ranking by recorded surah count:\n" : "Recorded Qur’an memorization progress:\n") + list,
-        (rankingQuestion ? "Classement de mémorisation du Coran selon les sourates enregistrées :\n" : "Progression de mémorisation du Coran enregistrée :\n") + list,
-        (rankingQuestion ? "ترتيب حفظ القرآن حسب عدد السور المسجلة:\n" : "تقدم حفظ القرآن المسجل:\n") + list
-      );
+      const list = leaderboard.map((student: any, index: number) => (index + 1) + ". " + student.name + ": " + student.n + " surah(s)").join("\\n") || "No student progress records found.";
+      return tr((rankingQuestion ? "Qur’an memorization ranking by recorded surah count:\\n" : "Recorded Qur’an memorization progress:\\n") + list,
+        (rankingQuestion ? "Classement de mémorisation du Coran selon les sourates enregistrées :\\n" : "Progression de mémorisation du Coran enregistrée :\\n") + list,
+        (rankingQuestion ? "ترتيب حفظ القرآن حسب عدد السور المسجلة:\\n" : "تقدم حفظ القرآن المسجل:\\n") + list);
     }
   }
 
