@@ -2067,6 +2067,7 @@ async function login(role,u,p){
        throw new Error('Account role does not match the selected login.');
      }
      user=d.user;S=d.state||S;tab=user.role==='student'?'home':'overview';
+     if(window.ahrufSyncChatUser)window.ahrufSyncChatUser();
      toast('Signed in securely');render();openCurtains();setTimeout(ahrufCheckPendingPushCall,250);
    }catch(e){console.error('Al-Ahruf login failed:',e);toast('Sign-in failed. Check your credentials or contact the administrator.');}
    finally{onlineBusy=false}
@@ -2074,7 +2075,7 @@ async function login(role,u,p){
  }
  toast('Secure online login is unavailable. Please check the academy connection and try again.'); return;
 }
-async function logout(){if(ONLINE&&sb){try{await sb.auth.signOut()}catch(e){}}user=null;joinInfo=null;render()}
+async function logout(){if(ONLINE&&sb){try{await sb.auth.signOut()}catch(e){}}user=null;joinInfo=null;if(window.ahrufSyncChatUser)window.ahrufSyncChatUser();render()}
 const lvl=s=>Math.round(s.sur.length/114*1000)/10;
 
 function applyArabicIndicDigits(root=document.body){
@@ -4930,9 +4931,9 @@ setInterval(pollLiveMessages,3000);
 (function installAhrufAIChat(){
  if(document.getElementById('ahrufChatLauncher'))return;
  const words={
- en:{title:'Al-Ahruf Assistant',sub:'Free helper · English',open:'Ask assistant',welcome:'Assalamu alaikum! I’m the Al-Ahruf assistant. How can I help you today?',placeholder:'Ask a question…',send:'Send',thinking:'Thinking…',err:'Sorry, I could not answer just now. Please try again.',config:'The AI assistant is not configured yet. Please contact the academy administrator.',close:'Close chat'},
- fr:{title:'Assistant Al-Ahruf',sub:'Aide gratuite · Français',open:'Assistant gratuit',welcome:'Assalamu alaikum ! Je suis l’assistant Al-Ahruf. Comment puis-je vous aider ?',placeholder:'Posez votre question…',send:'Envoyer',thinking:'Réflexion…',err:'Désolé, je ne peux pas répondre pour le moment. Réessayez.',config:'L’assistant IA n’est pas encore configuré. Contactez l’administrateur.',close:'Fermer la discussion'},
- ar:{title:'مساعد الأحرف',sub:'مساعد مجاني · العربية',open:'مساعد مجاني',welcome:'السلام عليكم! أنا مساعد أكاديمية الأحرف. كيف يمكنني مساعدتك اليوم؟',placeholder:'اكتب سؤالك…',send:'إرسال',thinking:'جارٍ التفكير…',err:'عذرًا، تعذرت الإجابة الآن. حاول مرة أخرى.',config:'لم يتم إعداد المساعد الذكي بعد. يرجى التواصل مع مسؤول الأكاديمية.',close:'إغلاق المحادثة'}
+ en:{title:'Al-Ahruf Assistant',sub:'Free helper · English',open:'Ask assistant',welcome:'Assalamu alaikum! How can I help you today?',placeholder:'Ask a question…',send:'Send',thinking:'Thinking…',err:'Sorry, I could not answer just now. Please try again.',config:'The AI assistant is not configured yet. Please contact the academy administrator.',close:'Close chat'},
+ fr:{title:'Assistant Al-Ahruf',sub:'Aide gratuite · Français',open:'Assistant gratuit',welcome:'Assalamu alaikum ! Comment puis-je vous aider aujourd’hui ?',placeholder:'Posez votre question…',send:'Envoyer',thinking:'Réflexion…',err:'Désolé, je ne peux pas répondre pour le moment. Réessayez.',config:'L’assistant IA n’est pas encore configuré. Contactez l’administrateur.',close:'Fermer la discussion'},
+ ar:{title:'مساعد الأحرف',sub:'مساعد مجاني · العربية',open:'مساعد مجاني',welcome:'السلام عليكم! كيف يمكنني مساعدتك اليوم؟',placeholder:'اكتب سؤالك…',send:'إرسال',thinking:'جارٍ التفكير…',err:'عذرًا، تعذرت الإجابة الآن. حاول مرة أخرى.',config:'لم يتم إعداد المساعد الذكي بعد. يرجى التواصل مع مسؤول الأكاديمية.',close:'إغلاق المحادثة'}
  };
  const el=(tag,attrs={},txt='')=>{const n=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>{if(k==='class')n.className=v;else n.setAttribute(k,v)});if(txt)n.textContent=txt;return n};
  const launcher=el('button',{id:'ahrufChatLauncher',type:'button','aria-label':'Open AI assistant'});launcher.innerHTML='<span aria-hidden="true" style="font-size:22px">✦</span><span id="ahrufChatLaunchText">Ask AI</span>';
@@ -4945,9 +4946,13 @@ setInterval(pollLiveMessages,3000);
  const history=[];let busy=false;
  function getLang(){return (typeof currentLang!=='undefined'&&words[currentLang])?currentLang:'en'}
  function dict(){return words[getLang()]}
- function paintLanguage(){const w=dict();launcher.querySelector('#ahrufChatLaunchText').textContent=w.open;launcher.setAttribute('aria-label',w.open);panel.querySelector('#ahrufChatTitle').textContent=w.title;panel.querySelector('#ahrufChatSub').textContent=w.sub;close.setAttribute('aria-label',w.close);input.placeholder=w.placeholder;input.setAttribute('aria-label',w.placeholder);send.textContent=w.send;panel.dir=getLang()==='ar'?'rtl':'ltr';input.dir=panel.dir;send.disabled=busy;if(!messages.children.length)addBubble('bot',w.welcome)}
+ function signedIn(){return !!(typeof user!=='undefined'&&user&&user.role)}
+ function displayName(){try{const u=user||{};const key=String(u.username||u.studentId||u.student_id||u.id||'').toLowerCase();const role=String(u.role||'').toLowerCase();const arr=role==='student'?S.students:role==='teacher'?S.teachers:[];const rec=Array.isArray(arr)?arr.find(x=>String(x.id||x.username||'').toLowerCase()===key):null;return String(u.name||u.full_name||rec&&rec.name||u.username||u.id||'').trim()}catch(_){return ''}}
+ function syncAccess(){const active=signedIn();launcher.style.display=active?(panel.classList.contains('open')?'none':'flex'):'none';if(!active){panel.classList.remove('open');messages.replaceChildren();history.length=0;return}if(!messages.children.length)paintLanguage()}
+ window.ahrufSyncChatUser=syncAccess;
+ function paintLanguage(){const w=dict();launcher.querySelector('#ahrufChatLaunchText').textContent=w.open;launcher.setAttribute('aria-label',w.open);panel.querySelector('#ahrufChatTitle').textContent=w.title;panel.querySelector('#ahrufChatSub').textContent=w.sub;close.setAttribute('aria-label',w.close);input.placeholder=w.placeholder;input.setAttribute('aria-label',w.placeholder);send.textContent=w.send;panel.dir=getLang()==='ar'?'rtl':'ltr';input.dir=panel.dir;send.disabled=busy;if(!messages.children.length){const name=displayName();const greeting=getLang()==='fr'?(name?'Bienvenue, '+name+' ! ':'Bienvenue ! ')+w.welcome:getLang()==='ar'?(name?'مرحبًا، '+name+'! ':'مرحبًا! ')+w.welcome:(name?'Welcome, '+name+'! ':'Welcome! ')+w.welcome;addBubble('bot',greeting)}}
  function addBubble(role,content){const b=el('div',{class:'ahruf-chat-bubble '+(role==='user'?'me':'bot')});b.textContent=content;messages.appendChild(b);messages.scrollTop=messages.scrollHeight;return b}
- function toggle(open){panel.classList.toggle('open',open);launcher.style.display=open?'none':'flex';if(open){paintLanguage();input.focus()}}
+ function toggle(open){if(open&&!signedIn())return;panel.classList.toggle('open',open);launcher.style.display=open?'none':(signedIn()?'flex':'none');if(open){paintLanguage();input.focus()}}
  launcher.addEventListener('click',()=>toggle(true));close.addEventListener('click',()=>toggle(false));
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('open'))toggle(false)});
  if(typeof MutationObserver!=='undefined')new MutationObserver(()=>{if(panel.classList.contains('open'))paintLanguage()}).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
@@ -4956,7 +4961,7 @@ setInterval(pollLiveMessages,3000);
   catch(err){const msg=String(err?.message||'');status.textContent=/not configured/i.test(msg)?dict().config:dict().err;if(/not configured/i.test(msg))addBubble('bot',dict().config)}
   finally{busy=false;send.disabled=false;input.focus()}
  });
- paintLanguage();
+ syncAccess();
 })();
 </script>
 </body>
