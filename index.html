@@ -3569,14 +3569,26 @@ function studentProfile(id){
 }
 async function delS(id,b){
  if(user?.role!=='admin'){toast('Only the administrator can delete students.');return}
- if(b.dataset.s){
+ const student=(S.students||[]).find(s=>String(s.id||'').toLowerCase()===String(id||'').toLowerCase());
+ const name=student?.name||id;
+ if(!window.confirm('Delete '+name+' ('+id+')? Any existing invoice records will be kept, and the administrator will be notified about unpaid invoices.'))return;
+ b.disabled=true;b.textContent='Deleting…';
+ try{
    if(ONLINE){
-     try{const result=await onlineApi('delete_student',{studentId:id});if(result.state)S=result.state;toast('Student deleted online');render()}
-     catch(e){toast(e.message||'Delete failed')}
-   }else{S.students=S.students.filter(s=>s.id!==id);save();toast('Student deleted');render()}
-   return
+     const result=await onlineApi('delete_student',{studentId:id});
+     if(!result?.state)throw new Error('The server did not confirm the deletion. Please refresh and check the student list before trying again.');
+     S=cleanState(result.state);
+   }else{
+     S.students=(S.students||[]).filter(s=>String(s.id||'').toLowerCase()!==String(id||'').toLowerCase());
+     save();
+   }
+   toast('Student deleted. Invoice records were preserved.');
+   render();
+ }catch(e){
+   console.error('Al-Ahruf student deletion failed:',e);
+   toast(e?.message||'Delete failed. Please try again.');
+   if(b.isConnected){b.disabled=false;b.textContent='Delete';}
  }
- b.dataset.s=1;b.textContent='Confirm?';b.classList.add('red')
 }
 function generateStudentId(name,phone,existingId){
  const keep=String(existingId||'').trim();
