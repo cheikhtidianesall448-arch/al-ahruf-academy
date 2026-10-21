@@ -1242,11 +1242,7 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
       return { status: "denied", allowed: false, message: "You are not the teacher assigned to this class." };
     }
   }
-  const meet = (state.classes || []).find((x: any) =>
-    (text(item.classCode) ? lower(x?.code) === lower(item.classCode) : normalizeClassTitle(x?.title) === normalizeClassTitle(item?.course)) &&
-    /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(x?.url))
-  );
-  if (!meet) return { status: "denied", allowed: false, message: "No valid Google Meet link is connected to this class." };
+  // Calls use Al-Ahruf's authenticated private call rooms; a Google Meet URL is not required.
   if (role === "student") {
     const parts = new Intl.DateTimeFormat("en-GB", {
       timeZone: "Africa/Dakar", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
@@ -1342,8 +1338,6 @@ async function recordClassAttendance(ctx: any, body: any) {
   if (!student) throw new Error("Your student record could not be found.");
   const item = state.timetable.find((x: any) => text(x?.id) === text(body.timetableId) && Array.isArray(x?.students) && x.students.map((id: any) => lower(id)).includes(studentId));
   if (!item) return { status: "not_scheduled", message: "This class is not assigned to you in your timetable." };
-  const meet = (state.classes || []).find((x: any) => (text(item.classCode) ? lower(x?.code) === lower(item.classCode) : normalizeClassTitle(x?.title) === normalizeClassTitle(item?.course)) && /^https:\/\/meet\.google\.com\/[a-z-]+(?:\?.*)?$/i.test(text(x?.url)));
-  if (!meet) return { status: "not_scheduled", message: "Your teacher has not connected a Google Meet link to this timetable entry yet." };
   const now = new Date();
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Dakar", year: "numeric", month: "2-digit", day: "2-digit", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
   const part = (name: string) => parts.find((p) => p.type === name)?.value || "";
