@@ -4049,7 +4049,7 @@ function myclass(){
  const cards=schedule.map(item=>{
   const students=(Array.isArray(item.students)?item.students:[]).map(sid=>(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(sid||'').toLowerCase())).filter(Boolean);
   let actions='';
-  if(student)actions=students.length>1?'<span class="mute">Group class: answer the teacher’s incoming call at class time so both students join together.</span>':'<button class="btn gold" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'video\')">📹 Call teacher</button><button class="btn ghost" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'audio\')">☎ Voice call</button>';
+  if(student)actions='<button class="btn gold" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'video\')">📹 Call teacher</button><button class="btn ghost" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'audio\')">☎ Voice call</button>';
   if(teacher)actions='<button class="btn gold" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'video\')">📹 Start group class · call all students</button><button class="btn ghost" type="button" data-timetable="'+esc(item.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,\'\',\'audio\')">☎ Voice call · all students</button>'+students.map(st=>'<button class="btn ghost" type="button" data-timetable="'+esc(item.id)+'" data-student="'+esc(st.id)+'" onclick="startScheduledClassCall(this.dataset.timetable,this.dataset.student,\'video\')">Call ('+esc(st.name||st.id)+')</button>').join('');
   return '<div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 6px">'+esc(item.course||'Quran class')+'</h3><div class="mute">'+esc(item.day||'')+' · '+esc(item.start||'')+'–'+esc(item.end||'')+' · Senegal time (UTC+0)</div><div class="mute" style="margin-top:5px">Teacher: '+esc(teacherName(item.teacher))+(teacher?' · Students: '+esc(students.map(x=>x.name||x.id).join(', ')||'None assigned'):'')+'</div>'+(students.length>1?'<div class="tag" style="margin-top:8px">Group class · '+students.length+' students together</div>':'')+(actions?'<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">'+actions+'</div>':'')+'</div>';
  }).join('');
@@ -4077,7 +4077,6 @@ async function startScheduledClassCall(timetableId,studentUsername='',kind='vide
  if(ahrufActiveCall)return ahrufCallToast('End your current call before starting another.');
  if(user.role==='student'){
   const scheduled=(S.timetable||[]).find(x=>String(x.id)===String(timetableId));
-  if((scheduled?.students||[]).length>1)return ahrufCallToast('This is a group class. Please answer the teacher’s group call so both students join together.');
   const waitMessage=ahrufStudentClassWaitMessage(scheduled);
   if(waitMessage)return ahrufCallToast(waitMessage);
  }
