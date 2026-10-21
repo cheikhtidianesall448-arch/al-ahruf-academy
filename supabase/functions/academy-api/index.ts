@@ -1789,8 +1789,10 @@ async function academyChat(ctx: any, body: any) {
 
   // Role-aware demographic analytics: use the same student records as the admin dashboard.
   // Accept natural wording such as "male percentage", "what percent are boys?", and equivalents.
-  const asksGenderShare = /(?:\b(?:percentage|percent|proportion|share|ratio|how many percent)\b|\bwhat\s+%|\b%\s*(?:of|are)?|pourcentage|proportion|نسبة|٪|%)/i.test(intentQ)
-    && /(?:\b(?:male|males|men|boys|female|females|women|girls|gender|sex|students?|learners?|pupils?)\b|garçons?|filles?|élèves?|étudiants?|masculin|féminin|ذكور|إناث|طلاب|طالبات|الطلاب|الطالبات)/i.test(intentQ);
+  const mentionsGender = /(?:\b(?:male|males|men|boys|female|females|women|girls|gender|sex)\b|garçons?|filles?|masculin|féminin|ذكور|إناث|الطلاب الذكور|الطالبات)/i.test(intentQ);
+  const mentionsStudentGroup = /(?:\b(?:students?|learners?|pupils?|boys|girls)\b|garçons?|filles?|élèves?|étudiants?|طلاب|طالبات|الطلاب|الطالبات)/i.test(intentQ);
+  const asksGenderShare = mentionsGender && mentionsStudentGroup
+    || (mentionsGender && /(?:\b(?:percentage|percent|proportion|share|ratio|how many percent|how many|number of|count|total)\b|\bwhat\s+%|\b%\s*(?:of|are)?|pourcentage|proportion|combien|nombre|نسبة|كم عدد|عدد|٪|%)/i.test(intentQ));
   if (asksGenderShare) {
     if (!isAdmin && !isTeacher) {
       return tr("I can show your own profile details, but academy-wide student demographics are restricted to authorized staff.",
