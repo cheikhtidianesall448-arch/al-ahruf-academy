@@ -703,7 +703,8 @@ async function login(ctx: any, payload: any) {
       payload.student_id ??
       payload.email,
   );
-  const password = text(payload.password);
+  // Passwords are case-sensitive and may intentionally contain leading/trailing spaces.
+  const password = String(payload.password ?? "");
   const wantedRole = normalizedRole(payload.role);
 
   const { authData, profile } = await authenticateLogin(
