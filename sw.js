@@ -1,4 +1,4 @@
-const CACHE_NAME = "al-ahruf-app-shell-v4";
+const CACHE_NAME = "al-ahruf-app-shell-v5";
 const APP_SHELL = new URL("./", self.location.href).href;
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.add(APP_SHELL)).catch(() => {}));
