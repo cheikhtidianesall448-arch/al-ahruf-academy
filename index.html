@@ -2780,7 +2780,17 @@ function ahrufApplyClassCallDeadline(call){
  if(call.automaticClass){
   const [sh,sm]=String(item.start).split(':').map(Number);
   if([sh,sm].every(Number.isFinite)){
-   const noAnswerRemaining=Math.max(0,Math.ceil(((sh*60+sm+30)-nowMinutes)*60000));
+   const noAnswerRemaining=Math.ceil(((sh*60+sm+30)-nowMinutes)*60000);
+   if(noAnswerRemaining<=0){
+    // Never allow a late async setup to recreate a call after the 30-minute cutoff.
+    call.ended=true;
+    if(ahrufActiveCall===call)ahrufActiveCall=null;
+    ahrufStopRingback(call);
+    if(call.autoInviteTimer){clearInterval(call.autoInviteTimer);call.autoInviteTimer=null;}
+    if(call.overlay){call.overlay.remove();call.overlay=null;}
+    ahrufCallToast('The class call stopped because nobody answered within 30 minutes of the scheduled start.');
+    return;
+   }
    call.noAnswerTimer=setTimeout(()=>{
     if(ahrufActiveCall!==call||call.ended||call.remoteJoined)return;
     ahrufCallToast('The class call stopped because nobody answered within 30 minutes of the scheduled start.');
@@ -2813,9 +2823,12 @@ async function ahrufCreateCall(kind,invitees,options={}){
  const call={room,timetableId:options.timetableId||'',automaticClass:!!options.automaticClass,key,peer,kind,invitees:[...new Set(invitees.map(x=>String(x).toLowerCase()))],participants:new Map(),pcs:new Map(),streams:new Map(),pendingIce:new Map(),localStream:null,client:null,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:false,ended:false,inviteMessageId:null,deliveredInvitees:new Set()};
  ahrufActiveCall=call;
  ahrufApplyClassCallDeadline(call);
+ if(call.ended||ahrufActiveCall!==call)return;
  try{
   call.client=await ahrufCallClient();
+  if(call.ended||ahrufActiveCall!==call)return;
   call.localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:kind==='video'});
+  if(call.ended||ahrufActiveCall!==call){for(const track of call.localStream?.getTracks?.()||[])track.stop();return;}
   ahrufBuildCallOverlay(call);
   call.channel=call.client.channel('ahruf-call-'+room,{config:{private:true,broadcast:{self:false}}});
   ahrufAttachRoomEvents(call);
@@ -4275,6 +4288,8 @@ function ahrufStartTeacherScheduleMonitor(){
   for(const item of items){
    const [sh,sm]=String(item.start||'').split(':').map(Number),[eh,em]=String(item.end||'').split(':').map(Number);
    if(![sh,sm,eh,em].every(Number.isFinite)||minutes<sh*60+sm||minutes>=eh*60+em)continue;
+   // Do not launch a new automatic call after the 30-minute no-answer cutoff.
+   if(minutes>=sh*60+sm+30)continue;
    await startScheduledTeacherCall(item.id,true);
    if(ahrufActiveCall)break;
   }
