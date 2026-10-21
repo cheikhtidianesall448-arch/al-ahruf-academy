@@ -1468,8 +1468,8 @@ async function academyChat(ctx: any, body: any) {
   const priorUserTurns = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content) && m !== latest).slice(-4);
   const previousQuestion = priorUserTurns.length ? text(priorUserTurns[priorUserTurns.length - 1].content).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
   const shortFollowup = q.length <= 70 && (
-    /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)\b/.test(intentQ) ||
-    /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\s*[؟?!.]*$/.test(intentQ)
+    /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)\b/.test(q) ||
+    /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\s*[؟?!.]*$/.test(q)
   );
   const intentQ = shortFollowup && previousQuestion ? q + " " + previousQuestion : q;
   const state = await getAcademyState(ctx);
