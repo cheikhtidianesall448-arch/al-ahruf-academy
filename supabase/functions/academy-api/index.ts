@@ -1268,7 +1268,7 @@ async function authorizeScheduledClassCall(ctx: any, body: any) {
         status: "denied",
         allowed: false,
         code: "CLASS_MISSED",
-        message: "You missed this class because you tried to join more than 30 minutes after it started. Please open Messages and contact your teacher to negotiate a make-up lesson or agree on how to catch up.",
+        message: "You missed the class, so you cannot join right now. Please contact your Oustaz in Messages to arrange a make-up lesson or ask how to catch up.",
       };
     }
   }
