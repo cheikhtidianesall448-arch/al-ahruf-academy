@@ -2911,9 +2911,10 @@ function ensureAhrufCallInbox(){
   ahrufCallInbox.on('broadcast',{event:'call_response'},({payload})=>{
    if(payload?.type==='cancelled'&&payload.room){ahrufCancelledCallRooms.add(String(payload.room));const incoming=document.querySelector('.ahruf-incoming-overlay');if(incoming&&incoming.dataset.callRoom===String(payload.room)&&typeof ahrufCancelIncomingCall==='function')ahrufCancelIncomingCall(payload.room);return}
    const call=ahrufActiveCall;
-   if(!call||call.ended||!payload||payload.room!==call.room)return;
-   const responder=String(payload.from||'').toLowerCase();
-   if(!call.invitees.includes(responder))return;
+   if(!call||call.ended||!payload||String(payload.room||'')!==String(call.room||''))return;
+   const responder=String(payload.from||'').trim().toLowerCase();
+   // The unguessable active room is the primary correlation key. Do not ignore a
+   // valid decline merely because usernames/IDs were normalized differently.
    if(payload.type==='declined'||payload.type==='missed'){
     ahrufStopRingback(call);
     ahrufSetCallStatus(call,payload.type==='declined'?'Call declined':'No answer');
