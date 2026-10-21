@@ -1502,7 +1502,8 @@ async function academyChat(ctx: any, body: any) {
   // For "how many students?" -> "and teachers?", preserve the intent ("how many")
   // and replace the old subject instead of appending two conflicting subjects.
   if (shortFollowup && contextQuestion && currentSubject) {
-    contextQuestion = contextQuestion.replace(subjectPattern, currentSubject);
+    const replacementSubject = /[\\u0600-\\u06ff]/.test(currentSubject) ? currentSubject.replace(/^ال/, "") : currentSubject;
+    contextQuestion = contextQuestion.replace(subjectPattern, replacementSubject);
   } else if (shortFollowup && contextQuestion) {
     // Put the previous topic first so the rule-based intent matcher can still see it.
     contextQuestion = contextQuestion + " " + q;
