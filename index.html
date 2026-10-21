@@ -2119,7 +2119,12 @@ function syncSiteFavicon(){
   if(logo.complete)apply();else logo.addEventListener('load',apply,{once:true});
  }catch(e){}
 }
-function render(){if(user)ensureAhrufCallInbox();if(user?.role==='teacher'&&typeof ahrufStartTeacherScheduleMonitor==='function')ahrufStartTeacherScheduleMonitor();
+function render(){
+ if(user){
+  ensureAhrufCallInbox();
+  if(user.role==='teacher'&&typeof ahrufStartTeacherScheduleMonitor==='function')ahrufStartTeacherScheduleMonitor();
+  if(user.role==='student'&&typeof ahrufStartStudentScheduleMonitor==='function')ahrufStartStudentScheduleMonitor();
+ }
  const who=$('#who'),out=$('#out'),app=$('#app'),themeBtn=$('button[onclick="theme()"]'),pushBtn=$('#callAlertsBtn');
  
  if(themeBtn)themeBtn.textContent=currentLang==='fr'?'Thème':currentLang==='ar'?'المظهر':'Theme';
@@ -4190,27 +4195,10 @@ async function startScheduledClassCall(timetableId,studentUsername='',kind='vide
  }catch(e){if(!automatic)ahrufCallToast(e?.message||'Could not start the scheduled class call.')}
 }
 function ahrufStartStudentScheduleMonitor(){
+ // The teacher is the only automatic caller. Students remain ready to receive Answer/Decline.
  if(window._ahrufStudentScheduleTimer)return;
- const check=async()=>{
-  if(!user||user.role!=='student'||document.hidden||ahrufActiveCall||document.querySelector('.ahruf-incoming-overlay'))return;
-  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Dakar',weekday:'long',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),get=n=>parts.find(p=>p.type===n)?.value||'';
-  const day=get('weekday').toLowerCase(),minutes=Number(get('hour'))*60+Number(get('minute')),seconds=Number(get('second')||0);
-  const me=String(user.username||user.id||'').trim().toLowerCase(),rec=currentStudent(),ids=studentTimetableIds(rec);
-  const schedule=(S.timetable||[]).filter(item=>(Array.isArray(item.students)?item.students:[]).some(v=>ids.includes(String(v||'').trim().toLowerCase())||String(v||'').trim().toLowerCase()===me)&&String(item.day||'').toLowerCase()===day);
-  for(const item of schedule){
-   const [sh,sm]=String(item.start||'').split(':').map(Number),[eh,em]=String(item.end||'').split(':').map(Number);
-   if(![sh,sm,eh,em].every(Number.isFinite)||minutes<sh*60+sm||minutes>=eh*60+em)continue;
-   // Give the Oustaz's monitor first chance to initiate the scheduled call.
-   if((minutes-(sh*60+sm))*60+seconds<10)continue;
-   window._ahrufStudentAutoCalled=window._ahrufStudentAutoCalled||new Set();
-   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Dakar',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),key=String(item.id)+'|'+date;
-   if(window._ahrufStudentAutoCalled.has(key))return;
-   await startScheduledClassCall(item.id,'','video',true);
-   if(ahrufActiveCall)window._ahrufStudentAutoCalled.add(key);
-   break;
-  }
- };
- check();window._ahrufStudentScheduleTimer=setInterval(check,15000);
+ const check=()=>{if(user?.role==='student')ensureAhrufCallInbox()};
+ check();window._ahrufStudentScheduleTimer=setInterval(check,3000);
 }
 function ahrufStartTeacherScheduleMonitor(){
  if(window._ahrufTeacherScheduleTimer)return;
@@ -4236,13 +4224,14 @@ function ahrufStartTeacherScheduleMonitor(){
 
 async function startScheduledTeacherCall(timetableId,automatic=false){
  if(user?.role!=='teacher'||ahrufActiveCall)return;
- const key=String(timetableId)+'|'+new Date().toLocaleDateString('en-CA',{timeZone:'Africa/Dakar'});
- window._ahrufAutoCalled=window._ahrufAutoCalled||new Set();
- if(automatic&&window._ahrufAutoCalled.has(key))return;
- // Mark the daily attempt only after the call has actually started.
  const dateKey=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Dakar',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- const room=automatic?'ahruf-class-'+String(timetableId).replace(/[^a-zA-Z0-9_-]/g,'_')+'-'+dateKey:'ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+ const key=String(timetableId)+'|'+dateKey;
+ window._ahrufAutoCalled=window._ahrufAutoCalled||new Set();
+ window._ahrufAutoStarting=window._ahrufAutoStarting||new Set();
+ if(automatic&&(window._ahrufAutoCalled.has(key)||window._ahrufAutoStarting.has(key)))return;
+ if(automatic)window._ahrufAutoStarting.add(key);
  try{
+  const room=automatic?'ahruf-class-'+String(timetableId).replace(/[^a-zA-Z0-9_-]/g,'_')+'-'+dateKey:'ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
   const result=await onlineApi('authorize_class_call',{timetableId:String(timetableId),room});
   if(result?.status!=='allowed'){if(!automatic)ahrufCallToast(result?.message||'No eligible students are available for this scheduled class.');return}
   const invitees=(result.students||[]).map(x=>String(x.username||'').trim().toLowerCase()).filter(Boolean);
@@ -4250,21 +4239,24 @@ async function startScheduledTeacherCall(timetableId,automatic=false){
   await ahrufCreateCall('video',invitees,{room,timetableId:String(timetableId),automaticClass:automatic});
   if(automatic&&ahrufActiveCall)window._ahrufAutoCalled.add(key);
  }catch(e){console.warn('Scheduled teacher call could not start:',e);if(!automatic)ahrufCallToast(e?.message||'Could not start the scheduled class call.')}
+ finally{if(automatic)window._ahrufAutoStarting.delete(key)}
 }
 function ahrufStartTeacherScheduleMonitor(){
  if(window._ahrufTeacherScheduleTimer)return;
  const check=async()=>{
-  if(!user||user.role!=='teacher'||document.hidden||ahrufActiveCall)return;
-  const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Dakar'}));
-  const day=now.toLocaleDateString('en-US',{weekday:'long'}),minutes=now.getHours()*60+now.getMinutes();
-  const items=(S.timetable||[]).filter(item=>[user.username,user.id,user.name].some(v=>String(item.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase())&&String(item.day||'').toLowerCase()===day.toLowerCase());
+  if(!user||user.role!=='teacher'||ahrufActiveCall)return;
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Dakar',weekday:'long',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+  const get=n=>parts.find(p=>p.type===n)?.value||'';
+  const day=get('weekday').toLowerCase(),minutes=Number(get('hour'))*60+Number(get('minute'));
+  const items=(S.timetable||[]).filter(item=>[user.username,user.id,user.name].some(v=>String(item.teacher||'').trim().toLowerCase()===String(v||'').trim().toLowerCase())&&String(item.day||'').toLowerCase()===day);
   for(const item of items){
    const [sh,sm]=String(item.start||'').split(':').map(Number),[eh,em]=String(item.end||'').split(':').map(Number);
-   if(!Number.isFinite(sh)||!Number.isFinite(sm)||!Number.isFinite(eh)||!Number.isFinite(em))continue;
-   if(minutes>=sh*60+sm&&minutes<eh*60+em){await startScheduledTeacherCall(item.id,true);if(ahrufActiveCall)break;}
+   if(![sh,sm,eh,em].every(Number.isFinite)||minutes<sh*60+sm||minutes>=eh*60+em)continue;
+   await startScheduledTeacherCall(item.id,true);
+   if(ahrufActiveCall)break;
   }
  };
- check();window._ahrufTeacherScheduleTimer=setInterval(check,30000);
+ check();window._ahrufTeacherScheduleTimer=setInterval(check,2000);
 }
 
 function editClassLink(){modal('Class settings','Class calls are managed by the academy timetable. Edit the class day, start/end time, teacher, and assigned students in Timetable settings. No external meeting URL is needed.',()=>{},'Close')}
