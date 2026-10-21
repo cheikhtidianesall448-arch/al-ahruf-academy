@@ -1471,7 +1471,13 @@ async function academyChat(ctx: any, body: any) {
     /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)\b/.test(q) ||
     /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\s*[؟?!.]*$/.test(q)
   );
-  const intentQ = shortFollowup && previousQuestion ? q + " " + previousQuestion : q;
+  let contextQuestion = previousQuestion;
+  // If a follow-up changes the subject (for example, "students?" -> "and teachers?"),
+  // keep the prior question's purpose but avoid carrying the previous subject into the new one.
+  if (/(teacher|enseignant|professeur|معلم|مدرس)/.test(q)) contextQuestion = contextQuestion.replace(/student|learner|eleve|etudiant|طلاب|طالب|تلميذ|course|class|lesson|session|cours|حصص|دروس/gi, " ");
+  else if (/(student|learner|eleve|etudiant|طلاب|طالب|تلميذ)/.test(q)) contextQuestion = contextQuestion.replace(/teacher|enseignant|professeur|معلم|مدرس|course|class|lesson|session|cours|حصص|دروس/gi, " ");
+  else if (/(course|class|lesson|session|cours|حصص|دروس)/.test(q)) contextQuestion = contextQuestion.replace(/teacher|enseignant|professeur|معلم|مدرس|student|learner|eleve|etudiant|طلاب|طالب|تلميذ/gi, " ");
+  const intentQ = shortFollowup && contextQuestion ? q + " " + contextQuestion : q;
   const state = await getAcademyState(ctx);
   const me = lower(profile.username);
   const isAdmin = role === "admin";
