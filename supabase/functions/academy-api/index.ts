@@ -1465,15 +1465,15 @@ async function academyChat(ctx: any, body: any) {
   let question = text(latest?.content);
   const lastAssistant = [...messages].reverse().find((m: any) => lower(m?.role) === "assistant");
   let confirmedIntent = false;
-  if (/^(yes|yes please|yeah|yep|correct|exactly|oui|exactement|نعم|صحيح)[!.?\\s]*$/i.test(question) && /do you mean|voulez-vous dire|هل تقصد/.test(text(lastAssistant?.content).toLowerCase())) {
+  if (/^(yes|yes please|yeah|yep|correct|exactly|that is right|that's right|go ahead|please do|oui|oui svp|exactement|c'est ça|نعم|أجل|صحيح)[!.?\s]*$/i.test(question) && /do you mean|voulez-vous dire|هل تقصد/.test(text(lastAssistant?.content).toLowerCase())) {
     const previousUser = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content)).slice(-2)[0];
     if (previousUser) { question = text(previousUser.content); confirmedIntent = true; }
   }
-  const q = question.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/\\bhoww+\\b/g, "how");
+  const q = question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\bhoww+\b/g, "how");
   // Use recent conversation turns to interpret short follow-ups without letting old topics override a new, complete question.
   const priorUserTurns = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content) && m !== latest).slice(-4);
   const previousQuestion = priorUserTurns.length ? text(priorUserTurns[priorUserTurns.length - 1].content).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
-  const shortFollowup = q.length <= 70 && (
+  const shortFollowup = q.length <= 100 && (
     /^(and|also|what about|how about|then|why|when|where|which|who|what|it|that|those|these|same|more|details|et|aussi|et pour|qu en est il|pourquoi|quand|ou|lequel|laquelle|ils|elles|cela|ca|plus|explique|et les|et la|et le|وماذا|وماذا عن|وكذلك|لماذا|متى|أين|ما هو|ما هي|هم|هي|ذلك|هذه|هؤلاء)\b/.test(q) ||
     /^(teachers?|students?|courses?|classes?|attendance|payments?|timetable|schedule|tajwid|tajweed|hifz|fiqh|enseignants?|eleves?|cours|presences|paiements|جدول|معلمون|طلاب|دروس|الحضور|المدفوعات)\s*[؟?!.]*$/.test(q) ||
     /^(please i want to know|please tell me|tell me|answer me|i want to know|je veux savoir|s il vous plait|أريد أن أعرف)[!.?\s]*$/.test(q)
@@ -1522,7 +1522,7 @@ async function academyChat(ctx: any, body: any) {
       {re: /(dark|light|theme|mode|sombre|clair|thème|الوضع الداكن|الوضع الفاتح|المظهر)/i,en:"you want to change the platform’s light or dark theme",fr:"vous souhaitez changer le thème clair ou sombre de la plateforme",ar:"أنك تريد تغيير مظهر المنصة إلى الوضع الفاتح أو الداكن"}
     ];
     const hint = hints.find((x: any) => x.re.test(q));
-    const vague = q.split(/\\s+/).length <= 9 && (countHint || !!hint) && !/(who is|what is|where is|when is|how do i|how can i|can you|please explain|explain|tell me about|comment|pourquoi|متى|كيف|ما هو|من هو)/i.test(q);
+    const vague = q.split(/\s+/).length <= 9 && (countHint || !!hint) && !/(who is|what is|where is|when is|how do i|how can i|can you|please explain|explain|tell me about|comment|pourquoi|متى|كيف|ما هو|من هو)/i.test(q);
     if (hint && vague) {
       const meaning = lang === "fr" ? hint.fr : lang === "ar" ? hint.ar : hint.en;
       return tr("Do you mean: “" + meaning + "”? You can answer yes, or rephrase your question.", "Voulez-vous dire : « " + meaning + " » ? Répondez oui ou reformulez votre question.", "هل تقصد: «" + meaning + "»؟ يمكنك الإجابة بنعم أو إعادة صياغة سؤالك.");
