@@ -5313,7 +5313,7 @@ setInterval(pollLiveMessages,3000);
  launcher.addEventListener('click',()=>toggle(true));close.addEventListener('click',()=>toggle(false));
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('open'))toggle(false)});
  if(typeof MutationObserver!=='undefined')new MutationObserver(()=>{if(panel.classList.contains('open'))paintLanguage()}).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
- function detectQuestionLang(value){const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();if(/[\u0600-\u06ff]/.test(q))return 'ar';if(/\b(bonjour|bonsoir|salut|merci|cours|eleve|inscrit|inscription|comment|pourquoi|qui|quand|quel|quelle|academie|enseignant|professeur|remercie|mission|fonction|ton|ta|mon|ma|mes|vous|votre|est|les|des|je|suis|qu'est|c'est|comment|pourquoi|avec|pour|dans|estce|s il vous plait)\b/.test(q))return 'fr';return 'en'}
+ function detectQuestionLang(value){const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();if(/[\u0600-\u06ff]/.test(q))return 'ar';if(/\b(bonjour|bonsoir|salut|merci|oui|non|pas encore|cours|eleve|inscrit|inscription|comment|pourquoi|qui|quand|quel|quelle|academie|enseignant|professeur|remercie|mission|fonction|ton|ta|mon|ma|mes|vous|votre|est|les|des|je|suis|qu'est|c'est|comment|pourquoi|avec|pour|dans|estce|s il vous plait)\b/.test(q))return 'fr';return 'en'}
  function publicAnswer(question){const lang=detectQuestionLang(question);const q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’']/g,' ').replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();const has=(re)=>re.test(q);const next=lang==='fr'?' Si vous êtes déjà inscrit(e), connectez-vous pour obtenir des réponses personnalisées via l’assistant interne. Sinon, contactez l’administrateur sur WhatsApp au +221 77 448 22 93 pour vous renseigner sur l’inscription.':lang==='ar'?' إذا كنت مسجلًا بالفعل، فسجّل الدخول للحصول على إجابات شخصية من المساعد الداخلي. وإذا لم تكن مسجلًا، فتواصل مع مسؤول الأكاديمية عبر واتساب على الرقم +221 77 448 22 93 للاستفسار عن التسجيل.':' If you are already registered, sign in to get personalized answers from the internal assistant. If not, contact the administrator on WhatsApp at +221 77 448 22 93 to ask about registration.';
  if(has(/\b(thank\w*|tank\s*u+|tanku+|thx+|tanks?\w*|tenks?|thanx|thnks?|thnk+|thanky?u+|thanks?\s*u+|merci\w*|mersi+|mercii+|remerci\w*)\b/)||/(شكرا|شكر|مشكور|مشكورة|تسلم|تسلمي|يعطيك العافية|بارك الله فيك)/.test(q))return lang==='fr'?'Avec plaisir ! Je suis là pour vous aider. N’hésitez pas à poser une autre question.':lang==='ar'?'العفو! يسعدني مساعدتك. لا تتردد في طرح سؤال آخر.':'You’re welcome! It’s my pleasure. Feel free to ask another question.';
  if((has(/\b(who|who s|created|creator|developed|made you|qui|createur|developpe)\b/)&&has(/\b(you|your|toi|vous|ton|votre|assistant|chatbot)\b/))||/(من أنشأك|من صنعك|من طورك|من هو مطورك|من قام بتطويرك|مين عملك)/.test(q))return (lang==='fr'?'J’ai été développé par Cheikh Tidiane Sall Al-Hussary, l’administrateur de l’Académie.':lang==='ar'?'تم تطويري بواسطة Cheikh Tidiane Sall Al-Hussary، مدير الأكاديمية.':'I was developed by Cheikh Tidiane Sall Al-Hussary, the Academy administrator.')+next;
@@ -5327,7 +5327,7 @@ setInterval(pollLiveMessages,3000);
  return lang==='fr'?'Je peux répondre aux questions générales sur les cours, le fonctionnement des classes, l’Académie et l’inscription. Êtes-vous déjà inscrit(e) ?'+next:lang==='ar'?'يمكنني الإجابة عن الأسئلة العامة حول الدورات وطريقة الدراسة والأكاديمية والتسجيل. هل أنت مسجل بالفعل؟'+next:'I can answer general questions about courses, how classes work, the Academy, and registration. Are you already registered?'+next}
 
  function resolvePublicConversation(question){
-  const lang=detectQuestionLang(question), norm=v=>String(v||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[’']/g,' ').replace(/[^\\p{L}\\p{N}\\s]/gu,' ').replace(/\\s+/g,' ').trim();
+  const lang=detectQuestionLang(question), norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’']/g,' ').replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();
   const q=norm(question), prior=[...history].reverse().filter(m=>m.role==='user').slice(0,3), lastUser=norm(prior[0]?.content||''), has=(re)=>re.test(q);
   const answer=(en,fr,ar)=>lang==='fr'?fr:lang==='ar'?ar:en;
   const yes=/^(yes|yeah|yep|yup|i am|im registered|i have|already|oui|je suis inscrit|je suis inscrite|oui je suis inscrit|نعم|أجل|مسجل|مسجلة|انا مسجل|انا مسجلة)$/i.test(q);
@@ -5342,14 +5342,14 @@ setInterval(pollLiveMessages,3000);
    'لا problème ! Je peux répondre aux questions générales sur l’Académie, la lecture du Coran, le tajwid, le hifz, la révision, le fiqh et le fonctionnement des cours en ligne. Pour connaître les étapes d’inscription, contactez l’administrateur sur WhatsApp au +221 77 448 22 93.',
    'لا مشكلة! يمكنني الإجابة عن الأسئلة العامة حول الأكاديمية وقراءة القرآن والتجويد والحفظ والمراجعة والفقه وطريقة الدروس عبر الإنترنت. لمعرفة خطوات التسجيل، تواصل مع المسؤول عبر واتساب على الرقم +221 77 448 22 93.'
   ).replace('لا problème!','Pas de problème !');
-  if(has(/\\b(price|prices|fee|fees|cost|costs|tuition|how much|payment|tarif|prix|frais|combien coute|combien ca coute|cout|paiement|رسوم|السعر|الأسعار|كم التكلفة|كم السعر|الدفع)\\b/)){
+  if(has(/\b(price|prices|fee|fees|cost|costs|tuition|how much|payment|tarif|prix|frais|combien coute|combien ca coute|cout|paiement|رسوم|السعر|الأسعار|كم التكلفة|كم السعر|الدفع)\b/)){
    return answer(
     'I don’t want to guess or give you an outdated price. Please ask the Academy administrator for the current fees and payment options on WhatsApp: +221 77 448 22 93.',
     'Je ne veux pas inventer un tarif ni vous donner un prix dépassé. Pour connaître les frais actuels et les moyens de paiement, contactez l’administrateur sur WhatsApp : +221 77 448 22 93.',
     'لا أريد تخمين الرسوم أو إعطاء سعر قديم. لمعرفة الرسوم الحالية وطرق الدفع، تواصل مع مسؤول الأكاديمية عبر واتساب: +221 77 448 22 93.'
    );
   }
-  if(has(/^(and|also|what about|how about|plus|et|et pour|qu en est il de|وماذا عن|وماذا|وكذلك)\\b/) && prior.length){
+  if(has(/^(and|also|what about|how about|plus|et|et pour|qu en est il de|وماذا عن|وماذا|وكذلك)\b/) && prior.length){
    const last=lastUser;
    if(/course|class|lesson|tajwid|tajweed|hifz|fiqh|quran|coran|cours|الدروس|التجويد|الحفظ|الفقه|القرآن/.test(last)){
     return answer(
