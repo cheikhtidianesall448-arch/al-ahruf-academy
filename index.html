@@ -5388,5 +5388,49 @@ window.ahrufOpenClassroom=function(call){if(!call||call.ended)return;if(call.cla
 })();
 </script>
 
+
+<script id="ahrufMushafTitleVisibilityFix">
+(function(){
+ if(document.getElementById('ahrufMushafTitleVisibilityFixStyles'))return;
+ const st=document.createElement('style');
+ st.id='ahrufMushafTitleVisibilityFixStyles';
+ st.textContent=`
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-surah-row,
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-basmala-row{
+   display:flex!important;align-items:center!important;justify-content:center!important;
+   text-align:center!important;overflow:visible!important;z-index:5!important;
+   min-height:0!important;padding:5px 0!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines .quran-surah-title-panel{
+   display:inline-block!important;visibility:visible!important;opacity:1!important;
+   width:max-content!important;max-width:96%!important;box-sizing:border-box!important;
+   font-family:"Amiri Quran","Amiri","Noto Naskh Arabic",serif!important;
+   font-size:clamp(24px,4vw,34px)!important;font-weight:700!important;
+   line-height:1.35!important;padding:5px 16px!important;
+   color:#30240f!important;background:#f7e8b7!important;
+   border:2px solid #9b762b!important;border-radius:7px!important;
+   white-space:normal!important;overflow:visible!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines .quran-basmala-panel{
+   display:inline-block!important;visibility:visible!important;opacity:1!important;
+   width:auto!important;max-width:100%!important;box-sizing:border-box!important;
+   font-family:"Amiri Quran","Amiri","Noto Naskh Arabic",serif!important;
+   font-size:clamp(23px,3.8vw,32px)!important;font-weight:600!important;
+   line-height:1.5!important;padding:4px 8px!important;
+   color:#1f2b1c!important;background:rgba(255,250,230,.98)!important;
+   white-space:normal!important;overflow:visible!important;text-align:center!important;
+  }
+  @media(max-width:600px){
+   #quranReaderContent .quran-page-paper .quran-lines .quran-surah-title-panel{
+    font-size:clamp(21px,5.2vw,27px)!important;padding:4px 9px!important;
+   }
+   #quranReaderContent .quran-page-paper .quran-lines .quran-basmala-panel{
+    font-size:clamp(20px,4.9vw,26px)!important;padding:3px 5px!important;
+   }
+  }
+ `;
+ document.head.appendChild(st);
+})();
+</script>
 </body>
 </html>
