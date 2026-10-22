@@ -1510,16 +1510,15 @@ async function academyChat(ctx: any, body: any) {
     if (clarification?.[1]) { question = clarification[1].trim().replace(/[”"»]+$/g, ""); confirmedIntent = true; }
   }
   const normalizeQuestion = (value: string) => {
-    let normalized = value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase()
+    return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
       .replace(/[’']/g, " ")
-      .replace(/\\bhoww+\\b/g, "how")
-      .replace(/\\b(teachr|techer|teechers|teachrs)\\b/g, "teacher")
-      .replace(/\\b(studnt|studnts|studens|stundents)\\b/g, "student")
-      .replace(/\\b(timtable|timetablee|schedual|schedul)\\b/g, "timetable")
-      .replace(/\\b(attendence|attandance|attendace)\\b/g, "attendance")
-      .replace(/\\b(paymant|payement|paiment|paymets)\\b/g, "payment")
-      .replace(/\\s+/g, " ").trim();
-    return normalized;
+      .replace(/\bhoww+\b/g, "how")
+      .replace(/\b(teachr|techer|teechers|teachrs)\b/g, "teacher")
+      .replace(/\b(studnt|studnts|studens|stundents)\b/g, "student")
+      .replace(/\b(timtable|timetablee|schedual|schedul)\b/g, "timetable")
+      .replace(/\b(attendence|attandance|attendace)\b/g, "attendance")
+      .replace(/\b(paymant|payement|paiment|paymets)\b/g, "payment")
+      .replace(/\s+/g, " ").trim();
   };
   const q = normalizeQuestion(question);
   // Use recent user turns for follow-ups, but don't let an old subject override a complete new question.
@@ -1538,7 +1537,7 @@ async function academyChat(ctx: any, body: any) {
   if (shortFollowup && contextQuestion && currentSubject) {
     const replacementSubject = /[\\u0600-\\u06ff]/.test(currentSubject) ? currentSubject.replace(/^ال/, "") : currentSubject;
     // Preserve qualifiers from a follow-up (for example "female" in "what about female students?").
-    const followupDetails = q.replace(subjectPattern, " ").replace(/\\b(and|also|what|about|how|the|a|an|for|et|les|des|la|le)\\b/g, " ").replace(/\\s+/g, " ").trim();
+    const followupDetails = q.replace(subjectPattern, " ").replace(/\b(and|also|what|about|how|the|a|an|for|et|les|des|la|le)\b/g, " ").replace(/\s+/g, " ").trim();
     contextQuestion = contextQuestion.replace(subjectPattern, replacementSubject);
     if (followupDetails) contextQuestion += " " + followupDetails;
   } else if (shortFollowup && contextQuestion) {
