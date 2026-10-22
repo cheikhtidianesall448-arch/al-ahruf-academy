@@ -5432,5 +5432,35 @@ window.ahrufOpenClassroom=function(call){if(!call||call.ended)return;if(call.cla
  document.head.appendChild(st);
 })();
 </script>
+
+
+<script id="ahrufMushafPageNumberVisibilityFix">
+(function(){
+ if(document.getElementById('ahrufMushafPageNumberVisibilityFixStyles'))return;
+ const style=document.createElement('style');
+ style.id='ahrufMushafPageNumberVisibilityFixStyles';
+ style.textContent=`
+  #quranReaderContent .quran-page-paper .quran-page-number{
+   font-family:"Amiri Quran","Amiri","Noto Naskh Arabic",serif!important;
+   font-size:clamp(18px,2.8vw,26px)!important;
+   font-weight:700!important;line-height:1.25!important;
+   min-width:48px!important;min-height:32px!important;
+   display:flex!important;align-items:center!important;justify-content:center!important;
+   padding:2px 14px!important;box-sizing:border-box!important;
+   color:#70521b!important;background:#fff8e8!important;
+   border:2px solid #c3a65f!important;border-radius:22px!important;
+   z-index:8!important;
+  }
+  @media(max-width:600px){
+   #quranReaderContent .quran-page-paper .quran-page-number{
+    font-size:clamp(17px,4.8vw,22px)!important;
+    min-width:42px!important;min-height:29px!important;padding:2px 11px!important;
+   }
+  }
+ `;
+ document.head.appendChild(style);
+})();
+</script>
+
 </body>
 </html>
