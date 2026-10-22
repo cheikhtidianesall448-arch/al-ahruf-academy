@@ -5350,5 +5350,84 @@ window.ahrufRenderClassroomPage=async function(call,page,broadcast){if(!call||ca
 window.ahrufOpenClassroom=function(call){if(!call||call.ended)return;if(call.classroomRoot?.isConnected){call.classroomRoot.style.display='flex';return}const root=document.createElement('section');root.className='ahruf-classroom-panel';root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label',t('Shared Qur’an'));root.innerHTML='<header class="ahruf-classroom-head"><div><h3>📖 '+E(t('Shared Qur’an'))+' · Al-Ahruf</h3><small>'+E(t('Select a verse or word to highlight it for everyone.'))+'</small></div><button type="button" class="ahruf-classroom-close" aria-label="Close">✕</button></header><div class="ahruf-classroom-toolbar"><label>'+E(t('Page'))+' <select class="ahruf-classroom-page" aria-label="'+E(t('Choose page'))+'">'+Array.from({length:604},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')+'</select></label><button type="button" data-step="-1">'+E(t('Previous'))+'</button><button type="button" data-step="1">'+E(t('Next'))+'</button><button type="button" class="ahruf-classroom-save">'+E(t('Save lesson progress'))+'</button></div><div class="ahruf-classroom-body"><div class="ahruf-classroom-quran" dir="rtl"></div><aside class="ahruf-classroom-side"><div class="ahruf-classroom-chat" aria-live="polite"></div><form class="ahruf-classroom-send"><textarea maxlength="2000" required placeholder="'+E(t('Ask a question or leave feedback…'))+'"></textarea><button type="submit" class="primary">'+E(t(user?.role==='teacher'?'Send feedback':'Send question'))+'</button></form><div class="ahruf-classroom-status"></div></aside></div>';document.body.appendChild(root);call.classroomRoot=root;root.querySelector('.ahruf-classroom-close').onclick=()=>{root.remove();call.classroomRoot=null};const picker=root.querySelector('.ahruf-classroom-page');picker.onchange=()=>ahrufRenderClassroomPage(call,picker.value,true);root.querySelectorAll('[data-step]').forEach(btn=>btn.onclick=()=>ahrufRenderClassroomPage(call,Number(picker.value)+Number(btn.dataset.step),true));root.querySelector('.ahruf-classroom-send').onsubmit=async event=>{event.preventDefault();const box=root.querySelector('textarea'),message=box.value.trim();if(!message)return;const targets=user?.role==='teacher'?(call.invitees||[]):[String(call.peer||'')].filter(Boolean);if(!targets.length)return ahrufCallToast(t('Could not send your message. Please try again.'));const button=root.querySelector('.ahruf-classroom-send button[type=submit]');button.disabled=true;try{for(const target of targets){const result=await onlineApi('send_message',{to:target,subject:t(user?.role==='teacher'?'Lesson feedback':'Classroom question'),category:'general',message:'['+(user?.role==='teacher'?'LESSON FEEDBACK':'CLASSROOM QUESTION')+'] '+message});if(result?.state&&Array.isArray(result.state.messages))S.messages=result.state.messages}ahrufAppendClassroomChat(call,user?.name||user?.username||ahrufMe(),message,user?.role==='teacher'?'feedback':'question');await ahrufBroadcast(call,'classroom_chat',{fromName:user?.name||user?.username||ahrufMe(),message:message,kind:user?.role==='teacher'?'feedback':'question'});box.value=''}catch(error){console.warn('Classroom message failed:',error);ahrufCallToast(t('Could not send your message. Please try again.'))}finally{button.disabled=false}};root.querySelector('.ahruf-classroom-save').onclick=async()=>{if(user?.role!=='teacher'){ahrufCallToast(t('Only the teacher can save lesson progress.'));return}const state=call.classroomState||{page:Number(picker.value)||1,ayah:0,word:0};const progress=t('Page')+' '+state.page+(state.ayah?' · '+t('Ayah')+' '+state.ayah:'')+(state.word?' · '+t('Word')+' '+state.word:'');const targets=(call.invitees||[]).filter(Boolean);if(!targets.length)return;const button=root.querySelector('.ahruf-classroom-save');button.disabled=true;try{for(const target of targets){const result=await onlineApi('send_message',{to:target,subject:t('Lesson progress saved'),category:'general',message:'[LESSON PROGRESS] '+progress});if(result?.state&&Array.isArray(result.state.messages))S.messages=result.state.messages}ahrufCallToast(t('Lesson progress saved'));await ahrufBroadcast(call,'classroom_chat',{fromName:user?.name||user?.username||ahrufMe(),message:progress,kind:'progress'})}catch(error){console.warn('Lesson progress save failed:',error);ahrufCallToast(t('Could not send your message. Please try again.'))}finally{button.disabled=false}};ahrufRenderClassroomPage(call,call.classroomState?.page||1,false)};
 })();
 </script>
+
+<!-- Runtime override: stop later-injected styles from expanding Mushaf pages and creating large gaps. -->
+<script id="ahrufMushafNoBlankSpaceFix">
+(function(){
+ const st=document.createElement('style');
+ st.id='ahrufMushafNoBlankSpaceRuntimeStyle';
+ st.textContent=`
+  #quranReaderContent .quran-page-paper{
+   position:relative!important;display:block!important;
+   width:min(100%,560px)!important;max-width:560px!important;
+   height:auto!important;min-height:0!important;max-height:none!important;
+   aspect-ratio:472 / 693!important;overflow:hidden!important;
+   margin:0 auto 16px!important;box-sizing:border-box!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines{
+   position:absolute!important;inset:9% 6% 9% 6%!important;
+   width:auto!important;height:auto!important;min-height:0!important;max-height:none!important;
+   display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+   grid-template-rows:repeat(var(--mushaf-row-count,15),minmax(0,1fr))!important;
+   grid-auto-rows:minmax(0,1fr)!important;align-content:stretch!important;
+   justify-content:stretch!important;gap:0!important;padding:4px 5px!important;
+   overflow:hidden!important;box-sizing:border-box!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line{
+   display:flex!important;align-items:center!important;justify-content:space-between!important;
+   flex-wrap:nowrap!important;width:100%!important;height:100%!important;
+   min-width:0!important;min-height:0!important;max-height:100%!important;
+   margin:0!important;padding:0 1px!important;border-bottom:1px solid #e9dfc8!important;
+   box-sizing:border-box!important;overflow:hidden!important;white-space:nowrap!important;
+   overflow-wrap:normal!important;line-height:1.05!important;
+   font-size:clamp(8px,1.8vw,14px)!important;
+   text-align:justify!important;text-align-last:justify!important;direction:rtl!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line>span:not(.quran-ayah-mark){
+   display:inline!important;flex:0 1 auto!important;min-width:0!important;max-width:none!important;
+   margin:0!important;padding:0!important;white-space:nowrap!important;line-height:1.05!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-surah-row,
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-basmala-row{
+   display:flex!important;align-items:center!important;justify-content:center!important;
+   text-align:center!important;text-align-last:center!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines .quran-surah-title-panel{
+   display:block!important;width:max-content!important;max-width:94%!important;
+   margin:0 auto!important;padding:2px 10px!important;box-sizing:border-box!important;
+   font-size:clamp(11px,2.2vw,16px)!important;line-height:1.1!important;white-space:nowrap!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines .quran-basmala-panel{
+   display:block!important;width:100%!important;max-width:100%!important;
+   margin:0 auto!important;padding:0!important;box-sizing:border-box!important;
+   font-size:clamp(10px,2vw,14px)!important;line-height:1.1!important;
+   text-align:center!important;white-space:nowrap!important;
+  }
+  #quranReaderContent .quran-page-paper .quran-lines>.quran-line.quran-line-empty{
+   min-height:0!important;height:100%!important;padding:0!important;
+  }
+  body.quran-surah-fullscreen #quranReaderContent .quran-page-paper{
+   width:min(100vw,calc(100dvh * 472 / 693))!important;
+   max-width:min(100vw,calc(100dvh * 472 / 693))!important;
+   aspect-ratio:472 / 693!important;height:auto!important;min-height:0!important;
+   margin:0 auto 12px!important;overflow:hidden!important;
+  }
+  body.quran-surah-fullscreen #quranReaderContent .quran-page-paper .quran-lines{
+   position:absolute!important;inset:9% 6% 9% 6%!important;
+   height:auto!important;min-height:0!important;padding:4px 5px!important;
+  }
+  @media(max-width:600px){
+   #quranReaderContent .quran-page-paper{width:100%!important;max-width:100%!important;aspect-ratio:472 / 693!important}
+   #quranReaderContent .quran-page-paper .quran-lines{inset:9% 5% 9% 5%!important;padding:2px!important}
+   #quranReaderContent .quran-page-paper .quran-lines>.quran-line{font-size:clamp(7px,2vw,10px)!important;line-height:1!important}
+   #quranReaderContent .quran-page-paper .quran-lines .quran-surah-title-panel{font-size:clamp(9px,2.4vw,12px)!important;padding:1px 5px!important}
+   #quranReaderContent .quran-page-paper .quran-lines .quran-basmala-panel{font-size:clamp(8px,2.1vw,11px)!important;line-height:1!important}
+   body.quran-surah-fullscreen #quranReaderContent .quran-page-paper{width:100vw!important;max-width:100vw!important}
+  }
+ `;
+ document.head.appendChild(st);
+})();
+</script>
+
 </body>
 </html>
