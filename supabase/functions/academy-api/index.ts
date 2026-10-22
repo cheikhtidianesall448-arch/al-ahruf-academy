@@ -1509,7 +1509,18 @@ async function academyChat(ctx: any, body: any) {
     const clarification = text(lastAssistant?.content).match(/(?:do you mean|voulez-vous dire\s*:\s*|هل تقصد\s*[:：]?\s*)[“"«]?(.+?)[”"»]?(?:\?|\.|\s*you can answer|\s*répondez|\s*يمكنك الإجابة|$)/i);
     if (clarification?.[1]) { question = clarification[1].trim().replace(/[”"»]+$/g, ""); confirmedIntent = true; }
   }
-  const normalizeQuestion = (value: string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/\\bhoww+\\b/g, "how").trim();
+  const normalizeQuestion = (value: string) => {
+    let normalized = value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase()
+      .replace(/[’']/g, " ")
+      .replace(/\\bhoww+\\b/g, "how")
+      .replace(/\\b(teachr|techer|teechers|teachrs)\\b/g, "teacher")
+      .replace(/\\b(studnt|studnts|studens|stundents)\\b/g, "student")
+      .replace(/\\b(timtable|timetablee|schedual|schedul)\\b/g, "timetable")
+      .replace(/\\b(attendence|attandance|attendace)\\b/g, "attendance")
+      .replace(/\\b(paymant|payement|paiment|paymets)\\b/g, "payment")
+      .replace(/\\s+/g, " ").trim();
+    return normalized;
+  };
   const q = normalizeQuestion(question);
   // Use recent user turns for follow-ups, but don't let an old subject override a complete new question.
   const priorUserTurns = messages.filter((m: any) => lower(m?.role) === "user" && text(m?.content) && m !== latest).slice(-4);
@@ -1526,7 +1537,10 @@ async function academyChat(ctx: any, body: any) {
   // and replace the old subject instead of appending two conflicting subjects.
   if (shortFollowup && contextQuestion && currentSubject) {
     const replacementSubject = /[\\u0600-\\u06ff]/.test(currentSubject) ? currentSubject.replace(/^ال/, "") : currentSubject;
+    // Preserve qualifiers from a follow-up (for example "female" in "what about female students?").
+    const followupDetails = q.replace(subjectPattern, " ").replace(/\\b(and|also|what|about|how|the|a|an|for|et|les|des|la|le)\\b/g, " ").replace(/\\s+/g, " ").trim();
     contextQuestion = contextQuestion.replace(subjectPattern, replacementSubject);
+    if (followupDetails) contextQuestion += " " + followupDetails;
   } else if (shortFollowup && contextQuestion) {
     // Put the previous topic first so the rule-based intent matcher can still see it.
     contextQuestion = contextQuestion + " " + q;
