@@ -5500,48 +5500,64 @@ window.ahrufOpenClassroom=function(call){if(!call||call.ended)return;if(call.cla
 
 
 
-<script id="ahrufMushafHeadingsBiggerBoxFinal">
+<style id="ahrufMushafHeadingsForceVisibleStyles">
+/* High-contrast, enlarged headings for every Mushaf reader container */
+.quran-page-paper .quran-lines .quran-surah-row{
+ display:flex!important;flex:0 0 auto!important;min-height:104px!important;height:auto!important;
+ padding:10px 3px!important;align-items:center!important;justify-content:center!important;overflow:visible!important;
+}
+.quran-page-paper .quran-lines .quran-basmala-row{
+ display:flex!important;flex:0 0 auto!important;min-height:88px!important;height:auto!important;
+ padding:8px 3px!important;align-items:center!important;justify-content:center!important;overflow:visible!important;
+}
+.quran-page-paper .quran-lines .quran-surah-row .quran-surah-title-panel{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-height:82px!important;
+ padding:12px 20px!important;border:4px solid #8b681f!important;border-radius:12px!important;
+ background:#fff0b8!important;color:#201706!important;
+ font-family:"Amiri Quran","Amiri","Noto Naskh Arabic",serif!important;
+ font-size:64px!important;line-height:1.3!important;font-weight:800!important;
+ text-align:center!important;white-space:normal!important;overflow:visible!important;
+}
+.quran-page-paper .quran-lines .quran-basmala-row .quran-basmala-panel{
+ display:block!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;
+ min-height:68px!important;padding:6px 4px!important;
+ background:#fffdf4!important;color:#173c24!important;
+ font-family:"Amiri Quran","Amiri","Noto Naskh Arabic",serif!important;
+ font-size:56px!important;line-height:1.4!important;font-weight:700!important;
+ text-align:center!important;white-space:normal!important;overflow:visible!important;
+}
+@media(max-width:600px){
+ .quran-page-paper .quran-lines .quran-surah-row{min-height:78px!important;padding:7px 2px!important}
+ .quran-page-paper .quran-lines .quran-basmala-row{min-height:68px!important;padding:5px 2px!important}
+ .quran-page-paper .quran-lines .quran-surah-row .quran-surah-title-panel{
+  min-height:62px!important;padding:8px 8px!important;font-size:44px!important;border-width:3px!important;
+ }
+ .quran-page-paper .quran-lines .quran-basmala-row .quran-basmala-panel{
+  min-height:52px!important;padding:4px 2px!important;font-size:38px!important;
+ }
+}
+</style>
+<script id="ahrufMushafHeadingsForceVisible">
 (function(){
- if(document.getElementById('ahrufMushafHeadingsBiggerBoxFinalStyles'))return;
- const style=document.createElement('style');
- style.id='ahrufMushafHeadingsBiggerBoxFinalStyles';
- style.textContent=`
-  /* Apply to both normal and fullscreen Mushaf readers */
-  .quran-page-paper .quran-lines>.quran-line.quran-surah-row{
-   display:flex!important;flex:0 0 auto!important;align-items:center!important;justify-content:center!important;
-   height:auto!important;min-height:96px!important;padding:10px 4px!important;overflow:visible!important;
-  }
-  .quran-page-paper .quran-lines>.quran-line.quran-basmala-row{
-   display:flex!important;flex:0 0 auto!important;align-items:center!important;justify-content:center!important;
-   height:auto!important;min-height:84px!important;padding:8px 4px!important;overflow:visible!important;
-  }
-  .quran-page-paper .quran-lines .quran-surah-title-panel{
-   display:flex!important;align-items:center!important;justify-content:center!important;
-   box-sizing:border-box!important;width:98%!important;max-width:98%!important;min-height:76px!important;
-   padding:10px 18px!important;border-width:3px!important;border-radius:10px!important;
-   font-size:clamp(48px,8.5vw,72px)!important;line-height:1.35!important;font-weight:700!important;
-   white-space:normal!important;overflow:visible!important;text-align:center!important;
-  }
-  .quran-page-paper .quran-lines .quran-basmala-panel{
-   display:block!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;
-   min-height:62px!important;padding:6px 6px!important;
-   font-size:clamp(42px,7.5vw,64px)!important;line-height:1.45!important;font-weight:600!important;
-   white-space:normal!important;overflow:visible!important;text-align:center!important;
-  }
-  @media(max-width:600px){
-   .quran-page-paper .quran-lines>.quran-line.quran-surah-row{min-height:72px!important;padding:7px 2px!important}
-   .quran-page-paper .quran-lines>.quran-line.quran-basmala-row{min-height:64px!important;padding:5px 2px!important}
-   .quran-page-paper .quran-lines .quran-surah-title-panel{
-    width:98%!important;max-width:98%!important;min-height:58px!important;
-    font-size:clamp(38px,9.5vw,52px)!important;line-height:1.3!important;padding:7px 8px!important;
-   }
-   .quran-page-paper .quran-lines .quran-basmala-panel{
-    min-height:48px!important;font-size:clamp(32px,8.5vw,46px)!important;
-    line-height:1.35!important;padding:4px 3px!important;
-   }
-  }
- `;
- document.head.appendChild(style);
+ const styleValues = (el, values) => { for (const [k,v] of Object.entries(values)) el.style.setProperty(k,v,'important'); };
+ function apply(root){
+  if(!root || !root.querySelectorAll)return;
+  root.querySelectorAll('.quran-page-paper .quran-lines .quran-surah-row').forEach(row=>{
+   styleValues(row,{'display':'flex','flex':'0 0 auto','min-height':matchMedia('(max-width:600px)').matches?'78px':'104px','height':'auto','padding':matchMedia('(max-width:600px)').matches?'7px 2px':'10px 3px','align-items':'center','justify-content':'center','overflow':'visible'});
+   const panel=row.querySelector('.quran-surah-title-panel');
+   if(panel)styleValues(panel,{'display':'flex','align-items':'center','justify-content':'center','box-sizing':'border-box','width':'100%','max-width':'100%','min-height':matchMedia('(max-width:600px)').matches?'62px':'82px','padding':matchMedia('(max-width:600px)').matches?'8px':'12px 20px','border':(matchMedia('(max-width:600px)').matches?'3px':'4px')+' solid #8b681f','border-radius':'12px','background':'#fff0b8','color':'#201706','font-family':'"Amiri Quran","Amiri","Noto Naskh Arabic",serif','font-size':matchMedia('(max-width:600px)').matches?'44px':'64px','line-height':'1.3','font-weight':'800','text-align':'center','white-space':'normal','overflow':'visible'});
+  });
+  root.querySelectorAll('.quran-page-paper .quran-lines .quran-basmala-row').forEach(row=>{
+   styleValues(row,{'display':'flex','flex':'0 0 auto','min-height':matchMedia('(max-width:600px)').matches?'68px':'88px','height':'auto','padding':matchMedia('(max-width:600px)').matches?'5px 2px':'8px 3px','align-items':'center','justify-content':'center','overflow':'visible'});
+   const panel=row.querySelector('.quran-basmala-panel');
+   if(panel)styleValues(panel,{'display':'block','box-sizing':'border-box','width':'100%','max-width':'100%','min-height':matchMedia('(max-width:600px)').matches?'52px':'68px','padding':matchMedia('(max-width:600px)').matches?'4px 2px':'6px 4px','background':'#fffdf4','color':'#173c24','font-family':'"Amiri Quran","Amiri","Noto Naskh Arabic",serif','font-size':matchMedia('(max-width:600px)').matches?'38px':'56px','line-height':'1.4','font-weight':'700','text-align':'center','white-space':'normal','overflow':'visible'});
+  });
+ }
+ function run(){apply(document);}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+ new MutationObserver(()=>run()).observe(document.documentElement,{childList:true,subtree:true});
+ window.addEventListener('resize',run);
 })();
 </script>
 
