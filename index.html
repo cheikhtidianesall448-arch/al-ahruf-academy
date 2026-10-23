@@ -5403,7 +5403,7 @@ setInterval(pollLiveMessages,3000);
    return answer('You can contact the Academy administrator on WhatsApp at +221 77 448 22 93 for registration, current fees, schedules, and questions that need confirmation.',
     'Vous pouvez contacter l’administrateur sur WhatsApp au +221 77 448 22 93 pour l’inscription, les tarifs actuels, les horaires et toute question nécessitant une confirmation.',
     'يمكنك التواصل مع مسؤول الأكاديمية عبر واتساب على الرقم +221 77 448 22 93 بشأن التسجيل والرسوم الحالية والمواعيد والأسئلة التي تحتاج إلى تأكيد.');
-  if(has(/\b(hello|hi|hey|good morning|good afternoon|good evening|salam|assalamu alaikum|bonjour|bonsoir|salut|مرحبا|السلام عليكم|أهلا|صباح الخير|مساء الخير)\b/u.test(raw))
+  if(has(/\b(hello|hi|hey|good morning|good afternoon|good evening|salam|assalamu alaikum|bonjour|bonsoir|salut|مرحبا|السلام عليكم|أهلا|صباح الخير|مساء الخير)\b/u))
    return answer('Welcome to Al-Ahruf International Academy! I can explain our courses, online learning, teachers, and registration. What would you like to explore?',
     'Bienvenue à Al-Ahruf International Academy ! Je peux vous présenter les cours, l’apprentissage en ligne, les enseignants et l’inscription. Que souhaitez-vous découvrir ?',
     'مرحبًا بك في أكاديمية الأحرف الدولية! يمكنني شرح الدروس والتعلم عبر الإنترنت والمعلمين والتسجيل. ما الذي ترغب في معرفته؟');
