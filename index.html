@@ -2134,6 +2134,7 @@ function render(){
  if(!app)return;
  app.innerHTML=!user?viewLogin():user.role==='student'?viewStudent():viewStaff();
  syncSiteFavicon();
+ if(user&&user.role==='student')syncAssignmentReminderRefresh();
 
  // Refresh countdowns after rendering so newly inserted MyClass notices never stay on “Calculating…”.
  if(user&&typeof updateNextClassCountdown==='function')updateNextClassCountdown();
@@ -3621,6 +3622,29 @@ Object.assign(I18N.fr,{
 Object.assign(I18N.ar,{
  'Assignments':'الواجبات','Assignment':'واجب','Add assignment':'إضافة واجب','Assignment title':'عنوان الواجب','Instructions':'التعليمات','Select student':'اختر الطالب','Due before next class':'موعده قبل الحصة القادمة','Next class':'الحصة القادمة','No assignments yet.':'لا توجد واجبات حتى الآن.','Complete':'مكتمل','Mark completed':'تحديد كمكتمل','Mark incomplete':'تحديد كغير مكتمل','Pending':'قيد الإنجاز','Research this now before your next class!':'ابدأ البحث الآن قبل حصتك القادمة!','Assignment completed':'تم إكمال الواجب','Created by':'أنشأه','Save assignment':'حفظ الواجب','Assignment saved':'تم حفظ الواجب','Assignment status updated':'تم تحديث حالة الواجب','Please research and complete this assignment before your next class.':'يرجى البحث وإنجاز هذا الواجب قبل حصتك القادمة.'
 });
+function updateAssignmentReminderVisibility(){
+ const banner=document.getElementById('assignmentReminderBanner');
+ if(!banner)return;
+ const items=Array.from(banner.querySelectorAll('.assignment-reminder-item'));
+ items.forEach(item=>{const due=Number(item.dataset.dueAt||0);item.style.display=due&&Date.now()>=due?'none':''});
+ banner.style.display=items.some(item=>item.style.display!=='none')?'':'none';
+}
+function syncAssignmentReminderRefresh(){
+ if(window._assignmentReminderUiTimer)clearInterval(window._assignmentReminderUiTimer);
+ window._assignmentReminderUiTimer=setInterval(updateAssignmentReminderVisibility,1000);
+ const hasPending=(S.assignments||[]).some(a=>!a.completed);
+ if(!hasPending){if(window._assignmentRefreshTimer)clearInterval(window._assignmentRefreshTimer);window._assignmentRefreshTimer=null;return}
+ if(!window._assignmentRefreshTimer){
+  window._assignmentRefreshTimer=setInterval(async()=>{
+   const due=(S.assignments||[]).some(a=>!a.completed&&a.dueAt&&new Date(a.dueAt).getTime()<=Date.now());
+   if(due&&user&&user.role==='student'){
+    const ok=await loadOnlineState();
+    if(ok&&user&&user.role==='student')render();
+   }
+  },30000);
+ }
+ updateAssignmentReminderVisibility();
+}
 function assignmentDate(value){
  if(!value)return '—';
  try{return new Intl.DateTimeFormat(currentLang==='fr'?'fr-FR':currentLang==='ar'?'ar':'en-GB',{timeZone:'Africa/Dakar',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value))+' (GMT+0)'}catch(e){return String(value)}
@@ -3628,7 +3652,7 @@ function assignmentDate(value){
 function assignmentReminder(studentId){
  const pending=(S.assignments||[]).filter(a=>String(a.studentId||'').toLowerCase()===String(studentId||'').toLowerCase()&&!a.completed&&a.dueAt&&new Date(a.dueAt).getTime()>Date.now());
  if(!pending.length)return '';
- return '<div class="card" role="status" style="margin:0 0 14px;background:#fff1f2;border:1px solid #fda4af;border-left:5px solid #e11d48;color:#881337"><h3 style="margin:0 0 8px;color:#9f1239">📌 '+t('Assignments')+' · '+t('Pending')+'</h3>'+pending.map(a=>'<div style="padding:8px 0;border-top:1px solid #fecdd3"><b>'+esc(a.title||t('Assignment'))+'</b><div style="margin-top:4px;font-weight:750">'+t('Research this now before your next class!')+'</div>'+(a.instructions?'<p style="margin:5px 0">'+esc(a.instructions)+'</p>':'')+'<div style="font-size:.9em;margin-top:4px">'+t('Due before next class')+': <b>'+esc(assignmentDate(a.dueAt))+'</b> · '+esc(a.dueClass||t('Next class'))+'</div></div>').join('')+'</div>';
+ return '<div id="assignmentReminderBanner" class="card" role="status" style="margin:0 0 14px;background:#fff1f2;border:1px solid #fda4af;border-left:5px solid #e11d48;color:#881337"><h3 style="margin:0 0 8px;color:#9f1239">📌 '+t('Assignments')+' · '+t('Pending')+'</h3>'+pending.map(a=>'<div class="assignment-reminder-item" data-due-at="'+new Date(a.dueAt).getTime()+'" style="padding:8px 0;border-top:1px solid #fecdd3"><b>'+esc(a.title||t('Assignment'))+'</b><div style="margin-top:4px;font-weight:750">'+t('Research this now before your next class!')+'</div>'+(a.instructions?'<p style="margin:5px 0">'+esc(a.instructions)+'</p>':'')+'<div style="font-size:.9em;margin-top:4px">'+t('Due before next class')+': <b>'+esc(assignmentDate(a.dueAt))+'</b> · '+esc(a.dueClass||t('Next class'))+'</div></div>').join('')+'</div>';
 }
 function assignments(){
  const isStaff=user.role==='admin'||user.role==='teacher';
