@@ -3631,9 +3631,9 @@ function updateAssignmentReminderVisibility(){
 }
 function syncAssignmentReminderRefresh(){
  if(window._assignmentReminderUiTimer)clearInterval(window._assignmentReminderUiTimer);
- window._assignmentReminderUiTimer=setInterval(updateAssignmentReminderVisibility,1000);
  const hasPending=(S.assignments||[]).some(a=>!a.completed);
- if(!hasPending){if(window._assignmentRefreshTimer)clearInterval(window._assignmentRefreshTimer);window._assignmentRefreshTimer=null;return}
+ if(!hasPending){if(window._assignmentRefreshTimer)clearInterval(window._assignmentRefreshTimer);window._assignmentRefreshTimer=null;window._assignmentReminderUiTimer=null;return}
+ window._assignmentReminderUiTimer=setInterval(updateAssignmentReminderVisibility,1000);
  if(!window._assignmentRefreshTimer){
   window._assignmentRefreshTimer=setInterval(async()=>{
    const due=(S.assignments||[]).some(a=>!a.completed&&a.dueAt&&new Date(a.dueAt).getTime()<=Date.now());
