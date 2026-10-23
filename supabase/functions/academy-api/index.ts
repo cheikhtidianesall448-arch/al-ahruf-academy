@@ -54,6 +54,7 @@ function cleanState(state: any) {
   s.notifications = Array.isArray(s.notifications) ? s.notifications : [];
   s.messagePeers = Array.isArray(s.messagePeers) ? s.messagePeers : [];
   s.paymentReminders = Array.isArray(s.paymentReminders) ? s.paymentReminders : [];
+  s.assignments = Array.isArray(s.assignments) ? s.assignments : [];
 
   // Never return stored passwords to the browser.
   s.students.forEach((student: any) => {
@@ -78,6 +79,7 @@ function studentState(state: any, username: string) {
   };
 
   const me = s.students.find((student: any) => lower(student?.id) === id);
+  s.assignments = (s.assignments || []).filter((assignment: any) => lower(assignment?.studentId) === id);
   s.timetable = (s.timetable || []).filter((item: any) => Array.isArray(item?.students) && item.students.map((studentId: any) => lower(studentId)).includes(id));
   s.classes = (s.classes || []).filter((cls: any) => s.timetable.some((item: any) => text(item?.classCode) ? text(item.classCode) === text(cls?.code) : lower(item?.course) === lower(cls?.title))).map((cls: any) => ({ title: cls.title, code: cls.code }));
   // Share only public leaderboard fields; keep payments, contact details and account data private.
@@ -138,6 +140,7 @@ function teacherState(state: any, username: string) {
   });
   const assignedIds = new Set(assigned.map((student: any) => lower(student?.id)));
   s.students = assigned;
+  s.assignments = (s.assignments || []).filter((assignment: any) => assignedIds.has(lower(assignment?.studentId)));
   // Teachers may see and edit attendance for their assigned students only.
   const filteredAttendance: Record<string, any> = {};
   for (const [date, value] of Object.entries(s.att || {})) {
@@ -1195,6 +1198,133 @@ async function saveProfilePhoto(ctx: any, body: any) {
   return { ok: true };
 }
 
+function timetableStudentMatches(item: any, studentId: string) {
+  return Array.isArray(item?.students) && item.students.some((id: any) => lower(id) === lower(studentId));
+}
+
+function nextAssignmentClass(state: any, studentId: string, now = new Date()) {
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const todayIndex = (now.getUTCDay() + 6) % 7;
+  const candidates: { item: any; date: Date }[] = [];
+  for (const item of Array.isArray(state?.timetable) ? state.timetable : []) {
+    if (!timetableStudentMatches(item, studentId)) continue;
+    const dayIndex = dayNames.findIndex((day) => lower(day) === lower(item?.day));
+    const match = text(item?.start).match(/^(\\d{1,2}):(\\d{2})$/);
+    if (dayIndex < 0 || !match) continue;
+    const hour = Number(match[1]), minute = Number(match[2]);
+    if (hour > 23 || minute > 59) continue;
+    let offset = (dayIndex - todayIndex + 7) % 7;
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offset, hour, minute));
+    if (date.getTime() <= now.getTime()) {
+      offset += 7;
+      date.setUTCDate(date.getUTCDate() + 7);
+    }
+    candidates.push({ item, date });
+  }
+  candidates.sort((x, y) => x.date.getTime() - y.date.getTime());
+  return candidates[0] || null;
+}
+
+function studentHasLiveClass(state: any, studentId: string, now = new Date()) {
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const today = dayNames[now.getUTCDay()];
+  const minutesNow = now.getUTCHours() * 60 + now.getUTCMinutes();
+  return (Array.isArray(state?.timetable) ? state.timetable : []).some((item: any) => {
+    if (!timetableStudentMatches(item, studentId) || lower(item?.day) !== lower(today)) return false;
+    const parse = (value: any) => {
+      const match = text(value).match(/^(\\d{1,2}):(\\d{2})$/);
+      return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
+    };
+    const start = parse(item?.start), end = parse(item?.end);
+    return Number.isFinite(start) && Number.isFinite(end) && minutesNow >= start && minutesNow < end;
+  });
+}
+
+async function refreshAssignmentDueDates(ctx: any, state: any) {
+  const assignments = Array.isArray(state?.assignments) ? state.assignments : [];
+  const now = new Date();
+  let changed = false;
+  for (const assignment of assignments) {
+    if (assignment?.completed || !assignment?.studentId || !assignment?.dueAt) continue;
+    if (new Date(assignment.dueAt).getTime() > now.getTime()) continue;
+    if (studentHasLiveClass(state, assignment.studentId, now)) continue;
+    const next = nextAssignmentClass(state, assignment.studentId, now);
+    if (next && String(assignment.dueAt) !== next.date.toISOString()) {
+      assignment.dueAt = next.date.toISOString();
+      assignment.dueClass = text(next.item?.course) || "Quran class";
+      changed = true;
+    }
+  }
+  if (changed) {
+    const { error } = await ctx.supabaseAdmin.from("academy_state")
+      .update({ state: cleanState(state), updated_at: now.toISOString() }).eq("id", 1);
+    if (error) throw error;
+  }
+  return state;
+}
+
+async function manageAssignment(ctx: any, body: any) {
+  const profile = await getCurrentProfile(ctx);
+  if (!profile || !isActive(profile)) throw new Error("Not authenticated.");
+  const role = normalizedRole(profile.role);
+  const mode = lower(body.mode);
+  if (!["admin", "teacher"].includes(role)) throw new Error("Only teachers and administrators can manage assignments.");
+  if (!["create", "complete"].includes(mode)) throw new Error("Unknown assignment operation.");
+
+  const state = await getAcademyState(ctx);
+  state.assignments = Array.isArray(state.assignments) ? state.assignments : [];
+  const me = lower(profile.username);
+  const teacherRecord = (state.teachers || []).find((item: any) => lower(item?.username) === me);
+  const teacherName = lower(teacherRecord?.name || profileName(profile));
+  const canManageStudent = (student: any) => role === "admin" ||
+    lower(student?.teacher) === me || lower(student?.teacher) === teacherName;
+
+  if (mode === "create") {
+    const studentId = text(body.studentId).slice(0, 100);
+    const title = text(body.title).slice(0, 140);
+    const instructions = text(body.instructions).slice(0, 2000);
+    const student = (state.students || []).find((item: any) => lower(item?.id) === lower(studentId));
+    if (!student) throw new Error("Choose a valid student.");
+    if (!canManageStudent(student)) throw new Error("You can only assign work to students assigned to you.");
+    if (!title) throw new Error("Enter an assignment title.");
+    const next = nextAssignmentClass(state, student.id, new Date());
+    if (!next) throw new Error("This student has no upcoming class in the timetable. Add the student's next class before creating an assignment.");
+    const assignment = {
+      id: crypto.randomUUID(),
+      studentId: student.id,
+      studentName: text(student.name),
+      title,
+      instructions,
+      createdBy: profile.username,
+      createdByName: profileName(profile),
+      createdAt: new Date().toISOString(),
+      dueAt: next.date.toISOString(),
+      dueClass: text(next.item?.course) || "Quran class",
+      completed: false,
+      completedAt: null,
+      completedBy: null,
+    };
+    state.assignments.unshift(assignment);
+    const { error } = await ctx.supabaseAdmin.from("academy_state")
+      .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw error;
+    return { ok: true, assignment };
+  }
+
+  const assignmentId = text(body.assignmentId);
+  const assignment = state.assignments.find((item: any) => text(item?.id) === assignmentId);
+  if (!assignment) throw new Error("Assignment not found.");
+  const student = (state.students || []).find((item: any) => lower(item?.id) === lower(assignment.studentId));
+  if (!student || !canManageStudent(student)) throw new Error("You can only update assignments for students assigned to you.");
+  assignment.completed = body.completed === true;
+  assignment.completedAt = assignment.completed ? new Date().toISOString() : null;
+  assignment.completedBy = assignment.completed ? profile.username : null;
+  const { error } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) throw error;
+  return { ok: true, assignment };
+}
+
 async function getState(ctx: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile) throw new Error("Not authenticated.");
@@ -1202,6 +1332,7 @@ async function getState(ctx: any) {
 
   let state = await getAcademyState(ctx);
   state = await recordMissedTimetableClasses(ctx, state);
+  state = await refreshAssignmentDueDates(ctx, state);
   const actualRole = normalizedRole(profile.role);
   const visibleState = actualRole === "student"
     ? studentState(state, profile.username)
@@ -2188,6 +2319,10 @@ export default {
 
         if (action === "get_state") {
           return json(await getState(ctx));
+        }
+
+        if (action === "manage_assignment") {
+          return json(await manageAssignment(ctx, body));
         }
 
         if (action === "save_state") {
