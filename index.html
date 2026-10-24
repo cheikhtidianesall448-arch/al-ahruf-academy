@@ -1488,18 +1488,25 @@ async function onlineApi(action,payload={}){
   async function request(accessToken){
     const headers={'Content-Type':'application/json','apikey':AHRUF_CFG.key};
     if(action!=='login')headers.Authorization='Bearer '+accessToken;
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),15000);
-    try{
-      const res=await fetch(API_BASE,{method:'POST',headers,body:JSON.stringify(body),signal:controller.signal});
-      const data=await res.json().catch(()=>({}));
-      return {res,data};
-    }catch(e){
-      if(e?.name==='AbortError')throw new Error('The academy server did not respond. Please try again.');
-      throw e;
-    }finally{
-      clearTimeout(timeout);
+    let lastNetworkError=null;
+    for(let attempt=0;attempt<2;attempt++){
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),15000);
+      try{
+        const res=await fetch(API_BASE,{method:'POST',headers,body:JSON.stringify(body),signal:controller.signal,cache:'no-store'});
+        const data=await res.json().catch(()=>({}));
+        return {res,data};
+      }catch(e){
+        if(e?.name==='AbortError')throw new Error('The academy server did not respond. Please check your connection and try again.');
+        lastNetworkError=e;
+        const networkFailure=e instanceof TypeError||/failed to fetch|networkerror|load failed/i.test(String(e?.message||e));
+        if(!networkFailure||attempt===1)throw new Error('Cannot reach the Academy server. Check your internet connection, then try again.');
+      }finally{
+        clearTimeout(timeout);
+      }
+      await new Promise(resolve=>setTimeout(resolve,650));
     }
+    throw lastNetworkError||new Error('Cannot reach the Academy server. Check your internet connection and try again.');
   }
 
   let session=null;
