@@ -5774,5 +5774,32 @@ window.ahrufOpenClassroom=function(call){if(!call||call.ended)return;if(call.cla
 })();
 </script>
 
+
+<!-- Allow readers to scroll vertically within the visible Mushaf reader area. -->
+<style id="ahrufMushafVerticalScrollFix">
+  #quranReaderContent {
+    max-height: min(78vh, 900px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y pinch-zoom !important;
+    scrollbar-gutter: stable;
+  }
+  #quranReaderContent > .quran-page-paper {
+    flex-shrink: 0 !important;
+  }
+  #quranReaderContent:focus-visible {
+    outline: 2px solid var(--gold, #b79a52);
+    outline-offset: 3px;
+  }
+  @media (max-width: 600px) {
+    #quranReaderContent {
+      max-height: 76vh !important;
+      overscroll-behavior-y: auto;
+    }
+  }
+</style>
+
 </body>
 </html>
