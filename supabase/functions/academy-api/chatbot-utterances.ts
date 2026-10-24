@@ -53,7 +53,7 @@ const typoPairs: Array<[string,string]> = [
 const frames = [
 "please help me with","I have a question about","could you explain","tell me more about","I would like to know about","can you help me understand","how can I manage","where can I find","I need information about","I want to ask about","what should I do about","can you guide me on","please tell me how to","I am asking about","I need help regarding","could you clarify","je voudrais savoir","aidez-moi avec","j'ai une question sur","expliquez-moi","comment faire pour","où trouver","j'aimerais comprendre","pouvez-vous m'aider avec","أريد أن أعرف عن","ساعدني في","لدي سؤال عن","اشرح لي","كيف يمكنني","أحتاج مساعدة في","هل يمكنك توضيح","أريد معلومات عن","من فضلك أخبرني عن","ماذا أفعل بخصوص","can you tell me","I am not sure about","I am confused about","what about","is there a way to","please guide me through"
 ];
-const normalize=(s:string)=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g," ").replace(/\s+/g," ").trim();
+const normalize=(s:string)=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/[ًٌٍَُِّْـٰ]/g,"").replace(/[^a-z0-9\u0600-\u06ff]+/g," ").replace(/\s+/g," ").trim();
 const stop=new Set(["please","could","would","help","with","about","the","for","and","what","how","where","tell","more","question","je","de","la","le","les","une","des","du","dans","sur","avec","pour","comment","vous","mon","ma","mes","من","في","عن","هل","كيف","أريد","أحتاج","مع","لي"]);
 const tokens=(s:string)=>normalize(s).split(" ").filter(t=>t.length>1&&!stop.has(t));
 const examples:Array<{text:string;canonical:string}>=[];
@@ -106,6 +106,20 @@ for (const lang of ["en","fr","ar"] as const) {
   count++;
  }
  CHAT_LOCALIZED_VARIANTS[lang]=count;
+}
+
+
+/* Second bank: 34 topics × 30 new formulations = 1,020 additional combinations per language. */
+const extraFrames = {
+ en: ["Could I get guidance about {x}?","I am trying to figure out {x}.","I am having trouble with {x}.","Walk me through {x}, please.","What is the best way to handle {x}?","I have a question concerning {x}.","Point me in the right direction for {x}.","I need details regarding {x}.","How do I get started with {x}?","I am unsure how {x} works.","Give me a quick overview of {x}.","I need more clarity on {x}.","Help me sort out {x}.","I want to check something about {x}.","What should I do for {x}?","I cannot work out {x}.","Where do I go for {x}?","I have doubts about {x}.","Make {x} easier to understand, please.","What steps should I follow for {x}?","I need help because of {x}.","Would you explain {x} for me?","I do not know where to start with {x}.","Help me find the right option for {x}.","Explain {x} in simple words, please.","I need an answer about {x}.","What is the process for {x}?","I would appreciate help with {x}.","Clear up my confusion about {x}.","I want to check that I understand {x}."],
+ fr: ["Pourriez-vous me conseiller au sujet de {x} ?","J’essaie de comprendre {x}.","J’ai des difficultés avec {x}.","Expliquez-moi {x} étape par étape.","Quelle est la meilleure façon de gérer {x} ?","J’ai une question concernant {x}.","Pouvez-vous m’orienter pour {x} ?","J’ai besoin de précisions sur {x}.","Comment commencer avec {x} ?","Je ne sais pas comment fonctionne {x}.","Donnez-moi un aperçu de {x}.","J’ai besoin d’éclaircissements sur {x}.","Aidez-moi à résoudre mon problème avec {x}.","Je voudrais vérifier quelque chose sur {x}.","Que dois-je faire pour {x} ?","Je ne comprends pas bien {x}.","Où dois-je aller pour {x} ?","J’ai des doutes concernant {x}.","Rendez {x} plus facile à comprendre.","Quelles étapes suivre pour {x} ?","J’ai besoin d’aide à propos de {x}.","Pourriez-vous m’expliquer {x} ?","Je ne sais pas par où commencer pour {x}.","Aidez-moi à choisir la bonne option pour {x}.","Expliquez {x} simplement, s’il vous plaît.","J’ai besoin d’une réponse sur {x}.","Quelle est la procédure pour {x} ?","Merci de m’aider concernant {x}.","Éclaircissez mes doutes sur {x}.","Je veux vérifier que j’ai bien compris {x}."],
+ ar: ["هل يمكن إرشادي بشأن {x}؟","أحاول فهم {x}.","أواجه صعوبة في {x}.","اشرح لي {x} خطوة بخطوة.","ما أفضل طريقة للتعامل مع {x}؟","لدي سؤال بخصوص {x}.","أرشدني إلى الطريقة المناسبة لـ{x}.","أحتاج تفاصيل عن {x}.","كيف أبدأ في {x}؟","لا أعرف كيف يعمل {x}.","أعطني فكرة عامة عن {x}.","أحتاج إلى توضيح بشأن {x}.","ساعدني في حل مشكلة {x}.","أريد التأكد من أمر حول {x}.","ماذا أفعل بشأن {x}؟","لا أفهم {x} جيدًا.","أين أجد {x}؟","لدي شكوك حول {x}.","بسّط لي {x} من فضلك.","ما خطوات القيام بـ{x}؟","أحتاج مساعدة بخصوص {x}.","هل يمكنك شرح {x} لي؟","لا أعرف من أين أبدأ في {x}.","ساعدني في اختيار الخيار المناسب لـ{x}.","اشرح {x} بكلمات بسيطة.","أحتاج إجابة عن {x}.","ما الإجراءات الخاصة بـ{x}؟","ساعدني من فضلك في {x}.","وضّح ما التبس عليّ بشأن {x}.","أريد التأكد من فهم {x} بشكل صحيح."] };
+for (const lang of ["en","fr","ar"] as const) {
+ const topics=localizedTopics[lang], framesForLanguage=extraFrames[lang];
+ for (let i=0;i<topics.length;i++) for (const frame of framesForLanguage) {
+  const item={text:frame.replace("{x}",topics[i]),canonical:intents[i].canonical};
+  examples.push(item); baseAliases.push(item);
+ }
 }
 
 const compiledExamples=examples.map(e=>({...e,phrase:normalize(e.text),wanted:tokens(e.text)}));
