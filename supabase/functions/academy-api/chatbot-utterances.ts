@@ -37,6 +37,19 @@ const intents: Intent[] = [
 {canonical:"student goals target progress planning",aliases:["my goal","learning target","memorization target","progress target","objectif","mon objectif","هدفي","هدف الحفظ"]},
 {canonical:"clarification follow-up conversation",aliases:["what do you mean","can you repeat","say that another way","I mean","actually","more details","clarify","répète","précise","ماذا تقصد","أعد الشرح"]}
 ];
+
+const synonymSets: string[][] = [["Quran lessons","Quran studies","learn to recite","Quran course","Islamic lessons","cours de Coran","études coraniques","apprendre la récitation","cours religieux","matières islamiques","دروس القرآن","تعليم القرآن","دراسة القرآن","تعلم التلاوة","الدروس الإسلامية"],["create an account","apply to join","student sign-up","enrollment process","new student admission","créer un compte","demande d'inscription","inscrire un élève","devenir étudiant","procédure d'admission","إنشاء حساب","طلب التسجيل","تسجيل طالب","الالتحاق بالأكاديمية","قبول الطلاب"],["monthly fee","lesson price","tuition amount","payment status","payment deadline","frais mensuels","prix des cours","montant à payer","état du paiement","date limite de paiement","الرسوم الشهرية","سعر الدروس","المبلغ المستحق","حالة الدفع","موعد الدفع"],["weekly class plan","lesson timetable","upcoming lesson","class calendar","scheduled lesson","planning hebdomadaire","horaire des cours","prochaine leçon","calendrier des cours","cours programmé","جدول أسبوعي","مواعيد الدروس","الحصة القادمة","تقويم الحصص","موعد الدرس"],["enter the online lesson","video lesson URL","meeting invitation","connect to the lesson","lesson access link","entrer dans le cours en ligne","lien de visioconférence","invitation à la réunion","se connecter au cours","lien d'accès au cours","الدخول إلى الدرس","رابط الدرس المرئي","دعوة الاجتماع","الاتصال بالدرس","رابط الدخول للحصة"],["attendance status","class presence record","absence record","late arrival","attendance report","statut de présence","registre des présences","historique des absences","retard au cours","rapport de présence","حالة الحضور","سجل الغياب","تأخر عن الحصة","تقرير الحضور","تاريخ الحضور"],["homework task","work to complete","assigned exercise","homework deadline","unfinished assignment","devoir à faire","travail à terminer","exercice assigné","date limite du devoir","travail non terminé","الواجب المدرسي","المهمة المطلوبة","التمرين المكلّف به","موعد تسليم الواجب","واجب لم يكتمل"],["memorization progress","surah count","Quran learning progress","surahs completed","memorization ranking","progrès de mémorisation","nombre de sourates","progression coranique","sourates terminées","classement de mémorisation","تقدم الحفظ","عدد السور","تقدم تعلم القرآن","السور المكتملة","ترتيب الحفظ"],["Quran manuscript","Mushaf pages","browse Quran pages","open Quran reader","read a Quran page","moushaf","pages du Coran","naviguer dans le Coran","ouvrir le lecteur coranique","lire une page du Coran","المصحف الشريف","صفحات المصحف","تصفح صفحات القرآن","فتح قارئ القرآن","قراءة صفحة قرآنية"],["recitation pronunciation","Tajweed guidance","articulation points","Quran recitation technique","pronunciation correction","prononciation de la récitation","conseils de tajwid","points d'articulation","technique de récitation","corriger la prononciation","نطق التلاوة","إرشادات التجويد","مخارج الأصوات","طريقة التلاوة","تصحيح النطق"],["Quran memorizing routine","retention practice","daily Hifz","memorization schedule","review what I learned","routine de mémorisation","exercice de rétention","hifz quotidien","planning de mémorisation","réviser mes acquis","روتين حفظ القرآن","تثبيت الحفظ","الحفظ اليومي","جدول الحفظ","مراجعة ما تعلمته"],["Islamic law","rules of worship","religious practice questions","Islamic rulings","understanding Fiqh","droit islamique","règles du culte","questions de pratique religieuse","avis juridiques islamiques","comprendre le fiqh","الشريعة الإسلامية","أحكام العبادات","أسئلة دينية","الأحكام الشرعية","فهم الفقه"],["my assigned ustadh","teacher allocation","name of my instructor","who is my Quran teacher","teacher details","mon oustaz","enseignant attribué","nom de mon professeur","qui enseigne mon Coran","coordonnées de l'enseignant","الأستاذ المعيّن لي","تعيين المعلم","اسم المدرس","من يعلمني القرآن","بيانات المعلم"],["inbox","chat with teacher","send a reply","message thread","academy communication","boîte de réception","discuter avec l'enseignant","envoyer une réponse","fil de discussion","communication avec l'académie","صندوق الرسائل","محادثة الأستاذ","إرسال رد","سلسلة الرسائل","التواصل مع الأكاديمية"],["access my account","username recovery","reset password","sign-in trouble","student login details","accéder à mon compte","retrouver mon identifiant","réinitialiser le mot de passe","problème de connexion","identifiants étudiant","الدخول إلى حسابي","استعادة اسم المستخدم","إعادة تعيين كلمة المرور","مشكلة تسجيل الدخول","بيانات دخول الطالب"],["preferred language","change interface language","display language","use Arabic","switch interface to French","langue préférée","changer la langue de l'interface","langue d'affichage","utiliser l'arabe","passer l'interface en français","اللغة المفضلة","تغيير لغة الواجهة","لغة العرض","استخدام العربية","تحويل الواجهة إلى الفرنسية"],["connection failure","page won't load","server connection problem","unexpected error","site malfunction","échec de connexion","la page ne charge pas","problème de connexion au serveur","erreur inattendue","dysfonctionnement du site","فشل الاتصال","الصفحة لا تفتح","مشكلة اتصال بالخادم","خطأ غير متوقع","خلل في الموقع"],["account profile","personal details","update profile photo","my student information","edit my information","profil du compte","informations personnelles","modifier ma photo","mes informations d'élève","mettre à jour mes données","ملف الحساب","البيانات الشخصية","تغيير صورة الملف","معلومات الطالب","تحديث بياناتي"],["teacher control panel","class roster","students under my care","manage my class","teacher workspace","espace enseignant","liste de classe","mes élèves inscrits","gérer ma classe","espace de travail du professeur","لوحة المعلم","قائمة الطلاب","طلابي المسجلون","إدارة صفي","مساحة عمل المعلم"],["academy control panel","manage academy records","administrator tools","academy overview","manage academy users","espace administrateur","gérer les dossiers de l'académie","outils d'administration","vue d'ensemble de l'académie","gérer les utilisateurs","لوحة الإدارة","إدارة سجلات الأكاديمية","أدوات المدير","نظرة عامة على الأكاديمية","إدارة المستخدمين"],["data confidentiality","account protection","private student records","data access permissions","secure personal information","confidentialité des données","protection du compte","dossiers privés des élèves","droits d'accès aux données","sécuriser les informations","سرية البيانات","حماية الحساب","سجلات الطلاب الخاصة","صلاحيات الوصول للبيانات","تأمين المعلومات الشخصية"],["class evaluation","score my lesson","teacher feedback","lesson review","rate the session","évaluation du cours","noter ma leçon","avis sur l'enseignant","commentaire sur le cours","évaluer la séance","تقييم الدرس","تقييم الحصة","ملاحظات للمعلم","مراجعة الدرس","تقييم الجلسة"],["class alerts","upcoming lesson reminder","new notification","reminder message","alert settings","alertes de cours","rappel du prochain cours","nouvelle notification","message de rappel","paramètres des alertes","تنبيهات الحصص","تذكير بالدرس القادم","إشعار جديد","رسالة تذكير","إعدادات التنبيه"],["academy creator","who started this academy","assistant creator","academy background","founding person","créateur de l'académie","qui a fondé cette académie","créateur de l'assistant","histoire de l'académie","fondateur","مؤسس الأكاديمية","من بدأ الأكاديمية","مبتكر المساعد","تاريخ الأكاديمية","الشخص المؤسس"],["explain it simply","walk me through this","clarify the lesson","help me understand","give me guidance","explique simplement","guide-moi étape par étape","clarifie la leçon","aide-moi à comprendre","donne-moi des conseils","اشرح ببساطة","وضح لي خطوة بخطوة","فسّر الدرس","ساعدني على الفهم","أرشدني"],["greetings and salutations","good to see you","I appreciate it","many thanks","talk to you later","salutations","ravi de vous retrouver","je vous remercie","un grand merci","à bientôt","تحياتي","سعيد بلقائك","أقدّر مساعدتك","شكراً جزيلاً","إلى اللقاء"],["my current proficiency","course difficulty level","learning stage","beginner course","advanced study level","mon niveau actuel","niveau de difficulté","étape d'apprentissage","cours pour débutant","niveau avancé","مستواي الحالي","مستوى صعوبة الدرس","مرحلة التعلم","دورة للمبتدئين","المستوى المتقدم"],["change the lesson date","move my class","I will miss the lesson","request a new time","class date change","changer la date du cours","déplacer ma séance","je manquerai le cours","demander un nouvel horaire","modifier la date du cours","تغيير تاريخ الحصة","نقل موعد الدرس","سأتغيب عن الحصة","طلب موعد جديد","تعديل موعد الدرس"],["effective study methods","improve my recitation","daily learning habits","practice recommendations","build a study routine","méthodes d'étude efficaces","améliorer ma récitation","habitudes d'apprentissage","conseils d'entraînement","créer une routine d'étude","طرق دراسة فعالة","تحسين تلاوتي","عادات التعلم اليومية","نصائح للتدرب","إنشاء روتين للدراسة"],["get technical assistance","academy help contact","support phone","report a problem","contact the support team","obtenir une assistance technique","contacter l'aide de l'académie","téléphone du support","signaler un problème","contacter l'équipe d'assistance","الحصول على مساعدة تقنية","التواصل مع دعم الأكاديمية","هاتف الدعم","الإبلاغ عن مشكلة","الاتصال بفريق المساعدة"],["parent account","my child's lessons","enroll my son","enroll my daughter","guardian information","compte parent","cours de mon enfant","inscrire mon fils","inscrire ma fille","informations du tuteur","حساب ولي الأمر","دروس طفلي","تسجيل ابني","تسجيل ابنتي","بيانات ولي الأمر"],["course handouts","lesson documents","study files","download learning resources","class notes","supports pédagogiques","documents de cours","fichiers d'étude","télécharger les ressources","notes de cours","أوراق الدروس","وثائق الحصة","ملفات الدراسة","تحميل مصادر التعلم","ملاحظات الدرس"],["learning objective","memorization goal","target for this month","progress milestone","personal learning plan","objectif d'apprentissage","objectif de mémorisation","objectif du mois","étape de progression","plan personnel d'apprentissage","هدف التعلم","هدف الحفظ","هدف هذا الشهر","مرحلة التقدم","خطة تعلم شخصية"],["please rephrase that","I need more context","can you be more specific","let me clarify","I meant something else","reformulez s'il vous plaît","j'ai besoin de précisions","pouvez-vous préciser","laissez-moi clarifier","je voulais dire autre chose","أعد صياغة ذلك","أحتاج إلى مزيد من السياق","هل يمكنك التحديد أكثر","دعني أوضح","كنت أقصد شيئاً آخر"]];
+const typoPairs: Array<[string,string]> = [
+ ["tajweed","tajwid"],["quraan","quran"],["koran","quran"],["quran","quran"],["sourat","surah"],
+ ["mushaf","mushaf"],["hifdh","hifz"],["hifz","hifz"],["tajwid","tajwid"],["oustaz","oustadh"],
+ ["ouztaz","oustadh"],["ustaz","oustadh"],["ustadh","oustadh"],["scedule","schedule"],["shedule","schedule"],
+ ["timetable","timetable"],["assigment","assignment"],["assignement","assignment"],["attendence","attendance"],
+ ["presense","presence"],["absense","absence"],["connexion","connection"],["conection","connection"],
+ ["pasword","password"],["pasword","password"],["recieve","receive"],["techer","teacher"],["teatcher","teacher"],
+ ["payement","payment"],["paiment","payment"],["insciption","inscription"],["inscription","inscription"],
+ ["francais","français"],["frensh","french"],["arabic","arabic"],["englis","english"]
+];
+
 const frames = [
 "please help me with","I have a question about","could you explain","tell me more about","I would like to know about","can you help me understand","how can I manage","where can I find","I need information about","I want to ask about","what should I do about","can you guide me on","please tell me how to","I am asking about","I need help regarding","could you clarify","je voudrais savoir","aidez-moi avec","j'ai une question sur","expliquez-moi","comment faire pour","où trouver","j'aimerais comprendre","pouvez-vous m'aider avec","أريد أن أعرف عن","ساعدني في","لدي سؤال عن","اشرح لي","كيف يمكنني","أحتاج مساعدة في","هل يمكنك توضيح","أريد معلومات عن","من فضلك أخبرني عن","ماذا أفعل بخصوص","can you tell me","I am not sure about","I am confused about","what about","is there a way to","please guide me through"
 ];
@@ -44,11 +57,37 @@ const normalize=(s:string)=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").to
 const stop=new Set(["please","could","would","help","with","about","the","for","and","what","how","where","tell","more","question","je","de","la","le","les","une","des","du","dans","sur","avec","pour","comment","vous","mon","ma","mes","من","في","عن","هل","كيف","أريد","أحتاج","مع","لي"]);
 const tokens=(s:string)=>normalize(s).split(" ").filter(t=>t.length>1&&!stop.has(t));
 const examples:Array<{text:string;canonical:string}>=[];
-for(const intent of intents) for(const alias of intent.aliases) {
- examples.push({text:alias,canonical:intent.canonical});
- for(const frame of frames) examples.push({text:frame+" "+alias,canonical:intent.canonical});
+const baseAliases:Array<{text:string;canonical:string}>=[];
+for(const [i,intent] of intents.entries()) {
+ const aliases=[...intent.aliases,...(synonymSets[i]||[])];
+ for(const alias of aliases) {
+  baseAliases.push({text:alias,canonical:intent.canonical});
+  examples.push({text:alias,canonical:intent.canonical});
+  for(const frame of frames) examples.push({text:frame+" "+alias,canonical:intent.canonical});
+ }
 }
 export const CHAT_EXAMPLE_COUNT=examples.length;
+export const CHAT_SYNONYM_COUNT=synonymSets.reduce((n,items)=>n+items.length,0);
+function editDistance(a:string,b:string):number {
+ if(Math.abs(a.length-b.length)>2)return 3;
+ const prev=Array.from({length:b.length+1},(_,i)=>i);
+ for(let i=1;i<=a.length;i++) {
+  let diagonal=prev[0]; prev[0]=i;
+  for(let j=1;j<=b.length;j++) {
+   const above=prev[j];
+   prev[j]=Math.min(prev[j]+1,prev[j-1]+1,diagonal+(a[i-1]===b[j-1]?0:1));
+   diagonal=above;
+  }
+ }
+ return prev[b.length];
+}
+function phoneticFold(s:string):string {
+ return normalize(s)
+  .replace(/ph/g,"f").replace(/ck/g,"k").replace(/qu/g,"k")
+  .replace(/th/g,"t").replace(/dh/g,"d").replace(/ou/g,"u")
+  .replace(/oo/g,"u").replace(/ee/g,"i").replace(/ea/g,"i")
+  .replace(/kh/g,"h").replace(/gh/g,"g").replace(/sh/g,"ch");
+}
 export function matchChatExample(query:string):{score:number;canonical:string}|null {
  const q=normalize(query); if(!q) return null;
  const qt=new Set(tokens(q)); if(!qt.size) return null;
@@ -60,6 +99,25 @@ export function matchChatExample(query:string):{score:number;canonical:string}|n
   const overlap=wanted.filter(t=>qt.has(t)).length; if(!overlap)continue;
   const precision=overlap/wanted.length, recall=overlap/Math.max(1,qt.size);
   const score=Math.min(.88,precision*.58+recall*.42);
+  if(score>=.56&&(!best||score>best.score))best={score,canonical:e.canonical};
+ }
+ if(best && best.score>=.72)return best;
+ // A light phonetic/typo pass on the compact base vocabulary, not every generated
+ // sentence frame. This keeps matching inexpensive while accepting common misspellings.
+ const qWords=tokens(q);
+ for(const e of baseAliases) {
+  const alias=normalize(e.text);
+  if(alias.length<4)continue;
+  const aliasWords=tokens(alias);
+  let matched=0;
+  for(const aw of aliasWords) {
+   if(qWords.some(qw=>qw===aw || phoneticFold(qw)===phoneticFold(aw) ||
+     (Math.min(qw.length,aw.length)>=4 && editDistance(qw,aw)<= (Math.max(qw.length,aw.length)>=8?2:1)))) matched++;
+  }
+  if(!matched)continue;
+  const precision=matched/Math.max(1,aliasWords.length);
+  const recall=matched/Math.max(1,qWords.length);
+  const score=Math.min(.79,.48+precision*.19+recall*.12);
   if(score>=.56&&(!best||score>best.score))best={score,canonical:e.canonical};
  }
  return best;
