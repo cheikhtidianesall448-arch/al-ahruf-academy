@@ -1209,7 +1209,7 @@ function nextAssignmentClass(state: any, studentId: string, now = new Date()) {
   for (const item of Array.isArray(state?.timetable) ? state.timetable : []) {
     if (!timetableStudentMatches(item, studentId)) continue;
     const dayIndex = dayNames.findIndex((day) => lower(day) === lower(item?.day));
-    const match = text(item?.start).match(/^(\\d{1,2}):(\\d{2})$/);
+    const match = text(item?.start).match(/^(\d{1,2}):(\d{2})$/);
     if (dayIndex < 0 || !match) continue;
     const hour = Number(match[1]), minute = Number(match[2]);
     if (hour > 23 || minute > 59) continue;
@@ -1232,7 +1232,7 @@ function studentHasLiveClass(state: any, studentId: string, now = new Date()) {
   return (Array.isArray(state?.timetable) ? state.timetable : []).some((item: any) => {
     if (!timetableStudentMatches(item, studentId) || lower(item?.day) !== lower(today)) return false;
     const parse = (value: any) => {
-      const match = text(value).match(/^(\\d{1,2}):(\\d{2})$/);
+      const match = text(value).match(/^(\d{1,2}):(\d{2})$/);
       return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
     };
     const start = parse(item?.start), end = parse(item?.end);
