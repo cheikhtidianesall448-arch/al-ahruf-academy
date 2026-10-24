@@ -94,7 +94,7 @@ const localizedFrames = {
   "أخبرني عن {x}.","أحتاج إلى مساعدة بشأن {x}.","هل يمكنك شرح {x}؟","لدي سؤال عن {x}.","أين أجد معلومات عن {x}؟","كيف أستخدم {x}؟","ساعدني على فهم {x}.","أريد تفاصيل عن {x}.","هل يمكنك تزويدي بمعلومات حول {x}؟","أريد أن أسأل عن {x}.","ماذا ينبغي أن أعرف عن {x}؟","هل يمكنك إرشادي بخصوص {x}؟","أبحث عن مساعدة في {x}.","من فضلك وضح لي {x}.","كيف يمكنني التعامل مع {x}؟","أريد معرفة المزيد عن {x}.","كيف يعمل {x}؟","لا أفهم {x} جيدًا.","أحتاج إلى تفسير {x}.","إلى أين أذهب بخصوص {x}؟","هل يمكنك مساعدتي في {x}؟","أعطني مزيدًا من التفاصيل عن {x}.","أريد فهم {x} بشكل أفضل.","ما الخيارات المتاحة لي بخصوص {x}؟","هل يمكنك الإجابة عن سؤال حول {x}؟","أحتاج إلى توجيه بشأن {x}.","كيف أصل إلى {x}؟","أحتاج إلى دعم يتعلق بـ{x}.","أود أن أسألك عن {x}.","ماذا يمكنك أن تخبرني عن {x}؟"
  ]
 };
-export const CHAT_LOCALIZED_VARIANTS = { en: 0, fr: 0, ar: 0 };
+export const CHAT_LOCALIZED_VARIANTS: Record<"en" | "fr" | "ar", number> = { en: 0, fr: 0, ar: 0 };
 for (const lang of ["en","fr","ar"] as const) {
  const topics=localizedTopics[lang], localized=localizedFrames[lang];
  let count=0;
@@ -108,6 +108,7 @@ for (const lang of ["en","fr","ar"] as const) {
  CHAT_LOCALIZED_VARIANTS[lang]=count;
 }
 
+const compiledExamples=examples.map(e=>({...e,phrase:normalize(e.text),wanted:tokens(e.text)}));
 export const CHAT_EXAMPLE_COUNT=examples.length;
 export const CHAT_SYNONYM_COUNT=synonymSets.reduce((n,items)=>n+items.length,0);
 function editDistance(a:string,b:string):number {
@@ -134,10 +135,10 @@ export function matchChatExample(query:string):{score:number;canonical:string}|n
  const q=normalize(query); if(!q) return null;
  const qt=new Set(tokens(q)); if(!qt.size) return null;
  let best:{score:number;canonical:string}|null=null;
- for(const e of examples) {
-  const phrase=normalize(e.text);
+ for(const e of compiledExamples) {
+  const phrase=e.phrase;
   if(q.includes(phrase)) { const score=Math.min(.99,.78+Math.min(.21,phrase.length/180)); if(!best||score>best.score)best={score,canonical:e.canonical}; continue; }
-  const wanted=tokens(e.text); if(!wanted.length)continue;
+  const wanted=e.wanted; if(!wanted.length)continue;
   const overlap=wanted.filter(t=>qt.has(t)).length; if(!overlap)continue;
   const precision=overlap/wanted.length, recall=overlap/Math.max(1,qt.size);
   const score=Math.min(.88,precision*.58+recall*.42);
