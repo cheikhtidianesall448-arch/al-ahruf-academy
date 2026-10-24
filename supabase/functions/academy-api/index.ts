@@ -2379,11 +2379,51 @@ export default {
 
         return errorResponse(`Unknown action: ${action}`, 404);
       } catch (error: any) {
+        const message = text(error?.message) || "Server error.";
         console.error("academy-api error:", error);
-        return errorResponse(
-          text(error?.message) || "Server error.",
-          Number.isInteger(error?.status) ? error.status : 500,
-        );
+
+        // Expected client/auth/permission failures must not be reported as HTTP 500.
+        // Preserve explicit status codes from downstream services.
+        let status = Number.isInteger(error?.status) ? error.status : 500;
+        if (!Number.isInteger(error?.status)) {
+          const normalizedMessage = lower(message);
+          if (
+            normalizedMessage === "invalid username or password." ||
+            normalizedMessage === "no account was found with that username or student id." ||
+            normalizedMessage === "your account is missing its academy profile." ||
+            normalizedMessage === "not authenticated." ||
+            normalizedMessage === "this account is inactive."
+          ) {
+            status = 401;
+          } else if (
+            normalizedMessage.includes("permission denied") ||
+            normalizedMessage.includes("only teachers and administrators") ||
+            normalizedMessage.includes("only teachers") ||
+            normalizedMessage.includes("only administrators") ||
+            normalizedMessage.includes("only the administrator") ||
+            normalizedMessage.includes("can only") ||
+            normalizedMessage.includes("registered as ") && normalizedMessage.includes(", not ")
+          ) {
+            status = 403;
+          } else if (normalizedMessage.includes("not found")) {
+            status = 404;
+          } else if (
+            normalizedMessage.includes("required") ||
+            normalizedMessage.includes("invalid") ||
+            normalizedMessage.includes("must ") ||
+            normalizedMessage.includes("choose ") ||
+            normalizedMessage.includes("enter ") ||
+            normalizedMessage.includes("unknown action") ||
+            normalizedMessage.includes("unknown assignment operation") ||
+            normalizedMessage.includes("cannot have more than")
+          ) {
+            status = 400;
+          } else if (normalizedMessage.includes("more than one active administrator")) {
+            status = 409;
+          }
+        }
+
+        return errorResponse(message, status);
       }
     },
   ),
