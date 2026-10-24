@@ -66,6 +66,48 @@ for(const [i,intent] of intents.entries()) {
   for(const frame of frames) examples.push({text:frame+" "+alias,canonical:intent.canonical});
  }
 }
+
+/*
+ * Language-balanced natural query paraphrases.
+ * These are separate from the shared sentence-frame combinations above:
+ * 34 topics × 30 localized formulations = 1,020 query variants per language.
+ */
+const localizedTopics = {
+ en: [
+  "Academy courses","registration","fees and tuition","class timetable","online class link","attendance record","homework assignment","surah progress","Quran reader","Tajwid rules","Hifz memorization","Fiqh lessons","my assigned teacher","messages","account login","language settings","technical problem","student profile","teacher dashboard","administrator dashboard","privacy and security","class feedback","notifications","Academy founder","learning help","greetings","learning level","rescheduling a class","study advice","technical support","parent registration","course materials","learning goals","clarifying a previous answer"
+ ],
+ fr: [
+  "les cours de l’Académie","l’inscription","les frais de scolarité","l’emploi du temps","le lien du cours en ligne","le relevé de présence","les devoirs","ma progression dans les sourates","le lecteur du Coran","les règles du tajwid","la mémorisation du hifz","les cours de fiqh","mon professeur attitré","les messages","la connexion au compte","les paramètres de langue","un problème technique","le profil de l’élève","le tableau de bord enseignant","le tableau de bord administrateur","la confidentialité et la sécurité","l’avis sur un cours","les notifications","le fondateur de l’Académie","l’aide à l’apprentissage","les salutations","le niveau d’apprentissage","le changement d’horaire d’un cours","les conseils d’étude","l’assistance technique","l’inscription d’un enfant","les supports de cours","les objectifs d’apprentissage","la clarification d’une réponse précédente"
+ ],
+ ar: [
+  "دورات الأكاديمية","التسجيل","الرسوم الدراسية","جدول الحصص","رابط الحصة عبر الإنترنت","سجل الحضور","الواجبات","تقدمي في السور","قارئ القرآن","أحكام التجويد","حفظ القرآن","دروس الفقه","المعلم المخصص لي","الرسائل","تسجيل الدخول إلى الحساب","إعدادات اللغة","مشكلة تقنية","ملف الطالب","لوحة المعلم","لوحة المسؤول","الخصوصية والأمان","تقييم الحصة","الإشعارات","مؤسس الأكاديمية","المساعدة في التعلم","التحية","مستوى التعلم","تغيير موعد الحصة","نصائح الدراسة","الدعم الفني","تسجيل طفل","المواد التعليمية","أهداف التعلم","توضيح إجابة سابقة"
+ ]
+};
+const localizedFrames = {
+ en: [
+  "Tell me about {x}.","I need help with {x}.","Can you explain {x}?","I have a question about {x}.","Where can I find information about {x}?","How do I use {x}?","Please help me understand {x}.","I would like details about {x}.","Could you give me information on {x}?","I want to ask about {x}.","What should I know about {x}?","Can you guide me regarding {x}?","I am looking for help with {x}.","Please clarify {x} for me.","How can I manage {x}?","I would like to know more about {x}.","Could you tell me how {x} works?","I am confused about {x}.","I need an explanation of {x}.","Where do I go for {x}?","Can you assist me with {x}?","Please give me more details on {x}.","I want to understand {x} better.","What are my options for {x}?","Can you help me with a question on {x}?","I would appreciate guidance about {x}.","Could you explain how to access {x}?","I need support related to {x}.","Let me ask you about {x}.","What can you tell me regarding {x}?"
+ ],
+ fr: [
+  "Parlez-moi de {x}.","J’ai besoin d’aide concernant {x}.","Pouvez-vous expliquer {x} ?","J’ai une question sur {x}.","Où puis-je trouver des informations sur {x} ?","Comment utiliser {x} ?","Aidez-moi à comprendre {x}.","Je voudrais des détails sur {x}.","Pouvez-vous me renseigner sur {x} ?","Je souhaite poser une question sur {x}.","Que dois-je savoir sur {x} ?","Pouvez-vous me guider concernant {x} ?","Je cherche de l’aide pour {x}.","Pouvez-vous clarifier {x} pour moi ?","Comment puis-je gérer {x} ?","J’aimerais en savoir plus sur {x}.","Comment fonctionne {x} ?","Je ne comprends pas bien {x}.","J’ai besoin d’une explication sur {x}.","Où dois-je aller pour {x} ?","Pouvez-vous m’aider avec {x} ?","Donnez-moi plus de détails sur {x}, s’il vous plaît.","Je veux mieux comprendre {x}.","Quelles sont mes options pour {x} ?","Pouvez-vous répondre à une question sur {x} ?","J’aimerais recevoir des conseils sur {x}.","Comment accéder à {x} ?","J’ai besoin d’assistance concernant {x}.","Je voudrais vous interroger sur {x}.","Que pouvez-vous me dire au sujet de {x} ?"
+ ],
+ ar: [
+  "أخبرني عن {x}.","أحتاج إلى مساعدة بشأن {x}.","هل يمكنك شرح {x}؟","لدي سؤال عن {x}.","أين أجد معلومات عن {x}؟","كيف أستخدم {x}؟","ساعدني على فهم {x}.","أريد تفاصيل عن {x}.","هل يمكنك تزويدي بمعلومات حول {x}؟","أريد أن أسأل عن {x}.","ماذا ينبغي أن أعرف عن {x}؟","هل يمكنك إرشادي بخصوص {x}؟","أبحث عن مساعدة في {x}.","من فضلك وضح لي {x}.","كيف يمكنني التعامل مع {x}؟","أريد معرفة المزيد عن {x}.","كيف يعمل {x}؟","لا أفهم {x} جيدًا.","أحتاج إلى تفسير {x}.","إلى أين أذهب بخصوص {x}؟","هل يمكنك مساعدتي في {x}؟","أعطني مزيدًا من التفاصيل عن {x}.","أريد فهم {x} بشكل أفضل.","ما الخيارات المتاحة لي بخصوص {x}؟","هل يمكنك الإجابة عن سؤال حول {x}؟","أحتاج إلى توجيه بشأن {x}.","كيف أصل إلى {x}؟","أحتاج إلى دعم يتعلق بـ{x}.","أود أن أسألك عن {x}.","ماذا يمكنك أن تخبرني عن {x}؟"
+ ]
+};
+export const CHAT_LOCALIZED_VARIANTS = { en: 0, fr: 0, ar: 0 };
+for (const lang of ["en","fr","ar"] as const) {
+ const topics=localizedTopics[lang], localized=localizedFrames[lang];
+ let count=0;
+ for (const topic of topics) for (const frame of localized) {
+  const text=frame.replace("{x}",topic);
+  const item={text,canonical:intents[topics.indexOf(topic)].canonical};
+  examples.push(item);
+  baseAliases.push(item);
+  count++;
+ }
+ CHAT_LOCALIZED_VARIANTS[lang]=count;
+}
+
 export const CHAT_EXAMPLE_COUNT=examples.length;
 export const CHAT_SYNONYM_COUNT=synonymSets.reduce((n,items)=>n+items.length,0);
 function editDistance(a:string,b:string):number {
