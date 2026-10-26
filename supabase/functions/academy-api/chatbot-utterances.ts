@@ -215,7 +215,6 @@ for (const lang of ["en","fr","ar"] as const) {
   for(const start of starts) for(const end of ends) {
    const item={text:start.replace("{x}",topics[i])+" "+end,canonical:intents[i].canonical};
    examples.push(item);
-   baseAliases.push(item);
    count++;
   }
  }
