@@ -1,5 +1,5 @@
 import { withSupabase } from "npm:@supabase/server@^1";
-import { matchChatExample } from "./chatbot-utterances.ts";
+import { detectChatLanguages, matchChatExample } from "./chatbot-utterances.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1664,17 +1664,7 @@ async function academyChat(ctx: any, body: any) {
   const latest = [...messages].reverse().find((m: any) => lower(m?.role) === "user");
   // Detect languages in the latest user message itself. If it contains multiple languages,
   // every reply is returned in each detected language. UI language does not override the message.
-  const detectLanguages = (value: any): string[] => {
-    const sample = text(value).normalize("NFC").toLowerCase();
-    const found: string[] = [];
-    if (/[\u0600-\u06ff]/.test(sample)) found.push("ar");
-    const hasFrench = /[àâçéèêëîïôùûüÿœæ]/i.test(sample) ||
-      /\b(bonjour|bonsoir|salut|merci|oui|non|pourquoi|comment|combien|enseignants?|professeurs?|élèves|eleves|cours|emploi du temps|présence|presence|paiement|je veux|est-ce|s'il vous plaît|qu'est-ce|avec|mais|pour|dans|est|les|des|de|du|au|je|suis|c'est|quand|où|ou|nous|ça|langue|répondre|dernière|utilisateur|toutes|chaque|une|mon|ma|mes|votre|vous|ton|ta|quel|quelle|rôle|role|rol|roll|roule|mission|fonction|créé|createur|développe|developpe|combien|comment)\b/i.test(sample);
-    const hasEnglish = /\b(hello|hi|hey|please|thanks|thank you|yes|no|why|how|what|when|where|teachers?|students?|classes?|attendance|timetable|schedule|payment|help|and|also|the|is|are|can|could|would|do|does|my|your|with|but|for|from|about|tell|me|want|need|today|there|many|much|should|response|respond|using|language|last|recent|mixed|every|use|answer|chatbot|user|message|speak|speaking|in)\b/i.test(sample);
-    if (hasFrench) found.push("fr");
-    if (hasEnglish) found.push("en");
-    return found;
-  };
+  const detectLanguages = detectChatLanguages;
   const latestText = text(latest?.content);
   const explicitLanguages = detectLanguages(latestText);
   const priorLanguages = [...messages].reverse()
