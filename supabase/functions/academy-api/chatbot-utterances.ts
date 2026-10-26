@@ -309,8 +309,8 @@ export function detectChatLanguages(value: unknown): string[] {
  if(/\b(c'est|j'ai|j'en|j'étais|qu'est-ce|n'est|l'académie|s'il|j'aimerais|j'aimerais|j'ai besoin|est-ce que)\b/i.test(raw)) fr+=2;
  // English syntax markers help distinguish English from French when vocabulary overlaps.
  if(/\b(the|and|with|from|about|please|what|where|when|how|why|can|could|would|my|your|is|are|do|does|i am|i'm|i want|i need|tell me)\b/i.test(raw)) en+=1;
- if(fr>=1 && (fr>=en || fr>=2)) result.push("fr");
- if(en>=1 && (en>fr || en>=2)) result.push("en");
+ if(fr>=1) result.push("fr");
+ if(en>=1) result.push("en");
  // For a clearly Latin-script message with no recognized markers, leave language
  // unresolved so the caller can fall back to recent conversation context.
  if(!result.length && latinChars>0) return [];
