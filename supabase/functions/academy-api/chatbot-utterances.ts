@@ -293,26 +293,25 @@ export function matchChatExample(query:string):{score:number;canonical:string}|n
 export function detectChatLanguages(value: unknown): string[] {
  const raw=String(value ?? "").normalize("NFC").toLowerCase();
  if(!raw.trim()) return [];
+ const normalized=raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[’']/g," ").replace(/[^\p{L}\p{N}\s]/gu," ").replace(/\s+/g," ").trim();
+ // A direct language instruction is stronger than the language of the words used to give it.
+ if(/^(french|francais|francaise|en francais|in french|reponds moi en francais|repondez moi en francais|answer in french|reply in french|respond in french|speak french|write in french)$/.test(normalized) || /\b(answer|reply|respond|speak|write|reponds|repondez|parle|parlez|ecris|ecrivez)\b.{0,50}\b(french|francais|francaise)\b/.test(normalized) || /\b(en|in)\s+(french|francais|francaise)\b/.test(normalized)) return ["fr"];
+ if(/^(arabic|arabe|en arabe|in arabic|answer in arabic|reply in arabic|respond in arabic|العربية|بالعربية|تحدث بالعربية|أجب بالعربية)$/.test(normalized) || /\b(answer|reply|respond|speak|write)\b.{0,50}\b(arabic|arabe)\b/.test(normalized)) return ["ar"];
+ if(/^(english|anglais|en anglais|in english|answer in english|reply in english|respond in english)$/.test(normalized) || /\b(answer|reply|respond|speak|write)\b.{0,50}\b(english|anglais)\b/.test(normalized)) return ["en"];
  const result:string[]=[];
  const arabicChars=(raw.match(/[\u0600-\u06ff]/g)||[]).length;
  const latinChars=(raw.match(/[a-zà-öø-ÿœæ]/g)||[]).length;
  if(arabicChars>=1) result.push("ar");
- const normalized=raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
  const words=new Set(normalized.match(/[a-z]+/g)||[]);
- const frenchWords=new Set(("bonjour bonsoir salut merci mercis oui non pourquoi comment combien quand ou où avec mais pour dans chez sans sur sous est sont suis sommes avez avez-vous vous votre vos nous je j'aime j'ai je veux je voudrais besoin aide aidez explique expliquez comprendre cours coran recitation récitation tajwid enseignant enseigants professeur professeurs eleve eleves élève élèves inscription paiement facture frais horaire emploi temps presence présence absence devoirs devoir prochaine prochain prochaine demain aujourd hui aujourd'hui academie académie langue francais français s'il vous plait plaît pouvez pouvez-vous quel quelle quels quelles mon ma mes ton ta tes role rôle mission fonction bienvenue bonnejour").split(/\s+/));
- const englishWords=new Set(("hello hi hey greetings thanks thankyou please yes yeah nope no why how what when where who which can could would should do does did is are am was were have has had my your yours our their me tell explain help need want looking find class classes student students teacher teachers course courses quran recitation tajweed hifz revision assignment homework attendance timetable schedule payment invoice fee fees price cost today tomorrow next account password login language english french arabic please platform academy howdy morning afternoon evening good").split(/\s+/));
+ const frenchWords=new Set("bonjour bonsoir salut merci mercis oui non pourquoi comment combien quand avec mais pour dans chez sans sur sous est sont suis sommes avez vous votre vos nous je besoin aide aidez explique expliquez comprendre cours coran recitation tajwid enseignant enseigants professeur professeurs eleve eleves inscription paiement facture frais horaire emploi temps presence absence devoirs prochaine prochain demain aujourd hui academie langue francais francaise reponds repondez parle parlez".split(/\s+/));
+ const englishWords=new Set("hello hi hey greetings thanks thankyou please yes yeah nope no why how what when where who which can could would should do does did is are am was were have has had my your yours our their me tell explain help need want looking find class classes student students teacher teachers course courses quran recitation tajweed hifz revision assignment homework attendance timetable schedule payment invoice fee fees price cost today tomorrow next account password login language english french arabic platform academy howdy morning afternoon evening good".split(/\s+/));
  let fr=0,en=0;
  for(const w of words){if(frenchWords.has(w))fr+=1;if(englishWords.has(w))en+=1;}
- // Strong French orthography and common contractions are useful evidence, but
- // accents alone never force French for a single borrowed name.
  if(/[àâçéèêëîïôùûüÿœæ]/i.test(raw)) fr+=2;
- if(/\b(c'est|j'ai|j'en|j'étais|qu'est-ce|n'est|l'académie|s'il|j'aimerais|j'aimerais|j'ai besoin|est-ce que)\b/i.test(raw)) fr+=2;
- // English syntax markers help distinguish English from French when vocabulary overlaps.
- if(/\b(the|and|with|from|about|please|what|where|when|how|why|can|could|would|my|your|is|are|do|does|i am|i'm|i want|i need|tell me)\b/i.test(raw)) en+=1;
+ if(/\b(c est|j ai|j en|j etais|qu est ce|n est|l academie|s il|j aimerais|j ai besoin|est ce que)\b/i.test(normalized)) fr+=2;
+ if(/\b(the|and|with|from|about|please|what|where|when|how|why|can|could|would|my|your|is|are|do|does|i am|i want|i need|tell me)\b/i.test(normalized)) en+=1;
  if(fr>=1) result.push("fr");
  if(en>=1) result.push("en");
- // For a clearly Latin-script message with no recognized markers, leave language
- // unresolved so the caller can fall back to recent conversation context.
  if(!result.length && latinChars>0) return [];
  return result;
 }
