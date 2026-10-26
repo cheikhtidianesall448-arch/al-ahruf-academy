@@ -122,6 +122,111 @@ for (const lang of ["en","fr","ar"] as const) {
  }
 }
 
+
+/*
+ * Expanded multilingual coverage: 34 topics × 90 carefully composed follow-up
+ * formulations = 3,060 additional variants in EACH language. Together with the
+ * two existing 1,020-variant banks, this gives 5,100 localized examples per
+ * language before the shared synonym and typo banks.
+ */
+const expandedFrames = {
+ en: {
+  starts: [
+   "Please help me with {x}",
+   "Could you explain {x}",
+   "I would like some guidance about {x}",
+   "Can you walk me through {x}",
+   "I need to understand {x}",
+   "Could you give me a clear answer about {x}",
+   "Please show me how to handle {x}",
+   "I have a question regarding {x}",
+   "Would you help me figure out {x}",
+   "I am looking for practical information about {x}"
+  ],
+  ends: [
+   "so I know what to do next.",
+   "in simple, clear language.",
+   "with the steps in the right order.",
+   "and tell me where to find it.",
+   "so I can use the platform correctly.",
+   "without leaving out the important details.",
+   "with an example if that would help.",
+   "and point out anything I should check.",
+   "so I can make progress confidently."
+  ]
+ },
+ fr: {
+  starts: [
+   "Aidez-moi à comprendre {x}",
+   "Pourriez-vous m’expliquer {x}",
+   "J’aimerais être guidé au sujet de {x}",
+   "Pouvez-vous me montrer comment gérer {x}",
+   "J’ai besoin de mieux comprendre {x}",
+   "Pourriez-vous me donner une réponse claire sur {x}",
+   "Montrez-moi comment procéder pour {x}",
+   "J’ai une question concernant {x}",
+   "Pourriez-vous m’aider à clarifier {x}",
+   "Je cherche des informations pratiques sur {x}"
+  ],
+  ends: [
+   "afin de savoir quoi faire ensuite.",
+   "avec des mots simples et clairs.",
+   "en présentant les étapes dans l’ordre.",
+   "et indiquez-moi où trouver cette option.",
+   "pour que je puisse bien utiliser la plateforme.",
+   "sans oublier les détails importants.",
+   "avec un exemple si nécessaire.",
+   "en précisant les points à vérifier.",
+   "afin que je puisse avancer sereinement."
+  ]
+ },
+ ar: {
+  starts: [
+   "من فضلك ساعدني في فهم {x}",
+   "هل يمكنك شرح {x} لي",
+   "أود الحصول على إرشاد بشأن {x}",
+   "هل يمكنك توضيح كيفية التعامل مع {x}",
+   "أحتاج إلى فهم {x} بشكل أفضل",
+   "هل يمكنك إعطائي إجابة واضحة عن {x}",
+   "أرني كيف أتعامل مع {x}",
+   "لدي سؤال بخصوص {x}",
+   "هل يمكنك مساعدتي في توضيح {x}",
+   "أبحث عن معلومات عملية حول {x}"
+  ],
+  ends: [
+   "حتى أعرف ما ينبغي فعله بعد ذلك.",
+   "بلغة بسيطة وواضحة.",
+   "مع ترتيب الخطوات بشكل صحيح.",
+   "وأخبرني أين أجد هذا الخيار.",
+   "حتى أستخدم المنصة بطريقة صحيحة.",
+   "مع عدم إغفال التفاصيل المهمة.",
+   "مع مثال إذا كان ذلك مفيدًا.",
+   "مع توضيح الأمور التي ينبغي التحقق منها.",
+   "حتى أتمكن من المتابعة بثقة."
+  ]
+ }
+};
+export const CHAT_EXPANDED_VARIANTS: Record<"en" | "fr" | "ar", number> = { en: 0, fr: 0, ar: 0 };
+for (const lang of ["en","fr","ar"] as const) {
+ const topics=localizedTopics[lang];
+ const {starts,ends}=expandedFrames[lang];
+ let count=0;
+ for(let i=0;i<topics.length;i++) {
+  for(const start of starts) for(const end of ends) {
+   const item={text:start.replace("{x}",topics[i])+" "+end,canonical:intents[i].canonical};
+   examples.push(item);
+   baseAliases.push(item);
+   count++;
+  }
+ }
+ CHAT_EXPANDED_VARIANTS[lang]=count;
+}
+export const CHAT_LOCALIZED_TOTAL: Record<"en" | "fr" | "ar", number> = {
+ en: CHAT_LOCALIZED_VARIANTS.en + 1020 + CHAT_EXPANDED_VARIANTS.en,
+ fr: CHAT_LOCALIZED_VARIANTS.fr + 1020 + CHAT_EXPANDED_VARIANTS.fr,
+ ar: CHAT_LOCALIZED_VARIANTS.ar + 1020 + CHAT_EXPANDED_VARIANTS.ar
+};
+
 const compiledExamples=examples.map(e=>({...e,phrase:normalize(e.text),wanted:tokens(e.text)}));
 export const CHAT_EXAMPLE_COUNT=examples.length;
 export const CHAT_SYNONYM_COUNT=synonymSets.reduce((n,items)=>n+items.length,0);
