@@ -1744,6 +1744,14 @@ async function academyChat(ctx: any, body: any) {
     return { reply: replyLanguages.map((language: string) => translations[language]).filter(Boolean).join("\\n\\n") };
   };
 
+  const isLanguageRequest = /^(french|francais|francaise|english|anglais|arabic|arabe|answer in french|reply in french|respond in french|answer in english|reply in english|answer in arabic|reply in arabic)$/.test(q) || /\b(reponds|repondez|answer|reply|respond|speak|write)\b.{0,45}\b(french|francais|francaise|english|anglais|arabic|arabe)\b/.test(q) || /\b(en|in)\s+(french|francais|francaise|english|anglais|arabic|arabe)\b/.test(q);
+  if (isLanguageRequest) {
+    const previousTopics = priorUserTurns.map((m: any) => normalizeQuestion(text(m.content))).join(" ");
+    const askedAboutCourses = /\b(course|courses|class|classes|lesson|lessons|cours|lecon|lecons|quran|coran|tajwid|tajweed|hifz|fiqh|en ligne)\b/.test(previousTopics);
+    if (askedAboutCourses) return tr("Of course. Al-Ahruf offers live online Qur’an reading, Tajwid, Hifz, revision, and Fiqh. The administrator can confirm teachers, schedules, and current availability.", "Bien sûr. Al-Ahruf propose des cours en direct en ligne de lecture du Coran, de tajwid, de hifz, de révision et de fiqh. L’administrateur peut confirmer les enseignants, les horaires et les disponibilités actuelles.", "بالطبع. تقدم أكاديمية الأحرف دروسًا مباشرة عبر الإنترنت في قراءة القرآن والتجويد والحفظ والمراجعة والفقه. يمكن للمسؤول تأكيد المعلمين والمواعيد والتوافر الحالي.");
+    return tr("Of course. I will continue in English. What would you like to know about the Academy?", "Bien sûr. Je continuerai en français. Que souhaitez-vous savoir sur l’Académie ?", "بالطبع، سأتابع باللغة العربية. ما الذي تريد معرفته عن الأكاديمية؟");
+  }
+
   // High-priority intent routes: answer dashboard analytics before broad classification.
   const fastGenderText = intentQ.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const fastMentionsGender = /\b(male|males|men|boys|female|females|women|girls|gender|sex)\b|garçons?|filles?|masculin|féminin|ذكور|إناث|الطلاب الذكور|الطالبات/i.test(fastGenderText);
