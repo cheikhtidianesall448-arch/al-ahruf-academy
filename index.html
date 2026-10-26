@@ -5416,6 +5416,7 @@ setInterval(pollLiveMessages,3000);
    'هل تريد معرفة المزيد عن الدروس، أو طريقة الدراسة عبر الإنترنت، أو كيفية التسجيل؟'
   );
   if(!raw)return next;
+  if(explicitLanguagePreference(raw))return answer('Of course. I will answer in English. What would you like to know about the Academy?','Bien sûr. Je vous répondrai en français. Que souhaitez-vous savoir sur l’Académie ?','بالطبع، سأجيبك باللغة العربية. ما الذي تريد معرفته عن الأكاديمية؟');
   if(has(/\b(thank\w*|thx|thanx|appreciate|merci\w*|remerci\w*)\b/)||/(شكرا|شكرًا|شكراً|جزاك الله خيرا|بارك الله فيك|مشكور|مشكورة)/u.test(raw))
    return answer('You’re very welcome! I’m glad to help. What would you like to know about Al-Ahruf Academy?',
     'Avec plaisir ! Je suis heureux de vous renseigner. Que souhaitez-vous savoir sur Al-Ahruf Academy ?',
