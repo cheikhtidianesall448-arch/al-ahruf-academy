@@ -1654,8 +1654,6 @@ async function generateAcademyModelReply(messages: any[], languages: string[], r
         messages: [{ role: "system", content: instructions }, ...safeMessages],
         max_tokens: 450,
         temperature: 0.35,
-        // Fail closed if no eligible free endpoint meets this provider data policy.
-        provider: { data_collection: "deny" }
       })
     });
     if (!response.ok) {
