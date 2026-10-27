@@ -1606,7 +1606,7 @@ async function saveState(ctx: any, body: any) {
 
 
 async function generateAcademyModelReply(messages: any[], languages: string[], role: string): Promise<string | null> {
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
   if (!apiKey) return null;
   const safeMessages = (Array.isArray(messages) ? messages : [])
     .filter((item: any) => ["user", "assistant"].includes(lower(item?.role)))
