@@ -13,6 +13,8 @@ Configure these in the Supabase Dashboard for the academy's active project, unde
 
 Do not add the key to GitHub Pages environment variables or any `VITE_*` / frontend setting. A key must be configured by the project owner before generative replies can be tested.
 
+The code has been deployed to the active Supabase project (`bxwrdutoauonbfdbrhsu`, Edge Function version 152). The OpenRouter provider has not been live-tested because the API key has not been configured through this workflow.
+
 ## Free-only behavior
 
 - Default model is `openrouter/free`, which routes to eligible free model endpoints.
@@ -30,6 +32,8 @@ supabase functions deploy academy-api --project-ref bxwrdutoauonbfdbrhsu
 ```
 
 Never put the API key directly in a shell command that may be saved in history. Prefer the Supabase Dashboard's secret manager or a protected local environment file.
+
+**GitHub Actions note:** the latest automatic deployment attempt failed because the repository secret `SUPABASE_ACCESS_TOKEN` was rejected by Supabase as an invalid access token. Replace that GitHub Actions secret with a current Supabase personal access token before relying on automatic deployments. The direct Supabase deployment for version 152 succeeded.
 
 ## Smoke tests after deployment
 
