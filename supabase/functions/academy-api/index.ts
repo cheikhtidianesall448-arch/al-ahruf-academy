@@ -1350,11 +1350,24 @@ async function manageBonus(ctx: any, body: any) {
     const teacherName = lower(record?.name || profileName(profile));
     if (lower(student.teacher) !== teacher && lower(student.teacher) !== teacherName) throw new Error("You can only award bonuses to students assigned to you.");
   }
-  const bonus = { id: crypto.randomUUID(), studentId: student.id, studentName: text(student.name), points, reason, note, awardedBy: profileName(profile), awardedById: text(profile.username), createdAt: new Date().toISOString() };
-  state.bonuses.unshift(bonus);
+  const bonusId = text(body.bonusId).slice(0, 100);
+  let bonus: any;
+  if (bonusId) {
+    bonus = state.bonuses.find((item: any) => text(item?.id) === bonusId && lower(item?.studentId) === lower(student.id));
+    if (!bonus) throw new Error("Bonus record not found.");
+    bonus.points = points;
+    bonus.reason = reason;
+    bonus.note = note;
+    bonus.editedAt = new Date().toISOString();
+    bonus.editedBy = profileName(profile);
+    bonus.editedById = text(profile.username);
+  } else {
+    bonus = { id: crypto.randomUUID(), studentId: student.id, studentName: text(student.name), points, reason, note, awardedBy: profileName(profile), awardedById: text(profile.username), createdAt: new Date().toISOString() };
+    state.bonuses.unshift(bonus);
+  }
   const { error } = await ctx.supabaseAdmin.from("academy_state").update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
   if (error) throw error;
-  return { ok: true, bonus };
+  return { ok: true, bonus, updated: Boolean(bonusId) };
 }
 
 async function getState(ctx: any) {
