@@ -46,6 +46,7 @@ function cleanState(state: any) {
   s.students = Array.isArray(s.students) ? s.students : [];
   s.teachers = Array.isArray(s.teachers) ? s.teachers : [];
   s.pay = Array.isArray(s.pay) ? s.pay : [];
+  s.bonuses = Array.isArray(s.bonuses) ? s.bonuses : [];
   s.att = s.att && typeof s.att === "object" ? s.att : {};
   s.classes = Array.isArray(s.classes) ? s.classes : [];
   s.timetable = Array.isArray(s.timetable) ? s.timetable : [];
@@ -80,6 +81,8 @@ function studentState(state: any, username: string) {
 
   const me = s.students.find((student: any) => lower(student?.id) === id);
   s.assignments = (s.assignments || []).filter((assignment: any) => lower(assignment?.studentId) === id);
+  const allBonuses = s.bonuses || [];
+  s.bonuses = allBonuses.filter((bonus: any) => lower(bonus?.studentId) === id);
   s.timetable = (s.timetable || []).filter((item: any) => Array.isArray(item?.students) && item.students.map((studentId: any) => lower(studentId)).includes(id));
   s.classes = (s.classes || []).filter((cls: any) => s.timetable.some((item: any) => text(item?.classCode) ? text(item.classCode) === text(cls?.code) : lower(item?.course) === lower(cls?.title))).map((cls: any) => ({ title: cls.title, code: cls.code }));
   // Share only public leaderboard fields; keep payments, contact details and account data private.
@@ -87,6 +90,7 @@ function studentState(state: any, username: string) {
     id: String(student?.id ?? ""),
     name: String(student?.name ?? "Student"),
     surahCount: Array.isArray(student?.sur) ? student.sur.length : 0,
+    bonus: allBonuses.filter((bonus: any) => lower(bonus?.studentId) === lower(student?.id)).reduce((sum: number, bonus: any) => sum + Math.max(0, Number(bonus?.points) || 0), 0),
   }));
   const teacher = teacherKey(me?.teacher);
   s.messagePeers = teacher
@@ -141,6 +145,7 @@ function teacherState(state: any, username: string) {
   const assignedIds = new Set(assigned.map((student: any) => lower(student?.id)));
   s.students = assigned;
   s.assignments = (s.assignments || []).filter((assignment: any) => assignedIds.has(lower(assignment?.studentId)));
+  s.bonuses = (s.bonuses || []).filter((bonus: any) => assignedIds.has(lower(bonus?.studentId)));
   // Teachers may see and edit attendance for their assigned students only.
   const filteredAttendance: Record<string, any> = {};
   for (const [date, value] of Object.entries(s.att || {})) {
@@ -1325,6 +1330,33 @@ async function manageAssignment(ctx: any, body: any) {
   return { ok: true, assignment };
 }
 
+async function manageBonus(ctx: any, body: any) {
+  const profile = await requireStaff(ctx, ["admin", "teacher"]);
+  const role = normalizedRole(profile.role);
+  const studentId = text(body.studentId).slice(0, 100);
+  const points = Number(body.points);
+  const reason = text(body.reason).slice(0, 80);
+  const note = text(body.note).slice(0, 180);
+  if (!studentId) throw new Error("Choose a valid student.");
+  if (!Number.isInteger(points) || points < 1 || points > 1000) throw new Error("Bonus points must be a whole number from 1 to 1000.");
+  if (!["Assignment completed", "Arrived on time", "Exceptional effort", "Other"].includes(reason)) throw new Error("Choose a valid bonus reason.");
+  const state = await getAcademyState(ctx);
+  state.bonuses = Array.isArray(state.bonuses) ? state.bonuses : [];
+  const student = (state.students || []).find((item: any) => lower(item?.id) === lower(studentId));
+  if (!student) throw new Error("Student not found.");
+  if (role === "teacher") {
+    const teacher = lower(profile.username);
+    const record = (state.teachers || []).find((item: any) => lower(item?.username) === teacher);
+    const teacherName = lower(record?.name || profileName(profile));
+    if (lower(student.teacher) !== teacher && lower(student.teacher) !== teacherName) throw new Error("You can only award bonuses to students assigned to you.");
+  }
+  const bonus = { id: crypto.randomUUID(), studentId: student.id, studentName: text(student.name), points, reason, note, awardedBy: profileName(profile), awardedById: text(profile.username), createdAt: new Date().toISOString() };
+  state.bonuses.unshift(bonus);
+  const { error } = await ctx.supabaseAdmin.from("academy_state").update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) throw error;
+  return { ok: true, bonus };
+}
+
 async function getState(ctx: any) {
   const profile = await getCurrentProfile(ctx);
   if (!profile) throw new Error("Not authenticated.");
@@ -2365,6 +2397,10 @@ export default {
 
         if (action === "manage_assignment") {
           return json(await manageAssignment(ctx, body));
+        }
+
+        if (action === "manage_bonus") {
+          return json(await manageBonus(ctx, body));
         }
 
         if (action === "save_state") {
