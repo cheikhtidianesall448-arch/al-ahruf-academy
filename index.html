@@ -3791,7 +3791,7 @@ function manageStudentBonuses(studentId){
  if(user.role==='teacher'&&!isAssignedToCurrentTeacher(student))return toast(t('Permission denied.'));
  const records=(S.bonuses||[]).filter(b=>String(b.studentId||'').toLowerCase()===String(student.id||'').toLowerCase());
  const content='<p class="mute">'+esc(student.name)+' · '+esc(student.id)+' · Total: +'+studentBonusTotal(student.id)+'</p>'+(records.length?records.map(b=>'<div class="row between" style="padding:10px 0;border-bottom:1px solid var(--line)"><div><b style="color:#38A7E8">+'+Number(b.points||0)+'</b> · '+esc(b.reason||'Other')+'<div class="mute" style="font-size:12px">'+esc(b.note||'No note')+' · '+esc(b.createdAt?new Date(b.createdAt).toLocaleDateString():'')+'</div></div><button class="btn ghost sm" type="button" onclick="editStudentBonus(\''+esc(student.id)+'\',\''+esc(b.id)+'\')">'+t('Edit')+'</button></div>').join(''):'<p class="mute">No bonus records yet.</p>');
- modal(t('Bonus history'),content,null,t('Close'));
+ modal(t('Bonus history'),content,async()=>true,t('Close'));
 }
 function overview(){
  const n=S.students.length,known=S.students.filter(s=>s.sex==='Male'||s.sex==='Female').length,males=S.students.filter(s=>s.sex==='Male').length,females=S.students.filter(s=>s.sex==='Female').length,maleRate=known?males/known*100:0,femaleRate=known?females/known*100:0,avg=n?S.students.reduce((a,s)=>a+lvl(s),0)/n:0,due=S.pay.filter(p=>p.st!=='paid').length;
