@@ -3764,8 +3764,8 @@ function addStudentBonus(id){
  modal(t('Award bonus'),'<p class="mute">'+esc(student.name)+' · '+esc(student.id)+'</p><label>'+t('Bonus points')+'</label><input name="points" type="number" min="1" max="1000" step="1" value="10" required><label>'+t('Reason')+'</label><select name="reason"><option value="Assignment completed">'+t('Assignment completed')+'</option><option value="Arrived on time">'+t('Arrived on time')+'</option><option value="Exceptional effort">'+t('Exceptional effort')+'</option><option value="Other">'+t('Other')+'</option></select><label>'+t('Note')+'</label><input name="note" maxlength="180" placeholder="'+t('Optional note')+'">',async f=>{
   const points=Math.floor(Number(f.namedItem('points').value));if(!Number.isFinite(points)||points<1||points>1000)throw new Error('Enter a bonus between 1 and 1000.');
   if(!ONLINE)throw new Error('Bonus points require the secure online academy connection.');
-  S.bonuses=Array.isArray(S.bonuses)?S.bonuses:[];const previousBonuses=S.bonuses.slice();S.bonuses.push({id:'BON-'+Date.now().toString(36).toUpperCase(),studentId:student.id,studentName:student.name,points,reason:f.namedItem('reason').value,note:f.namedItem('note').value.trim(),awardedBy:user.name||user.username||user.id,awardedById:user.username||user.id,createdAt:new Date().toISOString()});
-  try{localStorage.setItem(KEY,JSON.stringify(S));await onlineApi('save_state',{state:cleanState(S)});await loadOnlineState();render();toast(t('Bonus awarded')+' · +'+points);return true}catch(e){S.bonuses=previousBonuses;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){}throw e}
+  await onlineApi('manage_bonus',{studentId:student.id,points,reason:f.namedItem('reason').value,note:f.namedItem('note').value.trim()});
+  await loadOnlineState();render();toast(t('Bonus awarded')+' · +'+points);return true
  },t('Award bonus'));
 }
 function overview(){
