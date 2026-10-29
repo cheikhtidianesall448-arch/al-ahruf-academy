@@ -1338,7 +1338,7 @@ async function manageBonus(ctx: any, body: any) {
   const reason = text(body.reason).slice(0, 80);
   const note = text(body.note).slice(0, 180);
   if (!studentId) throw new Error("Choose a valid student.");
-  if (!Number.isInteger(points) || points < 1 || points > 1000) throw new Error("Bonus points must be a whole number from 1 to 1000.");
+  if (!Number.isInteger(points) || points < 5 || points > 1000 || points % 5 !== 0) throw new Error("Bonus points must be in steps of 5, from 5 to 1000.");
   if (!["Assignment completed", "Arrived on time", "Exceptional effort", "Other"].includes(reason)) throw new Error("Choose a valid bonus reason.");
   const state = await getAcademyState(ctx);
   state.bonuses = Array.isArray(state.bonuses) ? state.bonuses : [];
@@ -2240,29 +2240,31 @@ async function academyChat(ctx: any, body: any) {
     const leaderboard = sourceRanking.map((student: any) => ({
       id: lower(student?.id), name: text(student?.name || student?.id || "Student"),
       n: Math.max(0, Number(student?.surahCount ?? getSurahCount(student?.sur)) || 0),
+      bonus: Math.max(0, Number(student?.bonus) || 0),
     })).filter((student: any) => student.id && student.name)
-      .sort((a: any, b: any) => b.n - a.n || a.name.localeCompare(b.name));
+      .sort((a: any, b: any) => b.n - a.n || b.bonus - a.bonus || a.name.localeCompare(b.name));
     if (role === "student" && myStudent) {
       const myId = lower(myStudent.id || profile.username);
       const myName = text(myStudent.name || profileName(profile) || "You");
       const meRow = leaderboard.find((student: any) => student.id === myId);
       const n = meRow ? meRow.n : getSurahCount(myStudent.sur);
       if (rankingQuestion) {
-        const ahead = leaderboard.filter((student: any) => student.id !== myId && student.n > n);
-        const tied = leaderboard.filter((student: any) => student.id !== myId && student.n === n);
-        const behind = leaderboard.filter((student: any) => student.id !== myId && student.n < n);
-        const aheadText = ahead.length ? ahead.map((student: any) => student.name + " (" + student.n + ")").join(", ") : (lang === "fr" ? "Personne n’est devant vous" : lang === "ar" ? "لا يوجد طالب أمامك" : "No students are ahead of you");
-        const behindText = behind.length ? behind.map((student: any) => student.name + " (" + student.n + ")").join(", ") : (lang === "fr" ? "Personne n’est derrière vous" : lang === "ar" ? "لا يوجد طالب خلفك" : "No students are behind you");
-        const tiedText = tied.length ? (lang === "fr" ? " À égalité avec vous : " : lang === "ar" ? " متعادلون معك: " : " Tied with you: ") + tied.map((student: any) => student.name + " (" + student.n + ")").join(", ") + "." : "";
+        const myBonus = meRow ? meRow.bonus : 0;
+        const ahead = leaderboard.filter((student: any) => student.id !== myId && (student.n > n || (student.n === n && student.bonus > myBonus)));
+        const tied = leaderboard.filter((student: any) => student.id !== myId && student.n === n && student.bonus === myBonus);
+        const behind = leaderboard.filter((student: any) => student.id !== myId && (student.n < n || (student.n === n && student.bonus < myBonus)));
+        const aheadText = ahead.length ? ahead.map((student: any) => student.name + " (" + student.n + " surahs, +" + student.bonus + " bonus)").join(", ") : (lang === "fr" ? "Personne n’est devant vous" : lang === "ar" ? "لا يوجد طالب أمامك" : "No students are ahead of you");
+        const behindText = behind.length ? behind.map((student: any) => student.name + " (" + student.n + " surahs, +" + student.bonus + " bonus)").join(", ") : (lang === "fr" ? "Personne n’est derrière vous" : lang === "ar" ? "لا يوجد طالب خلفك" : "No students are behind you");
+        const tiedText = tied.length ? (lang === "fr" ? " À égalité avec vous : " : lang === "ar" ? " متعادلون معك: " : " Tied with you: ") + tied.map((student: any) => student.name + " (" + student.n + " surahs, +" + student.bonus + " bonus)").join(", ") + "." : "";
         const meaning = lang === "fr" ? "Le classement indique votre position par rapport aux autres élèves selon le nombre de sourates enregistrées. " : lang === "ar" ? "الترتيب يوضح موقعك مقارنةً بالطلاب الآخرين حسب عدد السور المسجلة. " : "Ranking means your position compared with other students, based on recorded memorized surahs. ";
-        return tr(meaning + "Your position is " + (1 + ahead.length) + " of " + leaderboard.length + " students. Your recorded surahs: " + n + ". Ahead of you: " + aheadText + ". Behind you: " + behindText + "." + tiedText,
+        return tr(meaning + "Your position is " + (1 + ahead.length) + " of " + leaderboard.length + " students. Your recorded surahs: " + n + ". Your bonus points: +" + myBonus + ". Ahead of you: " + aheadText + ". Behind you: " + behindText + "." + tiedText,
           meaning + "Votre position est " + (1 + ahead.length) + " sur " + leaderboard.length + " élèves. Sourates enregistrées : " + n + ". Devant vous : " + aheadText + ". Derrière vous : " + behindText + "." + tiedText,
           meaning + "ترتيبك هو " + (1 + ahead.length) + " من أصل " + leaderboard.length + " طالبًا. عدد السور المسجلة لك: " + n + ". أمامك: " + aheadText + ". خلفك: " + behindText + "." + tiedText);
       }
       return tr("Your profile records " + n + " memorized surah(s). Ask for your ranking to see your position and who is ahead of or behind you.", "Votre profil indique " + n + " sourate(s) mémorisée(s). Demandez votre classement pour connaître votre position et qui est devant ou derrière vous.", "يسجل ملفك " + n + " سورة محفوظة. اسأل عن ترتيبك لمعرفة موقعك ومن يتقدمك ومن يأتي بعدك.");
     }
     if (isAdmin || isTeacher) {
-      const list = leaderboard.map((student: any, index: number) => (index + 1) + ". " + student.name + ": " + student.n + " surah(s)").join("\n") || "No student progress records found.";
+      const list = leaderboard.map((student: any, index: number) => (index + 1) + ". " + student.name + ": " + student.n + " surah(s), +" + student.bonus + " bonus").join("\n") || "No student progress records found.";
       return tr((rankingQuestion ? "Qur’an memorization ranking by recorded surah count:\n" : "Recorded Qur’an memorization progress:\n") + list,
         (rankingQuestion ? "Classement de mémorisation du Coran selon les sourates enregistrées :\n" : "Progression de mémorisation du Coran enregistrée :\n") + list,
         (rankingQuestion ? "ترتيب حفظ القرآن حسب عدد السور المسجلة:\n" : "تقدم حفظ القرآن المسجل:\n") + list);
