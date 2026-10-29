@@ -1609,7 +1609,7 @@ async function generateAcademyModelReply(messages: any[], languages: string[], r
   // The OpenRouter free router only selects free model endpoints. Refuse paid model IDs.
   const apiKey = text(Deno.env.get("OPENROUTER_API_KEY"));
   if (!apiKey) {
-    console.warn("Academy AI: OPENROUTER_API_KEY is not configured; using built-in responses.");
+    console.warn("Academy AI: OpenRouter is not configured (OPENROUTER_API_KEY missing); using safe built-in fallback.");
     return null;
   }
   const model = text(Deno.env.get("OPENROUTER_MODEL")) || "openrouter/free";
@@ -1669,6 +1669,8 @@ async function generateAcademyModelReply(messages: any[], languages: string[], r
       : Array.isArray(content)
         ? content.filter((part: any) => typeof part?.text === "string").map((part: any) => part.text).join("\n").trim()
         : "";
+    // Log provider health without recording prompts, answers, or credentials.
+    console.info("Academy OpenRouter response received", { model, status: response.status, hasAnswer: Boolean(answer) });
     return answer ? answer.slice(0, 5000) : null;
   } catch (error) {
     console.error("Academy OpenRouter request failed:", error instanceof Error && error.name === "AbortError" ? "request timed out" : "network or response error");
@@ -2195,7 +2197,9 @@ async function academyChat(ctx: any, body: any) {
   }
 
   const rankingQuestion = /\b(rank|ranking|ranked|rankin|raking|position|place|leaderboard|ahead|behind|above|below|before|after|top student|best memor|who is in front|who comes before|who comes after|what is ranking|what does ranking mean|ranking mean)\b|classment|classement|rang|devant|derriere|pr[eé]c[eè]de|suit|ترتيب|ترتيبي|ترتيبك|المتصدر|قبلي|بعدي|أمامي|خلفي|من يتقدمني|من خلفي|من أمامي|من بعدي/.test(intentQ);
-  const progressQuestion = /progress|memorized|memorization|surah|surahs|quran progress|hifz|mémoris|sourate|sourates|تقدم|حفظ|سورة|سور/.test(intentQ);
+  // Only route explicit progress/count questions to the leaderboard. A general lesson question
+  // mentioning a surah (for example, memorization vs. revision) must reach the educational AI.
+  const progressQuestion = /\b(progress|memorized|memorization|hifz|quran progress|my surah count|how many surahs?|number of surahs?|surah count|surahs? memorized|memorized surahs?)\b|mémoris\w*.{0,35}(sourate|coran)|(?:sourate|sourates).{0,35}(?:mémoris\w*|nombre|combien|progression)|(?:تقدم|حفظ).{0,15}(?:القرآن|سورة|سور)|(?:سورة|سور).{0,15}(?:حفظ|عدد)/.test(intentQ);
   const getSurahCount = (value: any) => Array.isArray(value) ? value.length : value && typeof value === "object" ? Object.keys(value).length : 0;
   if (rankingQuestion || progressQuestion) {
     const sourceRanking = Array.isArray(state.ranking) && state.ranking.length
