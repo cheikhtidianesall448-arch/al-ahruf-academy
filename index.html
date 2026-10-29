@@ -3770,6 +3770,29 @@ function addStudentBonus(id){
   await loadOnlineState();render();toast(t('Bonus awarded')+' · +'+points);return true
  },t('Award bonus'));
 }
+function editStudentBonus(studentId,bonusId){
+ if(!['admin','teacher'].includes(user?.role))return toast(t('Permission denied.'));
+ const student=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(studentId||'').toLowerCase());
+ const bonus=(S.bonuses||[]).find(x=>String(x.id||'')===String(bonusId||'')&&String(x.studentId||'').toLowerCase()===String(studentId||'').toLowerCase());
+ if(!student||!bonus)return toast(t('Bonus record not found.'));
+ if(user.role==='teacher'&&!isAssignedToCurrentTeacher(student))return toast(t('Permission denied.'));
+ const reasons=['Assignment completed','Arrived on time','Exceptional effort','Other'];
+ const options=reasons.map(r=>'<option value="'+r+'" '+(bonus.reason===r?'selected':'')+'>'+t(r)+'</option>').join('');
+ modal(t('Edit bonus'),'<p class="mute">'+esc(student.name)+' · '+esc(student.id)+'</p><label>'+t('Bonus points')+'</label><input name="points" type="number" min="5" max="1000" step="5" value="'+Math.max(5,Number(bonus.points)||5)+'" required><label>'+t('Reason')+'</label><select name="reason">'+options+'</select><label>'+t('Note')+'</label><input name="note" maxlength="180" value="'+esc(bonus.note||'')+'" placeholder="'+t('Optional note')+'">',async f=>{
+  const points=Math.floor(Number(f.namedItem('points').value));if(!Number.isFinite(points)||points<5||points>1000||points%5!==0)throw new Error('Enter a bonus in steps of 5, from 5 to 1000.');
+  if(!ONLINE)throw new Error('Bonus editing requires the secure online academy connection.');
+  await onlineApi('manage_bonus',{studentId:student.id,bonusId:bonus.id,points,reason:f.namedItem('reason').value,note:f.namedItem('note').value.trim()});
+  await loadOnlineState();render();toast(t('Bonus updated'));return true
+ },t('Save changes'));
+}
+function manageStudentBonuses(studentId){
+ const student=(S.students||[]).find(x=>String(x.id||'').toLowerCase()===String(studentId||'').toLowerCase());
+ if(!student)return toast(t('Student not found.'));
+ if(user.role==='teacher'&&!isAssignedToCurrentTeacher(student))return toast(t('Permission denied.'));
+ const records=(S.bonuses||[]).filter(b=>String(b.studentId||'').toLowerCase()===String(student.id||'').toLowerCase());
+ const content='<p class="mute">'+esc(student.name)+' · '+esc(student.id)+' · Total: +'+studentBonusTotal(student.id)+'</p>'+(records.length?records.map(b=>'<div class="row between" style="padding:10px 0;border-bottom:1px solid var(--line)"><div><b style="color:#38A7E8">+'+Number(b.points||0)+'</b> · '+esc(b.reason||'Other')+'<div class="mute" style="font-size:12px">'+esc(b.note||'No note')+' · '+esc(b.createdAt?new Date(b.createdAt).toLocaleDateString():'')+'</div></div><button class="btn ghost sm" type="button" onclick="editStudentBonus(\''+esc(student.id)+'\',\''+esc(b.id)+'\')">'+t('Edit')+'</button></div>').join(''):'<p class="mute">No bonus records yet.</p>');
+ modal(t('Bonus history'),content,null,t('Close'));
+}
 function overview(){
  const n=S.students.length,known=S.students.filter(s=>s.sex==='Male'||s.sex==='Female').length,males=S.students.filter(s=>s.sex==='Male').length,females=S.students.filter(s=>s.sex==='Female').length,maleRate=known?males/known*100:0,femaleRate=known?females/known*100:0,avg=n?S.students.reduce((a,s)=>a+lvl(s),0)/n:0,due=S.pay.filter(p=>p.st!=='paid').length;
  const top=[...S.students].sort(compareStudentRanking);
@@ -3799,8 +3822,8 @@ function rows(){const q=($('#q')?.value||'').toLowerCase(),tb=$('#tb');if(!tb)re
  const teacher=user.role==='teacher';
  const source=teacher?S.students.filter(isAssignedToCurrentTeacher):S.students;
  tb.innerHTML=source.filter(s=>(s.name+s.id+s.phone+s.email+s.teacher).toLowerCase().includes(q)).map(s=>teacher
- ? `<tr><td><div style="display:flex;align-items:center;gap:10px;min-width:140px">${user.role==='admin'?userIdAvatar(s,'student',48):''}<span>${esc(s.id)}</span></div></td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${(s.sur||[]).length}/114</span></td><td><b style="color:#38A7E8">+${studentBonusTotal(s.id)}</b></td><td class="row"><button class="btn ghost sm" onclick="addStudentBonus('${esc(s.id)}')">+ ${t('Bonus')}</button><button class="btn gold sm" onclick="editStudentSurahs('${esc(s.id)}')">Update surahs</button></td></tr>`
- : `<tr><td><div style="display:flex;align-items:center;gap:10px;min-width:140px">${user.role==='admin'?userIdAvatar(s,'student',48):''}<span>${esc(s.id)}</span></div></td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${(s.sur||[]).length}/114</span></td><td><span class="badge ${s.pay}">${s.pay}</span></td><td><span class="mute">${esc(teacherName(s.teacher))}</span></td><td><b style="color:#38A7E8">+${studentBonusTotal(s.id)}</b></td><td class="row"><button class="btn ghost sm" onclick="addStudentBonus('${esc(s.id)}')">+ ${t('Bonus')}</button><button class="btn gold sm" onclick="studentProfile('${esc(s.id)}')">View profile</button><button class="btn gold sm" onclick="editStudentSurahs('${esc(s.id)}')">Update surahs</button><button class="btn ghost sm" onclick="editS('${esc(s.id)}')">Edit</button>${user.role==='admin'?'<button class="btn ghost sm" onclick="delS(\''+esc(s.id)+'\',this)">Delete</button>':''}</td></tr>`).join('')||`<tr><td colspan="${teacher?8:10}" class="mute">No students yet.</td></tr>`}
+ ? `<tr><td><div style="display:flex;align-items:center;gap:10px;min-width:140px">${user.role==='admin'?userIdAvatar(s,'student',48):''}<span>${esc(s.id)}</span></div></td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${(s.sur||[]).length}/114</span></td><td><b style="color:#38A7E8">+${studentBonusTotal(s.id)}</b></td><td class="row"><button class="btn ghost sm" onclick="addStudentBonus('${esc(s.id)}')">+ ${t('Bonus')}</button><button class="btn ghost sm" onclick="manageStudentBonuses('${esc(s.id)}')">Edit bonuses</button><button class="btn gold sm" onclick="editStudentSurahs('${esc(s.id)}')">Update surahs</button></td></tr>`
+ : `<tr><td><div style="display:flex;align-items:center;gap:10px;min-width:140px">${user.role==='admin'?userIdAvatar(s,'student',48):''}<span>${esc(s.id)}</span></div></td><td><b>${esc(s.name)}</b><br><span class="mute">${esc(s.phone)}</span></td><td>${s.age??'—'}</td><td>${esc(s.sex||'—')}</td><td>${esc(s.level)}</td><td><div class="bar2"><i style="width:${lvl(s)}%"></i></div><span class="mute">${(s.sur||[]).length}/114</span></td><td><span class="badge ${s.pay}">${s.pay}</span></td><td><span class="mute">${esc(teacherName(s.teacher))}</span></td><td><b style="color:#38A7E8">+${studentBonusTotal(s.id)}</b></td><td class="row"><button class="btn ghost sm" onclick="addStudentBonus('${esc(s.id)}')">+ ${t('Bonus')}</button><button class="btn ghost sm" onclick="manageStudentBonuses('${esc(s.id)}')">Edit bonuses</button><button class="btn gold sm" onclick="studentProfile('${esc(s.id)}')">View profile</button><button class="btn gold sm" onclick="editStudentSurahs('${esc(s.id)}')">Update surahs</button><button class="btn ghost sm" onclick="editS('${esc(s.id)}')">Edit</button>${user.role==='admin'?'<button class="btn ghost sm" onclick="delS(\''+esc(s.id)+'\',this)">Delete</button>':''}</td></tr>`).join('')||`<tr><td colspan="${teacher?8:10}" class="mute">No students yet.</td></tr>`}
 function studentProfile(id){
  if(user.role!=='admin'){toast('Only the administrator can view this profile.');return}
  const s=(S.students||[]).find(x=>String(x.id).toLowerCase()===String(id).toLowerCase());
