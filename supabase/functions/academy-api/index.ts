@@ -860,6 +860,30 @@ function generatedStudentId(fullName: string, phone: string, usedIds: string[], 
   return `${base}-${n}`;
 }
 
+// Check the live profiles table as well as academy_state before choosing an ID.
+// This also handles old/orphaned accounts that are not present in the student list.
+async function generateAvailableStudentId(ctx: any, fullName: string, phone: string, usedIds: string[]) {
+  const firstCandidate = generatedStudentId(fullName, phone, usedIds);
+  const match = firstCandidate.match(/^(.*?)(?:-(\\d+))?$/);
+  const base = match?.[1] || firstCandidate;
+  let suffix = match?.[2] ? Number(match[2]) : 1;
+
+  for (let attempt = 0; attempt < 500; attempt++) {
+    const candidate = suffix === 1 ? base : `${base}-${suffix}`;
+    const { data, error } = await ctx.supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .ilike("username", candidate)
+      .limit(1);
+    if (error) throw error;
+
+    const existsInState = usedIds.some((id) => lower(id) === lower(candidate));
+    if (!existsInState && !(data?.length)) return candidate;
+    suffix++;
+  }
+  throw new Error("A unique Student ID could not be generated. Please try again.");
+}
+
 async function upsertStudent(ctx: any, body: any) {
   const admin = await requireStaff(ctx, ["admin"]);
   void admin;
@@ -895,7 +919,7 @@ async function upsertStudent(ctx: any, body: any) {
       ...(state.students || []).map((x: any) => text(x?.id)),
       ...(profileResult.data || []).map((x: any) => text(x?.username)),
     ].filter(Boolean);
-    studentId = generatedStudentId(fullName, phone, usedIds);
+    studentId = await generateAvailableStudentId(ctx, fullName, phone, usedIds);
   }
 
   const normalizedStudentId = studentId.toLowerCase();
