@@ -28,4 +28,4 @@ jobs:
             echo "Missing GitHub repository secret SUPABASE_ACCESS_TOKEN."
             exit 1
           fi
-          supabase functions deploy academy-api --project-ref bxwrdutoauonbfdbrhsu --no-verify-jwt
+          supabase functions deploy academy-api --remote=bxwrdutoauonbfdbrhsu --yes --no-verify-jwt
