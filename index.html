@@ -3917,7 +3917,7 @@ function attendance(){
  const selectedDate=document.getElementById('ad')?.value||new Date().toISOString().slice(0,10),isTeacher=user.role==='teacher';
  const students=(S.students||[]).filter(st=>!isTeacher||isAssignedToCurrentTeacher(st));
  const me=String(user.username||user.id||'').toLowerCase(),myName=String(user.name||'').toLowerCase();
- const classes=(S.timetable||[]).filter(x=>!isTeacher||[me,myName].includes(String(x?.teacher||'').toLowerCase()));
+ const classes=(S.timetable||[]).filter(x=>!isTeacher||[me,myName,String(user.id||'').toLowerCase()].includes(String(x?.teacher||'').toLowerCase()));
  const records=[];
  for(const [date,day] of Object.entries(S.att||{})){if(date!==selectedDate)continue;for(const [sid,entry] of Object.entries(day||{})){
   const st=students.find(x=>String(x.id||'').toLowerCase()===String(sid).toLowerCase());if(!st)continue;
@@ -3944,7 +3944,7 @@ async function setManualAttendance(form){
  if(!date||!st||!['present','late','absent'].includes(status))return toast('Choose a valid date, student and status.');
  if(user.role==='teacher'&&!isAssignedToCurrentTeacher(st))return toast(t('Permission denied.'));
  const cls=(S.timetable||[]).find(x=>String(x.id)===String(classId));
- if(cls&&user.role==='teacher'&&![String(user.username||'').toLowerCase(),String(user.name||'').toLowerCase()].includes(String(cls.teacher||'').toLowerCase()))return toast(t('Permission denied.'));
+ if(cls&&user.role==='teacher'&&![String(user.username||'').toLowerCase(),String(user.name||'').toLowerCase(),String(user.id||'').toLowerCase()].includes(String(cls.teacher||'').toLowerCase()))return toast(t('Permission denied.'));
  const key=classId||'manual-general',day=S.att[date]&&typeof S.att[date]==='object'?S.att[date]:{},old=day[sid]&&typeof day[sid]==='object'?day[sid]:{},sessions=old.sessions&&typeof old.sessions==='object'?{...old.sessions}:{};
  sessions[key]={...(sessions[key]||{}),status,course:cls?.course||sessions[key]?.course||'Quran class',day:cls?.day||'',start:cls?.start||'',end:cls?.end||'',teacher:user.username||user.name||'',time:new Date().toISOString(),timetableId:key,manual:true,recordedBy:user.username||user.id||''};
  S.att[date]={...day,[sid]:{...old,sessions}};
