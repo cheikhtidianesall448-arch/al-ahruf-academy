@@ -1403,6 +1403,7 @@ async function getState(ctx: any) {
   if (!isActive(profile)) throw new Error("This account is inactive.");
 
   let state = await getAcademyState(ctx);
+  state.hafizStudents = state.students.filter((student: any) => student?.hafiz === true).map((student: any) => ({ id: String(student?.id ?? ''), name: String(student?.name ?? 'Student'), surahCount: Array.isArray(student?.sur) ? student.sur.length : 0 }));
   state = await recordMissedTimetableClasses(ctx, state);
   state = await refreshAssignmentDueDates(ctx, state);
   const actualRole = normalizedRole(profile.role);
