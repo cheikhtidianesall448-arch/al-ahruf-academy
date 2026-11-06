@@ -86,7 +86,8 @@ function studentState(state: any, username: string) {
   s.timetable = (s.timetable || []).filter((item: any) => Array.isArray(item?.students) && item.students.map((studentId: any) => lower(studentId)).includes(id));
   s.classes = (s.classes || []).filter((cls: any) => s.timetable.some((item: any) => text(item?.classCode) ? text(item.classCode) === text(cls?.code) : lower(item?.course) === lower(cls?.title))).map((cls: any) => ({ title: cls.title, code: cls.code }));
   // Share only public leaderboard fields; keep payments, contact details and account data private.
-  s.ranking = s.students.map((student: any) => ({
+   s.hafizStudents = s.students.filter((student: any) => student?.hafiz === true).map((student: any) => ({ id: String(student?.id ?? ''), name: String(student?.name ?? 'Student'), surahCount: Array.isArray(student?.sur) ? student.sur.length : 0 }));
+  s.ranking = s.students.filter((student: any) => student?.hafiz !== true).map((student: any) => ({
     id: String(student?.id ?? ""),
     name: String(student?.name ?? "Student"),
     surahCount: Array.isArray(student?.sur) ? student.sur.length : 0,
@@ -1592,6 +1593,36 @@ async function recordClassAttendance(ctx: any, body: any) {
   return { status, message: status === "late" ? "You are late. Your attendance has been recorded." : "You are present. Your attendance has been recorded.", date, state: studentState(state, profile.username) };
 }
 
+async function setHafizStatus(ctx: any, body: any) {
+  const profile = await requireStaff(ctx, ["admin", "teacher"]);
+  const studentId = lower(body.studentId);
+  const confirmed = body.hafiz === true;
+  if (!studentId) throw new Error("Student ID is required.");
+  const state = await getAcademyState(ctx);
+  const student = state.students.find((item: any) => lower(item?.id) === studentId);
+  if (!student) throw new Error("Student not found.");
+  if (confirmed && (!Array.isArray(student.sur) || student.sur.length !== 114)) {
+    throw new Error("The student must have all 114 surahs recorded before Hafiz confirmation.");
+  }
+  if (normalizedRole(profile.role) === "teacher") {
+    const teacher = lower(profile.username);
+    const teacherRecord = state.teachers.find((item: any) => lower(item?.username) === teacher);
+    const teacherName = lower(teacherRecord?.name || profileName(profile));
+    const assigned = lower(student.teacher);
+    const assignedRecord = state.teachers.find((item: any) => lower(item?.username) === assigned || lower(item?.name) === assigned);
+    if (assigned !== teacher && assigned !== teacherName && lower(assignedRecord?.username) !== teacher) {
+      throw new Error("You can change Hafiz status only for students assigned to you.");
+    }
+  }
+  student.hafiz = confirmed;
+  student.hafizAt = confirmed ? new Date().toISOString() : null;
+  student.hafizBy = confirmed ? text(profile.username) : null;
+  const { error } = await ctx.supabaseAdmin.from("academy_state")
+    .update({ state: cleanState(state), updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) throw error;
+  return { ok: true, studentId: student.id, hafiz: confirmed };
+}
+
 async function saveState(ctx: any, body: any) {
   const profile = await requireStaff(ctx, ["admin", "teacher"]);
   if (!body.state || typeof body.state !== "object") throw new Error("A valid state object is required.");
@@ -1650,9 +1681,15 @@ async function saveState(ctx: any, body: any) {
       ...submittedOwnLinks,
     ];
   }
+  const teacherRecord = (full.teachers || []).find((item: any) => lower(item?.username) === teacher);
+  const teacherName = lower(teacherRecord?.name || profileName(profile));
   const assignedIds = new Set(
     full.students
-      .filter((student: any) => lower(student?.teacher) === teacher)
+      .filter((student: any) => {
+        const value = lower(student?.teacher);
+        const match = (full.teachers || []).find((item: any) => lower(item?.username) === value || lower(item?.name) === value);
+        return value === teacher || value === teacherName || lower(match?.username) === teacher;
+      })
       .map((student: any) => lower(student?.id))
   );
 
@@ -2447,6 +2484,10 @@ export default {
 
         if (action === "manage_bonus") {
           return json(await manageBonus(ctx, body));
+        }
+
+        if (action === "set_hafiz_status") {
+          return json(await setHafizStatus(ctx, body));
         }
 
         if (action === "save_state") {
