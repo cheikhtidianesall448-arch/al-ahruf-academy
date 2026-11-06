@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://cheikhtidianesall448-arch.github.io/al-ahruf-academy/sitemap.xml
