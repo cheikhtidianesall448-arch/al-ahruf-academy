@@ -3823,7 +3823,7 @@ function hafizRecognitionSentence(person){
  const full=(S.students||[]).find(x=>(person?.id&&String(x.id)===String(person.id))||String(x.name||'').trim()===String(person?.name||'').trim())||person||{};
  const name=String(person?.name||full.name||'').trim();
  const gender=studentGender(full);
- if(currentLang==='fr')return gender==='female'?'L’élève '+name+' est officiellement reconnue comme hafiza après avoir mémorisé les 114 sourates.':'L’élève '+name+' est officiellement reconnu comme hafiz après avoir mémorisé les 114 sourates.';
+ if(currentLang==='fr')return gender==='female'?'L’élève '+name+' est officiellement reconnue comme Hafiza après avoir mémorisé les 114 sourates.':'L’élève '+name+' est officiellement reconnu comme Hafiz après avoir mémorisé les 114 sourates.';
  if(currentLang==='ar')return gender==='female'?'الطالبة '+name+' حافظة معتمدة رسميًا بعد حفظ السور الـ١١٤ كاملة.':'الطالب '+name+' حافظ معتمد رسميًا بعد حفظ السور الـ١١٤ كاملة.';
  return 'Student '+name+' is officially recognized as a Hafiz after memorizing all 114 surahs.';
 }
@@ -3832,7 +3832,7 @@ function hafizRecognitionSentenceHtml(person){
  const sentence=hafizRecognitionSentence(person);
  const full=(S.students||[]).find(x=>(person?.id&&String(x.id)===String(person.id))||String(x.name||'').trim()===String(person?.name||'').trim())||person||{};
  const female=studentGender(full)==='female';
- const term=currentLang==='fr'?(female?'hafiza':'hafiz'):currentLang==='ar'?(female?'حافظة':'حافظ'):'Hafiz';
+ const term=currentLang==='fr'?(female?'Hafiza':'Hafiz'):currentLang==='ar'?(female?'حافظة':'حافظ'):'Hafiz';
  const safe=esc(sentence),safeTerm=esc(term),safeName=esc(String(person?.name||full.name||'').trim());
  let highlighted=safe;
  if(safeName)highlighted=highlighted.replace(safeName,'<span style="color:#21834a;font-weight:850">'+safeName+'</span>');
