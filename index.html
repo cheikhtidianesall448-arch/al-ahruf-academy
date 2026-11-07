@@ -4438,8 +4438,8 @@ function sendWhatsAppPaymentReminder(i){
   '',
   'Thank you for your cooperation.',
   'Al-Ahruf International Academy (AIA)'
- ].join('\\n');
- const ok=confirm('Open WhatsApp with the AIA reminder prepared for '+rawPhone+'?\\n\\nAfter WhatsApp opens, attach this invoice PDF before sending: return to the invoice, choose “Print / Save PDF”, save it, then attach it in the chat.');
+ ].join('\n');
+ const ok=confirm('Open WhatsApp with the AIA reminder prepared for '+rawPhone+'?\n\nAfter WhatsApp opens, attach this invoice PDF before sending: return to the invoice, choose “Print / Save PDF”, save it, then attach it in the chat.');
  if(!ok)return;
  const url='https://wa.me/'+phone+'?text='+encodeURIComponent(message);
  window.open(url,'_blank','noopener');
