@@ -4063,53 +4063,82 @@ async function downloadInvoicePDF(){
  const paper=document.querySelector('#invoiceOverlay .invoice-paper');
  if(!paper)return toast(t('Open an invoice before downloading it.'));
  const button=document.querySelector('#invoiceOverlay button[onclick="downloadInvoicePDF()"]');
+ const originalButtonText=button?.textContent||'';
  if(button){button.disabled=true;button.textContent=t('Preparing PDF…');}
  try{
-  if(!window.html2pdf){
+  // Load the renderer only when needed. The bundled build exposes html2canvas
+  // and jsPDF, allowing us to render the visible invoice once and place that
+  // exact image on one A4 page (without html2pdf's automatic page slicing).
+  if(!window.html2canvas||!(window.jspdf?.jsPDF||window.jsPDF)){
    await new Promise((resolve,reject)=>{
     const existing=document.querySelector('script[data-ahruf-html2pdf]');
-    if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}
+    if(existing){
+     if(window.html2canvas&&(window.jspdf?.jsPDF||window.jsPDF)){resolve();return;}
+     existing.addEventListener('load',resolve,{once:true});
+     existing.addEventListener('error',()=>reject(new Error(t('Could not load the PDF generator. Check your internet connection and try again.'))),{once:true});
+     return;
+    }
     const script=document.createElement('script');
     script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.async=true;script.dataset.ahrufHtml2pdf='1';
-    script.onload=resolve;script.onerror=()=>reject(new Error(t('Could not load the PDF generator. Check your internet connection and try again.')));
+    script.onload=resolve;
+    script.onerror=()=>reject(new Error(t('Could not load the PDF generator. Check your internet connection and try again.')));
     document.head.appendChild(script);
    });
   }
-  if(typeof window.html2pdf!=='function')throw new Error(t('The PDF generator is unavailable. Please refresh and try again.'));
+  const JsPDF=window.jspdf?.jsPDF||window.jsPDF;
+  if(typeof window.html2canvas!=='function'||typeof JsPDF!=='function')
+   throw new Error(t('The PDF generator is unavailable. Please refresh and try again.'));
+  if(document.fonts?.ready)await document.fonts.ready;
+  await Promise.all(Array.from(paper.querySelectorAll('img')).map(img=>{
+   if(img.complete)return Promise.resolve();
+   return new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});});
+  }));
   const invoiceText=paper.querySelector('div[style*="font-weight:800"]')?.textContent||'AIA-Invoice';
   const invoiceId=paper.innerText.match(/Invoice\s*\n?([A-Z0-9-]+)/i)?.[1]||'Invoice';
   const safeName=('AIA-'+invoiceId+'-'+invoiceText).replace(/[^a-z0-9_-]+/gi,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,90)||'AIA-Invoice';
-  // Capture the actual visible invoice element so its colours, typography,
-  // spacing and all on-screen styling are preserved exactly in the PDF.
-  // Temporarily use exact A4-landscape dimensions so mobile layout does not
-  // create a trailing blank page; restore the on-screen size after rendering.
-  const savedStyle=paper.getAttribute('style');
-  paper.style.setProperty('width','297mm','important');
-  paper.style.setProperty('height','210mm','important');
-  paper.style.setProperty('min-height','210mm','important');
-  paper.style.setProperty('margin','0','important');
-  paper.style.setProperty('padding','15mm','important');
-  paper.style.setProperty('overflow','hidden','important');
-  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-  const options={margin:0,filename:safeName+'.pdf',image:{type:'png',quality:1},html2canvas:{scale:3,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1123,windowHeight:794},jsPDF:{unit:'mm',format:'a4',orientation:'landscape',compress:true},pagebreak:{mode:[]}};
-  const blob=await window.html2pdf().set(options).from(paper).outputPdf('blob');
-  if(savedStyle===null)paper.removeAttribute('style');else paper.setAttribute('style',savedStyle);
+
+  // Capture the invoice itself at its real on-screen size. No forced white
+  // background, temporary CSS overrides, hidden clone, or print dialog.
+  const captureWidth=Math.max(paper.scrollWidth,paper.clientWidth);
+  const captureHeight=Math.max(paper.scrollHeight,paper.clientHeight);
+  const canvas=await window.html2canvas(paper,{
+   scale:3,useCORS:true,allowTaint:false,backgroundColor:null,
+   logging:false,scrollX:0,scrollY:0,
+   windowWidth:captureWidth,windowHeight:captureHeight
+  });
+  if(!canvas||!canvas.width||!canvas.height)throw new Error(t('The PDF could not be generated. Please try again.'));
+  const imageData=canvas.toDataURL('image/png');
+  const pdf=new JsPDF({unit:'mm',format:'a4',orientation:'landscape',compress:true});
+  const pageWidth=297,pageHeight=210;
+  const ratio=Math.min(pageWidth/canvas.width,pageHeight/canvas.height);
+  const renderWidth=canvas.width*ratio,renderHeight=canvas.height*ratio;
+  const left=(pageWidth-renderWidth)/2,top=(pageHeight-renderHeight)/2;
+  pdf.addImage(imageData,'PNG',left,top,renderWidth,renderHeight,undefined,'FAST');
+  const blob=pdf.output('blob');
   if(!(blob instanceof Blob)||blob.size<1000)throw new Error(t('The PDF could not be generated. Please try again.'));
+
   if(window.showSaveFilePicker){
    try{
     const handle=await window.showSaveFilePicker({suggestedName:safeName+'.pdf',types:[{description:t('PDF document'),accept:{'application/pdf':['.pdf']}}]});
-    const writable=await handle.createWritable();await writable.write(blob);await writable.close();
+    const writable=await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
     toast(t('Invoice PDF downloaded successfully.'));
    }catch(error){if(error?.name==='AbortError')return;throw error;}
   }else{
    const url=URL.createObjectURL(blob),link=document.createElement('a');
-   link.href=url;link.download=safeName+'.pdf';link.style.display='none';document.body.appendChild(link);link.click();link.remove();
-   setTimeout(()=>URL.revokeObjectURL(url),1500);
+   link.href=url;link.download=safeName+'.pdf';link.style.display='none';
+   document.body.appendChild(link);link.click();link.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),30000);
    toast(t('Invoice PDF downloaded. Check your Downloads folder.'));
   }
- }catch(error){console.error('Invoice PDF download failed:',error);toast(error?.message||t('Could not download the invoice PDF. Please try again.'),6000);}
- finally{if(button){button.disabled=false;button.textContent='⬇ '+t('Download Invoice (PDF)');}}
+ }catch(error){
+  console.error('Invoice PDF download failed:',error);
+  toast(error?.message||t('Could not download the invoice PDF. Please try again.'),6000);
+ }finally{
+  if(button){button.disabled=false;button.textContent=originalButtonText||('⬇ '+t('Download Invoice (PDF)'));}
+ }
 }
 function viewInvoiceById(inv){const i=(S.pay||[]).findIndex(p=>String(p?.inv||'')===String(inv||''));if(i<0)return toast('Invoice not found');return viewInvoice(i)}
 function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not found');const s=invoiceStudent(p);if(!s)return toast('Student not found');if(user.role==='student'){const ids=[user.username,user.id,user.studentId,user.student_id].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);const ownStudent=(S.students||[]).find(st=>[st?.id,st?.username,st?.studentId,st?.student_id].some(v=>ids.includes(String(v||'').trim().toLowerCase())));if(!ownStudent||String(ownStudent.id||'').trim().toLowerCase()!==String(s.id||'').trim().toLowerCase())return toast('You can only access your own invoice.');}
