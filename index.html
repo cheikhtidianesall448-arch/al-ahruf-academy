@@ -3833,8 +3833,10 @@ function hafizRecognitionSentenceHtml(person){
  const full=(S.students||[]).find(x=>(person?.id&&String(x.id)===String(person.id))||String(x.name||'').trim()===String(person?.name||'').trim())||person||{};
  const female=studentGender(full)==='female';
  const term=currentLang==='fr'?(female?'hafiza':'hafiz'):currentLang==='ar'?(female?'حافظة':'حافظ'):'Hafiz';
- const safe=esc(sentence),safeTerm=esc(term);
- return safe.replace(safeTerm,'<span style="color:#21834a;font-weight:850">'+safeTerm+'</span>');
+ const safe=esc(sentence),safeTerm=esc(term),safeName=esc(String(person?.name||full.name||'').trim());
+ let highlighted=safe;
+ if(safeName)highlighted=highlighted.replace(safeName,'<span style="color:#21834a;font-weight:850">'+safeName+'</span>');
+ return highlighted.replace(safeTerm,'<span style="color:#21834a;font-weight:850">'+safeTerm+'</span>');
 }
 
 function hafizBadge(student){return isConfirmedHafiz(student)?'<span title="'+esc(t('Confirmed Hafiz · 114/114 surahs'))+'" style="display:inline-flex;align-items:center;gap:4px;margin-left:7px;padding:3px 8px;border-radius:999px;background:#fff2c8;color:#795400;border:1px solid #d6ad45;font-size:.76rem;font-weight:850;white-space:nowrap">🏅 '+esc(t('HAFIZ'))+' · '+academyNumber(114)+'/'+academyNumber(114)+'</span>':'';}
