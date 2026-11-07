@@ -4066,26 +4066,25 @@ async function downloadInvoicePDF(){
  const originalButtonText=button?.textContent||'';
  if(button){button.disabled=true;button.textContent=t('Preparing PDF…');}
  try{
-  // Load the renderer only when needed. The bundled build exposes html2canvas
-  // and jsPDF, allowing us to render the visible invoice once and place that
-  // exact image on one A4 page (without html2pdf's automatic page slicing).
-  if(!window.html2canvas||!(window.jspdf?.jsPDF||window.jsPDF)){
-   await new Promise((resolve,reject)=>{
-    const existing=document.querySelector('script[data-ahruf-html2pdf]');
-    if(existing){
-     if(window.html2canvas&&(window.jspdf?.jsPDF||window.jsPDF)){resolve();return;}
-     existing.addEventListener('load',resolve,{once:true});
-     existing.addEventListener('error',()=>reject(new Error(t('Could not load the PDF generator. Check your internet connection and try again.'))),{once:true});
-     return;
-    }
-    const script=document.createElement('script');
-    script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.async=true;script.dataset.ahrufHtml2pdf='1';
-    script.onload=resolve;
-    script.onerror=()=>reject(new Error(t('Could not load the PDF generator. Check your internet connection and try again.')));
-    document.head.appendChild(script);
-   });
-  }
+  // Load the two rendering libraries explicitly. Unlike the html2pdf bundle,
+  // these CDN builds expose html2canvas and jsPDF as public browser globals.
+  const loadScript=(src,marker,ready)=>new Promise((resolve,reject)=>{
+   if(ready()){resolve();return;}
+   const existing=document.querySelector('script['+marker+']');
+   if(existing){
+    existing.addEventListener('load',()=>ready()?resolve():reject(new Error(t('The PDF generator is unavailable. Please refresh and try again.'))),{once:true});
+    existing.addEventListener('error',()=>reject(new Error(t('Could not load the PDF generator. Check your internet connection and try again.'))),{once:true});
+    return;
+   }
+   const script=document.createElement('script');script.src=src;script.async=true;script.setAttribute(marker,'1');
+   script.onload=()=>ready()?resolve():reject(new Error(t('The PDF generator is unavailable. Please refresh and try again.')));
+   script.onerror=()=>reject(new Error(t('Could not load the PDF generator. Check your internet connection and try again.')));
+   document.head.appendChild(script);
+  });
+  await Promise.all([
+   loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','data-ahruf-html2canvas',()=>typeof window.html2canvas==='function'),
+   loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','data-ahruf-jspdf',()=>typeof (window.jspdf?.jsPDF||window.jsPDF)==='function')
+  ]);
   const JsPDF=window.jspdf?.jsPDF||window.jsPDF;
   if(typeof window.html2canvas!=='function'||typeof JsPDF!=='function')
    throw new Error(t('The PDF generator is unavailable. Please refresh and try again.'));
