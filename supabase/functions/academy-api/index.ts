@@ -1730,8 +1730,8 @@ async function generateAcademyModelReply(messages: any[], languages: string[], r
   // Preserve enough recent dialogue for follow-up questions without sending unbounded input.
   const safeMessages = (Array.isArray(messages) ? messages : [])
     .filter((item: any) => ["user", "assistant"].includes(lower(item?.role)))
-    .slice(-12)
-    .map((item: any) => ({ role: lower(item.role), content: text(item.content).slice(0, 2400) }))
+    .slice(-16)
+    .map((item: any) => ({ role: lower(item.role), content: text(item.content).slice(0, 3200) }))
     .filter((item: any) => item.content);
   if (!safeMessages.some((item: any) => item.role === "user")) return null;
 
@@ -1746,7 +1746,9 @@ async function generateAcademyModelReply(messages: any[], languages: string[], r
     "LANGUAGE: Reply in " + responseLanguage + ". The latest explicit language instruction always wins. If the user asks for one language only, use only that language. If the latest message genuinely mixes languages, mirror that mix naturally; do not add translations unless requested. For Arabic, write naturally in Arabic script.",
     "CONVERSATION: Read the recent messages as one conversation. Resolve short follow-ups from context, remember what has already been explained in this chat, and do not restart with a generic greeting on every turn.",
     "ANSWER METHOD: Identify exactly what the user is asking. Answer that first, then explain the reasoning in a logical order. Match the user's level, give a practical example when useful, and use short headings or numbered steps only when they improve clarity. If one essential detail is missing, ask one concise clarifying question.",
-    "ACADEMY SUBJECTS: You may explain Qur'an learning, Tajwid, Hifz, revision, Fiqh, study methods, and how to use academy features. Be precise with Arabic terminology and distinguish similar concepts instead of giving vague general advice.",
+    "ACADEMY SUBJECTS: Be a capable learning and platform assistant. Explain Qur'an learning, Tajwid, Hifz, revision, Fiqh, Arabic, Islamic studies, study methods, class preparation, assignments, and how to use academy features. Give structured lessons, examples, comparisons, practical steps, and suitable next steps when useful. Be precise with Arabic terminology and distinguish similar concepts instead of giving vague general advice.",
+    "BREADTH AND DEPTH: Handle natural questions even when they are long, misspelled, indirect, or not phrased with academy keywords. You may also help with general knowledge, language learning, writing, translation, and academic study when asked. Do not reject a question merely because it is not about a dashboard feature. For complex requests, organize a complete but readable answer; for simple requests, be concise.",
+    "ACADEMY KNOWLEDGE: Al-Ahruf International Academy supports students, teachers, and administrators. Platform areas include profiles, Qur'an memorization progress and surah tracking, rankings and bonuses, assignments, teachers, timetable, class calls, attendance, messages, notifications, and invoices/payments. Explain how a feature generally works, but never invent a specific account record, fee, schedule, or setting. Tell the user which dashboard or authorized staff member can verify live details.",
     "RELIGIOUS ACCURACY: Never invent Qur'anic verses, surah/ayah references, hadith wording, chains of narration, or scholarly quotations. If you cannot verify an exact quotation or reference, say so and explain the concept without presenting it as a quotation. For Fiqh issues with differing scholarly views or personal circumstances, explain that context and recommend checking with a qualified teacher; do not pretend there is always one uncontested answer.",
     "FACTUAL ACCURACY: Do not guess. Never invent academy rules, fees, class times, teacher assignments, student records, rankings, or platform capabilities. If a fact depends on live account data, explain that it must be checked in the relevant dashboard or by an authorized administrator.",
     "SECURITY AND PERMISSIONS: The authenticated user's role is " + role + ". You do not receive private academy records in this model call and cannot perform platform actions. Never disclose another person's private information, bypass role restrictions, or claim to have accessed records you were not given.",
@@ -1769,8 +1771,8 @@ async function generateAcademyModelReply(messages: any[], languages: string[], r
       body: JSON.stringify({
         model,
         messages: [{ role: "system", content: instructions }, ...safeMessages],
-        max_tokens: 650,
-        temperature: 0.4,
+        max_tokens: 1000,
+        temperature: 0.35,
       })
     });
     if (!response.ok) {
@@ -2423,11 +2425,14 @@ async function academyChat(ctx: any, body: any) {
   if (/(message|reply|call|contact|notification|chat|رسالة|اتصال|مكالمة|إشعار)/.test(intentQ))
     return tr("Open Messages to read or reply to a conversation. Use the call option when available. If a message or call option is missing, refresh the platform and contact the administrator if the problem persists.", "Ouvrez Messages pour lire ou répondre à une conversation. Utilisez l’option d’appel lorsqu’elle est disponible. Si une option manque, actualisez la plateforme et contactez l’administration si le problème persiste.", "افتح الرسائل لقراءة المحادثة أو الرد عليها. استخدم خيار الاتصال عند توفره. إذا غاب خيار، حدّث المنصة وتواصل مع الإدارة إذا استمرت المشكلة.");
 
-  // If the question mentions the academy but is not specific enough, ask a clarification instead of incorrectly rejecting it.
-  if (/(academy|platform|website|feature|profile|student|teacher|course|class|timetable|schedule|attendance|quran|qur an|surah|tajwid|tajweed|hifz|fiqh|message|call|login|theme|payment|invoice|أكاديمية|منصة|طالب|معلم|درس|جدول|حضور|قرآن|سورة|تجويد|حفظ|فقه|رسالة)/.test(intentQ))
-    return tr("I can help with that academy topic, but I need one more detail. Are you asking about your profile, classes, timetable, attendance, Qur’an progress, messages, or how to use a feature?", "Je peux vous aider sur ce sujet lié à l’académie, mais j’ai besoin d’une précision. Parlez-vous de votre profil, des cours, de l’emploi du temps, des présences, de la progression coranique, des messages ou d’une fonctionnalité ?", "يمكنني مساعدتك في هذا الموضوع المتعلق بالأكاديمية، لكن أحتاج إلى توضيح إضافي. هل تسأل عن ملفك أو الحصص أو الجدول أو الحضور أو تقدم القرآن أو الرسائل أو استخدام إحدى الميزات؟");
+  // Let the language model handle questions that the verified account-data rules above
+  // do not cover. This avoids brittle keyword-based clarifications for broad or nuanced questions.
   const modelReply = await generateAcademyModelReply(messages, replyLanguages, role);
   if (modelReply) return { reply: modelReply };
+
+  // Use a focused clarification only when the free model is unavailable.
+  if (/(academy|platform|website|feature|profile|student|teacher|course|class|timetable|schedule|attendance|quran|qur an|surah|tajwid|tajweed|hifz|fiqh|message|call|login|theme|payment|invoice|أكاديمية|منصة|طالب|معلم|درس|جدول|حضور|قرآن|سورة|تجويد|حفظ|فقه|رسالة)/.test(intentQ))
+    return tr("I can help with that academy topic, but I need one more detail. Are you asking about your profile, classes, timetable, attendance, Qur’an progress, messages, or how to use a feature?", "Je peux vous aider sur ce sujet lié à l’académie, mais j’ai besoin d’une précision. Parlez-vous de votre profil, des cours, de l’emploi du temps, des présences, de la progression coranique, des messages ou d’une fonctionnalité ?", "يمكنني مساعدتك في هذا الموضوع المتعلق بالأكاديمية، لكن أحتاج إلى توضيح إضافي. هل تسأل عن ملفك أو الحصص أو الجدول أو الحضور أو تقدم القرآن أو الرسائل أو استخدام إحدى الميزات؟");
   return offTopicReply();
 
 }
