@@ -4082,8 +4082,19 @@ async function downloadInvoicePDF(){
   const safeName=('AIA-'+invoiceId+'-'+invoiceText).replace(/[^a-z0-9_-]+/gi,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,90)||'AIA-Invoice';
   // Capture the actual visible invoice element so its colours, typography,
   // spacing and all on-screen styling are preserved exactly in the PDF.
-  const options={margin:0,filename:safeName+'.pdf',image:{type:'png'},html2canvas:{scale:3,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'landscape',compress:true},pagebreak:{mode:['avoid-all','css','legacy']}};
+  // Temporarily use exact A4-landscape dimensions so mobile layout does not
+  // create a trailing blank page; restore the on-screen size after rendering.
+  const savedStyle=paper.getAttribute('style');
+  paper.style.setProperty('width','297mm','important');
+  paper.style.setProperty('height','210mm','important');
+  paper.style.setProperty('min-height','210mm','important');
+  paper.style.setProperty('margin','0','important');
+  paper.style.setProperty('padding','15mm','important');
+  paper.style.setProperty('overflow','hidden','important');
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const options={margin:0,filename:safeName+'.pdf',image:{type:'png',quality:1},html2canvas:{scale:3,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1123,windowHeight:794},jsPDF:{unit:'mm',format:'a4',orientation:'landscape',compress:true},pagebreak:{mode:[]}};
   const blob=await window.html2pdf().set(options).from(paper).outputPdf('blob');
+  if(savedStyle===null)paper.removeAttribute('style');else paper.setAttribute('style',savedStyle);
   if(!(blob instanceof Blob)||blob.size<1000)throw new Error(t('The PDF could not be generated. Please try again.'));
   if(window.showSaveFilePicker){
    try{
@@ -4422,6 +4433,19 @@ function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not f
   #quranReaderContent .quran-page-paper .quran-basmala-panel{font-size:clamp(10px,2.7vw,13px)!important}
 }
 
+
+/* Fixed high-contrast invoice palette: consistent in light/dark mode and PDF. */
+#invoiceOverlay .invoice-paper{color:#172033!important;background:#fff!important}
+#invoiceOverlay .invoice-paper *{opacity:1!important}
+#invoiceOverlay .invoice-paper b,#invoiceOverlay .invoice-paper strong{color:#123f36!important}
+#invoiceOverlay .invoice-paper>div:first-child{color:#123f36!important;border-bottom-color:#c9a227!important}
+#invoiceOverlay .invoice-paper>div:nth-child(2){color:#123f36!important}
+#invoiceOverlay .invoice-paper>div:nth-child(3)>div{color:#172033!important;border-color:#d8dfdc!important;background:#fff!important}
+#invoiceOverlay .invoice-paper>div:nth-child(4){color:#172033!important;border-color:#d8dfdc!important;background:#fff!important}
+#invoiceOverlay .invoice-paper span,#invoiceOverlay .invoice-paper p{color:#566579!important}
+#invoiceOverlay .invoice-paper>div:nth-last-child(2){color:#123f36!important;border-top-color:#c9a227!important}
+#invoiceOverlay .invoice-paper>div:first-child>div:last-child,
+#invoiceOverlay .invoice-paper>div:first-child>div:last-child *{color:#123f36!important}
 </style>
  <div class="invoice-paper" style="width:min(100%,297mm);min-height:210mm;margin:0 auto 36px;background:#fff;padding:clamp(18px,5vw,20mm);border:1px solid #ddd;border-radius:0;box-shadow:0 8px 30px #0001;box-sizing:border-box">
  <div style="display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;border-bottom:3px solid #c9a227;padding-bottom:20px"><div><div style="font-size:24px;font-weight:800">Al-Ahruf International Academy</div><div style="color:#687386">Nurturing faith, enhancing learning</div></div><div><b>Invoice</b><br>${esc(p.inv||'')}</div></div>
