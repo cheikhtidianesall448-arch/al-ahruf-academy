@@ -4063,7 +4063,6 @@ async function downloadInvoicePDF(){
  const paper=document.querySelector('#invoiceOverlay .invoice-paper');
  if(!paper)return toast(t('Open an invoice before downloading it.'));
  const button=document.querySelector('#invoiceOverlay button[onclick="downloadInvoicePDF()"]');
- let exportPaper=null;
  if(button){button.disabled=true;button.textContent=t('Preparing PDF…');}
  try{
   if(!window.html2pdf){
@@ -4081,14 +4080,10 @@ async function downloadInvoicePDF(){
   const invoiceText=paper.querySelector('div[style*="font-weight:800"]')?.textContent||'AIA-Invoice';
   const invoiceId=paper.innerText.match(/Invoice\s*\n?([A-Z0-9-]+)/i)?.[1]||'Invoice';
   const safeName=('AIA-'+invoiceId+'-'+invoiceText).replace(/[^a-z0-9_-]+/gi,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,90)||'AIA-Invoice';
-  // Render a full A4-width copy instead of capturing the smaller screen preview.
-  // The higher-resolution PNG keeps invoice text and fine lines much clearer.
-  exportPaper=paper.cloneNode(true);
-  exportPaper.removeAttribute('id');
-  Object.assign(exportPaper.style,{width:'1123px',maxWidth:'none',minHeight:'794px',margin:'0',padding:'56.7px',boxSizing:'border-box',background:'#fff',color:'#172033',border:'0',borderRadius:'0',boxShadow:'none',position:'fixed',left:'-12000px',top:'0',zIndex:'-1'});
-  document.body.appendChild(exportPaper);
-  const options={margin:0,filename:safeName+'.pdf',image:{type:'png'},html2canvas:{scale:3,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1200},jsPDF:{unit:'mm',format:'a4',orientation:'landscape',compress:true},pagebreak:{mode:['avoid-all','css','legacy']}};
-  const blob=await window.html2pdf().set(options).from(exportPaper).outputPdf('blob');
+  // Capture the actual visible invoice element so its colours, typography,
+  // spacing and all on-screen styling are preserved exactly in the PDF.
+  const options={margin:0,filename:safeName+'.pdf',image:{type:'png'},html2canvas:{scale:3,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'landscape',compress:true},pagebreak:{mode:['avoid-all','css','legacy']}};
+  const blob=await window.html2pdf().set(options).from(paper).outputPdf('blob');
   if(!(blob instanceof Blob)||blob.size<1000)throw new Error(t('The PDF could not be generated. Please try again.'));
   if(window.showSaveFilePicker){
    try{
@@ -4103,7 +4098,7 @@ async function downloadInvoicePDF(){
    toast(t('Invoice PDF downloaded. Check your Downloads folder.'));
   }
  }catch(error){console.error('Invoice PDF download failed:',error);toast(error?.message||t('Could not download the invoice PDF. Please try again.'),6000);}
- finally{if(exportPaper)exportPaper.remove();if(button){button.disabled=false;button.textContent='⬇ '+t('Download Invoice (PDF)');}}
+ finally{if(button){button.disabled=false;button.textContent='⬇ '+t('Download Invoice (PDF)');}}
 }
 function viewInvoiceById(inv){const i=(S.pay||[]).findIndex(p=>String(p?.inv||'')===String(inv||''));if(i<0)return toast('Invoice not found');return viewInvoice(i)}
 function viewInvoice(i){const p=(S.pay||[])[i];if(!p)return toast('Invoice not found');const s=invoiceStudent(p);if(!s)return toast('Student not found');if(user.role==='student'){const ids=[user.username,user.id,user.studentId,user.student_id].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);const ownStudent=(S.students||[]).find(st=>[st?.id,st?.username,st?.studentId,st?.student_id].some(v=>ids.includes(String(v||'').trim().toLowerCase())));if(!ownStudent||String(ownStudent.id||'').trim().toLowerCase()!==String(s.id||'').trim().toLowerCase())return toast('You can only access your own invoice.');}
