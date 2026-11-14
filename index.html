@@ -6094,5 +6094,49 @@ window.ahrufOpenClassroom=function(call){if(!call||call.ended)return;if(call.cla
   }
 </style>
 
+
+
+<script id="ahrufReplyReferenceNavigation">
+(function(){
+ if(window.__ahrufReplyReferenceNavigationInstalled)return;
+ window.__ahrufReplyReferenceNavigationInstalled=true;
+ const originalRenderer=window.messageThreadItem;
+ if(typeof originalRenderer!=='function')return;
+ const labels={en:{reply:'Replying to',deleted:'Original message deleted',jump:'Go to original message'},fr:{reply:'En réponse à',deleted:'Message d’origine supprimé',jump:'Voir le message d’origine'},ar:{reply:'ردًا على',deleted:'تم حذف الرسالة الأصلية',jump:'الانتقال إلى الرسالة الأصلية'}};
+ function lang(){const v=String(window.currentLanguage||window.lang||document.documentElement.lang||'en').toLowerCase();return v.startsWith('fr')?'fr':v.startsWith('ar')?'ar':'en'}
+ function safe(v){return typeof window.esc==='function'?window.esc(String(v??'')):String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+ function preview(m){
+  if(!m||!m.replyToId)return '';
+  const original=(window.S?.messages||[]).find(x=>String(x.id)===String(m.replyToId));
+  const l=labels[lang()];
+  const text=original?(String(original.body||'').trim()||String(original.attachment?.name||'Attachment')):l.deleted;
+  const who=original?(original.fromName||original.from||'User'):'';
+  return '<button type="button" class="ahruf-reply-reference" data-reply-target="'+safe(m.replyToId)+'" onclick="ahrufJumpToOriginalMessage(this)" aria-label="'+safe(l.jump)+'" title="'+safe(l.jump)+'"><span class="ahruf-reply-reference-mark" aria-hidden="true">↪</span><span class="ahruf-reply-reference-copy"><strong>'+safe(l.reply)+(who?' · '+safe(who):'')+'</strong><span>'+safe(text.slice(0,180))+'</span></span></button>';
+ }
+ window.messageThreadItem=function(m,me){
+  let html=originalRenderer.call(this,m,me);
+  const quote=preview(m);
+  if(!quote)return html;
+  const senderEnd=html.indexOf('</div>');
+  if(senderEnd>=0)html=html.slice(0,senderEnd+6)+quote+html.slice(senderEnd+6);
+  return html;
+ };
+ window.ahrufJumpToOriginalMessage=function(button){
+  const id=String(button?.getAttribute('data-reply-target')||'');
+  if(!id)return;
+  const thread=document.querySelector('.message-thread');
+  if(!thread)return;
+  const target=Array.from(thread.querySelectorAll('.message-thread-item[data-message-id]')).find(el=>el.getAttribute('data-message-id')===id);
+  if(!target){if(typeof window.toast==='function')window.toast(labels[lang()].deleted);return}
+  target.scrollIntoView({behavior:'smooth',block:'center'});
+  target.classList.remove('ahruf-reply-target-highlight');void target.offsetWidth;
+  target.classList.add('ahruf-reply-target-highlight');
+  window.setTimeout(()=>target.classList.remove('ahruf-reply-target-highlight'),2200);
+ };
+ const style=document.createElement('style');style.id='ahrufReplyReferenceStyles';
+ style.textContent='.ahruf-reply-reference{display:flex;align-items:flex-start;gap:8px;width:100%;max-width:100%;margin:7px 0 8px;padding:8px 10px;text-align:left;border:0;border-left:3px solid #168879;border-radius:7px;background:rgba(22,136,121,.10);color:var(--ink,#173c37);cursor:pointer;font:inherit;box-shadow:none}[dir="rtl"] .ahruf-reply-reference{border-left:0;border-right:3px solid #168879;text-align:right}.ahruf-reply-reference:hover{background:rgba(22,136,121,.17)}.ahruf-reply-reference-mark{font-size:18px;line-height:1.2;flex:0 0 auto;color:#168879}.ahruf-reply-reference-copy{display:flex;flex-direction:column;gap:2px;min-width:0}.ahruf-reply-reference-copy strong{font-size:.73rem;color:#168879;font-weight:700}.ahruf-reply-reference-copy span{font-size:.82rem;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ahruf-reply-target-highlight{outline:3px solid #d6a63b!important;outline-offset:3px!important;animation:ahrufReplyPulse .55s ease-in-out 2}@keyframes ahrufReplyPulse{50%{box-shadow:0 0 0 7px rgba(214,166,59,.18)}}@media(prefers-reduced-motion:reduce){.ahruf-reply-target-highlight{animation:none}}';
+ document.head.appendChild(style);
+})();
+</script>
 </body>
 </html>
