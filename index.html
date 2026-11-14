@@ -6107,7 +6107,7 @@ window.ahrufOpenClassroom=function(call){if(!call||call.ended)return;if(call.cla
  function safe(v){return typeof window.esc==='function'?window.esc(String(v??'')):String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
  function preview(m){
   if(!m||!m.replyToId)return '';
-  const original=(window.S?.messages||[]).find(x=>String(x.id)===String(m.replyToId));
+  const messageState=typeof S!=='undefined'?S:null; const original=(messageState?.messages||[]).find(x=>String(x.id)===String(m.replyToId));
   const l=labels[lang()];
   const text=original?(String(original.body||'').trim()||String(original.attachment?.name||'Attachment')):l.deleted;
   const who=original?(original.fromName||original.from||'User'):'';
@@ -6117,8 +6117,9 @@ window.ahrufOpenClassroom=function(call){if(!call||call.ended)return;if(call.cla
   let html=originalRenderer.call(this,m,me);
   const quote=preview(m);
   if(!quote)return html;
-  const senderEnd=html.indexOf('</div>');
-  if(senderEnd>=0)html=html.slice(0,senderEnd+6)+quote+html.slice(senderEnd+6);
+  const senderStart=html.indexOf('<div class="message-sender"');
+  if(senderStart>=0)html=html.slice(0,senderStart)+quote+html.slice(senderStart);
+  else html=quote+html;
   return html;
  };
  window.ahrufJumpToOriginalMessage=function(button){
