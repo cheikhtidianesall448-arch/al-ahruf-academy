@@ -3277,11 +3277,10 @@ async function startAhrufCall(kind){
  document.head.appendChild(st);
 })();
 function scrollMessageThreadToLatest(){
- const scrollToLatest=()=>{
-  const thread=document.querySelector('.message-chat-shell .message-thread');
-  if(thread)thread.scrollTop=thread.scrollHeight;
- };
- requestAnimationFrame(()=>requestAnimationFrame(scrollToLatest));
+ const thread=document.querySelector('.message-chat-shell .message-thread');
+ if(!thread)return;
+ thread.style.scrollBehavior='auto';
+ thread.scrollTop=thread.scrollHeight;
 }
 function openMessageConversation(key){
  activeMessageConversationKey=String(key||'');
@@ -3303,7 +3302,6 @@ function openMessageConversation(key){
   save();
  }
  render();
- scrollMessageThreadToLatest();
 }
 function messageConversationKey(m){
  const conversationId=String(m.conversationId||'').trim();
@@ -3411,7 +3409,7 @@ async function pollLiveMessages(){
     if(count)count.textContent=items.length+' message'+(items.length===1?'':'s');
     const last=items[items.length-1],form=section?.querySelector('form[onsubmit*="sendThreadReply"]');
     if(form){if(form.elements.replyToId)form.elements.replyToId.value=String(last.id||'');const target=String(last.from||'').toLowerCase()===me?last.to:last.from;if(form.elements.to&&target)form.elements.to.value=target}
-    if(wasNearBottom&&items.some(m=>!oldIds.has(String(m.id))))window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});
+    // Keep the page position fixed; only the discussion thread itself may scroll.
    }else render();
    if(incoming.some(m=>keyOf(m)===key))onlineApi('mark_messages_read',{conversationId:key}).then(r=>{const arr=Array.isArray(r.messages)?r.messages:r.state?.messages;if(Array.isArray(arr))S.messages=arr}).catch(e=>console.warn('Live read receipt skipped:',e.message));
   }else if(tab==='messages'){
