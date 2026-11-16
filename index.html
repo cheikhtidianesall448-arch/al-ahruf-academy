@@ -3286,7 +3286,7 @@ async function startAhrufCall(kind){
 let messagePresenceChannel=null,messagePresenceConversation='',messagePresenceRemote=null,messagePresenceExpiry=null,messageTypingTimer=null,messageRecordingHeartbeat=null;
 const messagePresenceUser=()=>String(user?.username||user?.studentId||user?.student_id||user?.id||'').toLowerCase();
 function messagePresenceLabel(kind){
- const labels={en:{typing:'Writing...',recording:'Recording...'},fr:{typing:'Écrit...',recording:'Enregistre...'},ar:{typing:'يكتب الآن...',recording:'يسجّل الآن...'}};
+ const labels={en:{typing:'Writing...',recording:'Recording...'},fr:{typing:'Écriture en cours...',recording:'Enregistrement en cours...'},ar:{typing:'يكتب الآن...',recording:'يسجّل الآن...'}};
  return (labels[currentLang]||labels.en)[kind]||'';
 }
 function paintMessagePresence(){
