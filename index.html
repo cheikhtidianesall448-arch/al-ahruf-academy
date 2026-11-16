@@ -2230,7 +2230,7 @@ function render(){
  document.body.querySelectorAll('.lang-switch').forEach(x=>x.remove());
  try{document.body.appendChild(languageUI());applyI18n();applyArabicIndicDigits(document.body);installGlobalLanguageObserver()}catch(e){console.warn('Language UI skipped:',e)}
  // Every render of an open discussion starts at the newest message for every role/device.
- if(activeMessageConversationKey)scrollMessageThreadToLatest();
+ if(activeMessageConversationKey){scrollMessageThreadToLatest();if(typeof paintMessagePresence==='function')paintMessagePresence();}
 }
 
 function viewLogin(){
