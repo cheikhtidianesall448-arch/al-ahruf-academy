@@ -2414,7 +2414,7 @@ function clearVoiceRecordingIndicator(message){if(voiceRecordingTimer){clearInte
 async function startWhatsAppVoiceNote(event,button){
   if(event){event.preventDefault();event.stopPropagation()}
   if(activeMessageRecorder&&activeMessageRecorder.state==='recording'){finishWhatsAppVoiceNote(event,button);return}
-  if(activeMessageRecorder&&activeMessageRecorder.state==='paused'){try{activeMessageRecorder.resume();document.querySelectorAll('.recordAudioBtn').forEach(b=>{b.innerHTML="<svg viewBox=\"0 0 24 24\" width=\"25\" height=\"25\" aria-hidden=\"true\" focusable=\"false\" style=\"display:block;fill:currentColor\"><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"></rect><rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"></rect></svg>";b.title='Pause recording and review';b.setAttribute('aria-label','Pause recording and review')});updateVoiceRecordingStatus();if(voiceRecordingTimer)clearInterval(voiceRecordingTimer);voiceRecordingTimer=setInterval(updateVoiceRecordingStatus,250)}catch(e){toast('Could not resume recording.')}return}
+  if(activeMessageRecorder&&activeMessageRecorder.state==='paused'){try{activeMessageRecorder.resume();broadcastMessagePresence('recording',true);document.querySelectorAll('.recordAudioBtn').forEach(b=>{b.innerHTML="<svg viewBox=\"0 0 24 24\" width=\"25\" height=\"25\" aria-hidden=\"true\" focusable=\"false\" style=\"display:block;fill:currentColor\"><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"></rect><rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"></rect></svg>";b.title='Pause recording and review';b.setAttribute('aria-label','Pause recording and review')});updateVoiceRecordingStatus();if(voiceRecordingTimer)clearInterval(voiceRecordingTimer);voiceRecordingTimer=setInterval(updateVoiceRecordingStatus,250)}catch(e){toast('Could not resume recording.')}return}
  if(voicePermissionPending)return;
  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){toast('Voice recording is not supported by this browser. Please attach an audio file instead.');return}
  activeVoiceForm=button?.closest('form')||null;voicePermissionPending=true;voiceReleasedWhilePending=false;
@@ -2771,16 +2771,17 @@ function renderThreadMessages(items,me){
  });
  return out;
 }
-async function sendThreadReply(e,f){e.preventDefault();await sendPlatformMessage(f);return false}
+async function sendThreadReply(e,f){e.preventDefault();broadcastMessagePresence('typing',false);await sendPlatformMessage(f);return false}
 let activeMessageConversationKey=null;
 function messageUserStorageKey(){return String(user?.username||user?.studentId||user?.student_id||user?.id||'guest').toLowerCase().replace(/[^a-z0-9_-]/g,'_')}
 function readMessagePrefs(kind){try{return JSON.parse(localStorage.getItem('ahrufMessage'+kind+'_'+messageUserStorageKey())||'{}')}catch(_){return {}}}
 function writeMessagePrefs(kind,value){try{localStorage.setItem('ahrufMessage'+kind+'_'+messageUserStorageKey(),JSON.stringify(value))}catch(_){}}
 function isMessageThreadPinned(key){return !!readMessagePrefs('Pins')[key]}
 function toggleMessageThreadPin(key){const pins=readMessagePrefs('Pins');if(pins[key])delete pins[key];else pins[key]=Date.now();writeMessagePrefs('Pins',pins);hideMessageThreadMenu();render()}
-function clearMessageThreadForMe(key){if(!key)return;const cleared=readMessagePrefs('Cleared');cleared[key]=Date.now();writeMessagePrefs('Cleared',cleared);hideMessageThreadMenu();document.body.classList.remove('message-conversation-open');activeMessageConversationKey=null;render()}
+function clearMessageThreadForMe(key){if(!key)return;stopMessagePresence();const cleared=readMessagePrefs('Cleared');cleared[key]=Date.now();writeMessagePrefs('Cleared',cleared);hideMessageThreadMenu();document.body.classList.remove('message-conversation-open');activeMessageConversationKey=null;render()}
 async function clearMessageThreadForAll(key){
  if(!key)return;
+ stopMessagePresence();
  if(!ONLINE){toast('Clear for all requires the online academy connection.');return}
  
  try{
@@ -3333,6 +3334,7 @@ function messageComposerTyping(event){
  messageTypingTimer=setTimeout(()=>broadcastMessagePresence('typing',false),2200);
 }
 document.addEventListener('input',event=>{if(event.target?.matches?.('.message-chat-composer textarea[name="message"]'))messageComposerTyping(event)});
+document.addEventListener('blur',event=>{if(event.target?.matches?.('.message-chat-composer textarea[name="message"]')){if(messageTypingTimer)clearTimeout(messageTypingTimer);messageTypingTimer=null;broadcastMessagePresence('typing',false)}},true);
 function scrollMessageThreadToLatest(){
  const thread=document.querySelector('.message-chat-shell .message-thread');
  if(!thread)return;
