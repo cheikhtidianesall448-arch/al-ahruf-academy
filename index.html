@@ -3204,7 +3204,7 @@ async function ahrufSendInboxSignal(target,payload){
  const client=await ahrufCallClient(),channel=client.channel('ahruf-user-'+String(target).toLowerCase().replace(/[^a-z0-9_-]/g,'_'),{config:{private:true,broadcast:{self:false}}});
  try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Signalling timeout')),5000);channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Unavailable'))}})});await channel.send({type:'broadcast',event:'call_response',payload})}finally{setTimeout(()=>{try{client.removeChannel(channel)}catch(_){}},1000)}
 }
-async function ahrufJoinCall(invite){
+async async function ahrufJoinCall(invite){
  if(ahrufActiveCall)return ahrufCallToast('You are already in a call.');
  try{
   if(invite?.timetableId){
@@ -3219,7 +3219,11 @@ async function ahrufJoinCall(invite){
   const me=ahrufMe(),peer=String(invite.from||'').toLowerCase(),pairKey=[me.toLowerCase(),peer].sort().join('|');const call={room:invite.room,timetableId:invite.timetableId||'',key:pairKey,peer:invite.from,kind:invite.kind||'audio',invitees:[],participants:new Map(),pcs:new Map(),streams:new Map(),pendingIce:new Map(),localStream,client,channel:null,overlay:null,miniBar:null,startedAt:Date.now(),remoteJoined:true,ended:false,inviteMessageId:null};ahrufActiveCall=call;ahrufApplyClassCallDeadline(call);ahrufBuildCallOverlay(call);
   call.channel=client.channel('ahruf-call-'+call.room,{config:{private:true,broadcast:{self:false}}});ahrufAttachRoomEvents(call);
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Call room timed out')),12000);call.channel.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(timer);resolve()}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(timer);reject(new Error('Could not join call room'))}})});
-  call.participants.set(invite.from,{name:invite.fromName||invite.from});await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||ahrufMe(),kind:call.kind});ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Joining '+(invite.fromName||invite.from)+'…');
+  call.participants.set(invite.from,{name:invite.fromName||invite.from});await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||ahrufMe(),kind:call.kind});
+  // The caller's first peer_join may have been broadcast before this channel subscribed.
+  // Recreate the deterministic offerer here so either username ordering can negotiate.
+  if(String(ahrufMe()).localeCompare(String(peer))<0)await ahrufMakePeer(call,peer,true);
+  ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Joining '+(invite.fromName||invite.from)+'…');
  }catch(e){console.error('Could not join call:',e);await ahrufDisposeCall(ahrufActiveCall,false);ahrufCallToast('Could not join the call. Check permissions and internet connection.')}
 }
 async function ahrufDisposeCall(call,sendSignal){
