@@ -2951,6 +2951,15 @@ async function ahrufCreateCall(kind,invitees,options={}){
  try{
   call.client=await ahrufCallClient();
   if(call.ended||ahrufActiveCall!==call)return;
+  // Register direct-call participants before opening private Realtime topics.
+  if(!call.timetableId){
+   for(const id of call.invitees){
+    const {data,error}=await call.client.rpc('register_direct_call_participants',{p_room:call.room,p_target_username:id});
+    if(error)throw new Error('Could not authorize the call to '+id+': '+error.message);
+    if(!data?.ok)throw new Error(data?.error||'The recipient could not be authorized for this call.');
+   }
+  }
+  if(call.ended||ahrufActiveCall!==call)return;
   call.localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:kind==='video'});
   if(call.ended||ahrufActiveCall!==call){for(const track of call.localStream?.getTracks?.()||[])track.stop();return;}
   ahrufBuildCallOverlay(call);
