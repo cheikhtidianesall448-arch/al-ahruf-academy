@@ -2952,6 +2952,7 @@ async function ahrufCreateCall(kind,invitees,options={}){
  ahrufStartRingback(call);
  const mediaPromise=navigator.mediaDevices.getUserMedia({audio:true,video:kind==='video'}).then(stream=>{
   if(call.ended||ahrufActiveCall!==call){for(const track of stream.getTracks())track.stop();return null}
+  call.localStream=stream;
   return stream;
  });
  if(call.ended||ahrufActiveCall!==call)return;
