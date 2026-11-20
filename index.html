@@ -2967,8 +2967,6 @@ async function ahrufCreateCall(kind,invitees,options={}){
    }
   }
   if(call.ended||ahrufActiveCall!==call)return;
-  call.localStream=await mediaPromise;
-  if(!call.localStream||call.ended||ahrufActiveCall!==call)return;
   call.channel=call.client.channel('ahruf-call-'+room,{config:{private:true,broadcast:{self:false}}});
   ahrufAttachRoomEvents(call);
   await new Promise((resolve,reject)=>{
@@ -2985,11 +2983,15 @@ async function ahrufCreateCall(kind,invitees,options={}){
   };
   for(const id of call.invitees){try{await sendInvite(id)}catch(deliveryError){ahrufStopRingback(call);await ahrufDisposeCall(call,true);ahrufCallToast('The person you’re trying to call is not connected. Please try again.');return}}
   if(call.automaticClass)call.autoInviteTimer=setInterval(()=>{if(call.ended||call.remoteJoined){clearInterval(call.autoInviteTimer);call.autoInviteTimer=null;return}call.invitees.forEach(id=>sendInvite(id).catch(()=>{}))},1000);
+  // Deliver the invitation before waiting for the local permission prompt to finish.
+  call.localStream=await mediaPromise;
+  if(!call.localStream||call.ended||ahrufActiveCall!==call)return;
+  for(const [id] of call.participants){if(String(ahrufMe()).localeCompare(String(id))<0)await ahrufMakePeer(call,id,true)}
   ahrufRenderCallTiles(call);
   ahrufSetCallStatus(call,'Ringing '+call.invitees.length+' participant'+(call.invitees.length===1?'':'s')+'…');
  }catch(e){
   console.error('In-platform call setup failed:',e);
-  await ahrufDisposeCall(call,false);
+  await ahrufDisposeCall(call,call.deliveredInvitees.size>0);
   ahrufCallToast('Could not start the in-platform call: '+(e?.message||'connection error'));
  }
 }
@@ -3087,7 +3089,7 @@ function ahrufAttachRoomEvents(call){
   if(!p?.id||p.id===ahrufMe()||call.ended)return;
   call.participants.set(p.id,{name:p.name||p.id,kind:p.kind||'audio'});call.remoteJoined=true;ahrufStopRingback(call);ahrufRenderCallTiles(call);ahrufSetCallStatus(call,'Connected · '+call.participants.size+' participant'+(call.participants.size===1?'':'s'));
   // Existing participants offer to the newly arrived participant; the newcomer only answers.
-  if(String(ahrufMe()).localeCompare(String(p.id))<0)await ahrufMakePeer(call,p.id,true);
+  if(call.localStream&&String(ahrufMe()).localeCompare(String(p.id))<0)await ahrufMakePeer(call,p.id,true);
  });
  call.channel.on('broadcast',{event:'signal'},async({payload:p})=>{
   if(!p||p.to!==ahrufMe()||p.from===ahrufMe()||call.ended)return;
