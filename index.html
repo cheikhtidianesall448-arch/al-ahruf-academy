@@ -4762,8 +4762,7 @@ function myclass(){
   const active=schedule.find(item=>{if(String(item.day||'').toLowerCase()!==day.toLowerCase())return false;const [sh,sm]=String(item.start||'').split(':').map(Number),[eh,em]=String(item.end||'').split(':').map(Number);return [sh,sm,eh,em].every(Number.isFinite)&&minutes>=sh*60+sm&&minutes<eh*60+em});
   if(active){notice='<div class="card" style="margin-bottom:12px;background:#e8f7e9;border:1px solid #9bd6a2;color:#185c2b"><b style="font-size:1.08em">Class time!</b><div style="margin-top:4px;font-weight:700">'+esc(active.course||'Quran class')+'</div><div style="margin-top:3px">Your teacher: '+esc(teacherName(active.teacher))+' · Ends at '+esc(active.end||'')+' · Senegal time (UTC+0)</div><div style="margin-top:6px;font-weight:700">Connecting to your class…</div></div>';const next=nextScheduledClass(schedule.filter(item=>String(item.id)!==String(active.id)));if(next)notice+=nextClassNotice(next,'Your next class');}
   else{const next=nextScheduledClass(schedule);if(next)notice='<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="mute">UPCOMING CLASS · SENEGAL TIME (UTC+0)</div><b>'+esc(next.item.course||'Quran class')+'</b><div data-next-class-timestamp="'+next.date.getTime()+'" data-prefix="Your next class in " style="margin-top:5px;font-weight:750">Calculating…</div><div class="mute">'+esc(next.item.day||'')+' · '+esc(next.item.start||'')+' · Teacher: '+esc(teacherName(next.item.teacher))+'</div></div>';}
-  if(typeof ahrufStartStudentScheduleMonitor==='function')ahrufStartStudentScheduleMonitor();
- }
+  }
  else if(teacher){
   const now=new Date(),day=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getUTCDay()],minutes=now.getUTCHours()*60+now.getUTCMinutes();
   const active=schedule.find(item=>{
