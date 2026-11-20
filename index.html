@@ -2946,7 +2946,14 @@ async function ahrufCreateCall(kind,invitees,options={}){
  const room=String(options.room||('ahruf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10))),key=String(activeMessageConversationKey||''),peer=invitees[0]||ahrufCallPeer(key);
  const call={room,timetableId:options.timetableId||'',automaticClass:!!options.automaticClass,key,peer,kind,invitees:[...new Set(invitees.map(x=>String(x).toLowerCase()))],participants:new Map(),pcs:new Map(),streams:new Map(),pendingIce:new Map(),localStream:null,client:null,channel:null,overlay:null,startedAt:Date.now(),remoteJoined:false,ended:false,inviteMessageId:null,deliveredInvitees:new Set()};
  ahrufActiveCall=call;
- 
+ // Show the outgoing call immediately and request media at the same time as setup.
+ ahrufBuildCallOverlay(call);
+ ahrufSetCallStatus(call,'Calling…');
+ ahrufStartRingback(call);
+ const mediaPromise=navigator.mediaDevices.getUserMedia({audio:true,video:kind==='video'}).then(stream=>{
+  if(call.ended||ahrufActiveCall!==call){for(const track of stream.getTracks())track.stop();return null}
+  return stream;
+ });
  if(call.ended||ahrufActiveCall!==call)return;
  try{
   call.client=await ahrufCallClient();
@@ -2960,9 +2967,8 @@ async function ahrufCreateCall(kind,invitees,options={}){
    }
   }
   if(call.ended||ahrufActiveCall!==call)return;
-  call.localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:kind==='video'});
-  if(call.ended||ahrufActiveCall!==call){for(const track of call.localStream?.getTracks?.()||[])track.stop();return;}
-  ahrufBuildCallOverlay(call);
+  call.localStream=await mediaPromise;
+  if(!call.localStream||call.ended||ahrufActiveCall!==call)return;
   call.channel=call.client.channel('ahruf-call-'+room,{config:{private:true,broadcast:{self:false}}});
   ahrufAttachRoomEvents(call);
   await new Promise((resolve,reject)=>{
@@ -2970,7 +2976,6 @@ async function ahrufCreateCall(kind,invitees,options={}){
    call.channel.subscribe(status=>{if(status==='SUBSCRIBED'){clearTimeout(timeout);resolve()}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){clearTimeout(timeout);reject(new Error('Could not connect to the call signalling service.'))}});
   });
   await ahrufBroadcast(call,'peer_join',{id:ahrufMe(),name:user?.name||user?.username||ahrufMe(),kind});
-  ahrufStartRingback(call);
   const sendInvite=async id=>{
    const alreadyDelivered=call.deliveredInvitees.has(id);
    if(call.ended||call.remoteJoined||(alreadyDelivered&&!call.automaticClass))return;
@@ -3126,13 +3131,20 @@ function ensureAhrufCallInbox(){
   ahrufCallInboxUser=me;
   ahrufCallInbox.on('broadcast',{event:'call_invite'},({payload})=>{if(payload?.type==='invite'&&!ahrufCancelledCallRooms.has(String(payload.room||''))&&(!payload.sentAt||Date.now()-Number(payload.sentAt)<60000))ahrufShowIncomingCall(payload)});
   ahrufCallInbox.on('broadcast',{event:'call_response'},({payload})=>{
-   if(payload?.type==='cancelled'&&payload.room){ahrufCancelledCallRooms.add(String(payload.room));const incoming=document.querySelector('.ahruf-incoming-overlay');if(incoming&&incoming.dataset.callRoom===String(payload.room)&&typeof ahrufCancelIncomingCall==='function')ahrufCancelIncomingCall(payload.room);return}
+   if(payload?.type==='cancelled'&&payload.room){
+    ahrufCancelledCallRooms.add(String(payload.room));
+    const incoming=document.querySelector('.ahruf-incoming-overlay');
+    if(incoming&&incoming.dataset.callRoom===String(payload.room)&&typeof ahrufCancelIncomingCall==='function')ahrufCancelIncomingCall(payload.room);
+    const active=ahrufActiveCall;
+    if(active&&!active.ended&&String(active.room)===String(payload.room))closeAhrufCall(false);
+    return;
+   }
    const call=ahrufActiveCall;
    if(!call||call.ended||!payload||String(payload.room||'')!==String(call.room||''))return;
    const responder=String(payload.from||'').trim().toLowerCase();
    // The unguessable active room is the primary correlation key. Do not ignore a
    // valid decline merely because usernames/IDs were normalized differently.
-   if((payload.type==='declined'||payload.type==='missed')&&call.automaticClass){call.deliveredInvitees?.delete(String(payload.from||'').trim().toLowerCase());return;}
+   if(payload.type==='missed'&&call.automaticClass){call.deliveredInvitees?.delete(String(payload.from||'').trim().toLowerCase());return}
    if(payload.type==='declined'||payload.type==='missed'){
     ahrufStopRingback(call);
     ahrufSetCallStatus(call,payload.type==='declined'?'Call declined':'No answer');
