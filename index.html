@@ -4694,9 +4694,9 @@ function showOutcome(){
 }
 function invoiceConcernPeriod(p){
  const names=['January','February','March','April','May','June','July','August','September','October','November','December'];
- const named=String(p.description||'').match(/\\b(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(20\\d{2})\\b/i);
+ const named=String(p.description||'').match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(20\d{2})\b/i);
  if(named){const m=names.findIndex(n=>n.toLowerCase()===named[1].toLowerCase());return {key:named[2]+'-'+String(m+1).padStart(2,'0'),label:names[m]+' '+named[2]};}
- const d=String(p.date||p.due||'').match(/^(20\\d{2})-(\\d{2})/);
+ const d=String(p.date||p.due||'').match(/^(20\d{2})-(\d{2})/);
  if(d){const m=Number(d[2])-1;if(m>=0&&m<12)return {key:d[1]+'-'+d[2],label:names[m]+' '+d[1]};}
  const now=new Date();return {key:now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'),label:names[now.getMonth()]+' '+now.getFullYear()};
 }
