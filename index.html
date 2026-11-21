@@ -3443,9 +3443,28 @@ function messages(){
   const inboxPerson=other?(S.messagePeers||[]).find(x=>String(x.id||x.username||'').toLowerCase()===String(other).toLowerCase())||(S.students||[]).find(x=>String(x.id||x.username||'').toLowerCase()===String(other).toLowerCase())||(S.teachers||[]).find(x=>String(x.username||x.id||'').toLowerCase()===String(other).toLowerCase())||{id:other,name:heading}:last;
   return '<button type="button" onclick="openMessageConversation(\''+esc(thread.key)+'\')" class="message-inbox-row" style="width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:14px 12px;border:0;border-bottom:1px solid var(--line);background:'+(unread?'color-mix(in srgb,var(--gold) 9%,var(--card))':'var(--card)')+';color:var(--ink);cursor:pointer">'+profilePhotoAvatar(inboxPerson,44,inboxPerson?.role||'')+'<span style="min-width:0;flex:1"><span style="display:flex;gap:8px;align-items:center;justify-content:space-between"><b>'+esc(heading)+'</b><span class="mute" style="font-size:.72rem;white-space:nowrap">'+esc(messageDateLabel(last.createdAt||Date.now(),true))+'</span></span><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute);font-size:.86rem;margin-top:3px">'+formatMessageBody(preview)+'</span><span data-ahruf-online-for="'+esc(other||'')+'">'+ahrufOnlineBadge(other)+'</span></span>'+(isMessageThreadPinned(thread.key)?'<span title="Pinned discussion" aria-label="Pinned discussion">📌</span>':'')+(unread?'<span style="min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--ok);color:white;display:grid;place-items:center;font-size:.72rem;font-weight:800">'+unread+'</span>':'')+'</button>';
  }).join('');
- const header='<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Open a discussion to read messages. New messages stay unread until you open that discussion.</span></div><button class="btn" onclick="composeMessage()">New message</button></div>';
+ const people=[
+  ...(S.messagePeers||[]).map(x=>({id:x.id||x.username,name:x.name||x.username,role:x.role||'user',raw:x})),
+  ...(S.students||[]).map(x=>({id:x.id||x.username,name:x.name||x.id,role:'student',raw:x})),
+  ...(S.teachers||[]).map(x=>({id:x.username||x.id,name:x.name||x.username,role:'teacher',raw:x})),
+  {id:'ahruf',name:'Academy Administrator',role:'admin'}
+ ];
+ const known=new Set(threads.map(t=>t.key));
+ const seenPeople=new Set();
+ const contactRows=people.filter(p=>{
+  const id=String(p.id||'').trim(),key=id.toLowerCase();
+  if(!key||key===me||seenPeople.has(key))return false;
+  seenPeople.add(key);return true;
+ }).map(p=>{
+  const id=String(p.id),key=[me,id.toLowerCase()].sort().join('|');
+  if(known.has(key))return '';
+  const person=p.raw||{id,name:p.name,role:p.role};
+  return '<button type="button" onclick="openMessageConversation(\\''+esc(key)+'\\')" class="message-inbox-row" style="width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:14px 12px;border:0;border-bottom:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer">'+profilePhotoAvatar(person,44,p.role)+'<span style="min-width:0;flex:1"><b>'+esc(p.name||id)+'</b><span style="display:block;color:var(--mute);font-size:.82rem;margin-top:3px">'+esc(p.role==='admin'?'Administrator':p.role==='teacher'?'Teacher':p.role==='student'?'Student':'User')+'</span><span data-ahruf-online-for="'+esc(id)+'">'+ahrufOnlineBadge(id)+'</span></span></button>';
+ }).join('');
+ const inboxContent=inbox+contactRows;
+ const header='<div class="row between" style="margin-bottom:12px"><div><h3>Messages</h3><span class="mute">Select any user to open or continue a private conversation.</span></div></div>';
  if(!activeMessageConversationKey){
-  return header+'<div class="card message-list-card" style="padding:0;overflow:hidden">'+(inbox||'<p class="mute" style="padding:16px">No discussions yet. Start a new message.</p>')+'</div>';
+  return header+'<div class="card message-list-card" style="padding:0;overflow:hidden">'+(inboxContent||'<p class="mute" style="padding:16px">No other users are available.</p>')+'</div>';
  }
  const thread=threads.find(x=>x.key===activeMessageConversationKey);
  const pair=String(activeMessageConversationKey||'').split('|');
